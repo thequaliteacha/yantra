@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05040a">
 <title>Yantra</title>
 <style>
   html, body { margin: 0; height: 100%; background: #05040a; overflow: hidden; color: #f3e6c8; }
-  canvas { display: block; width: 100vw; height: 100vh; }
+  canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; }
   button, ol { font: inherit; }
   #gate {
     position: fixed; inset: 0; z-index: 2;
@@ -146,6 +148,33 @@
     opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
   }
   body.sitting.awake #end { opacity: 1; pointer-events: auto; }
+
+  /* Phones and narrow windows: one column, room for thumbs, nothing under the notch. */
+  @media (max-width: 760px) {
+    #gate {
+      align-items: flex-start;
+      padding: max(0.8rem, env(safe-area-inset-top)) max(0.6rem, env(safe-area-inset-right))
+               max(0.8rem, env(safe-area-inset-bottom)) max(0.6rem, env(safe-area-inset-left));
+    }
+    .shelf {
+      width: 100%; max-height: none; min-height: 0; height: 100%;
+      grid-template-columns: 1fr; gap: 0.6rem; padding: 1rem 1.05rem 1.4rem;
+      -webkit-overflow-scrolling: touch;
+    }
+    .menus { flex-wrap: wrap; gap: 0.6rem 1.4rem; }
+    .menus .listen { margin-left: 0; width: 100%; }
+    #discs, #saved { max-height: 30vh; }
+    #circles button, #discs button, .saved-row .name { padding: 0.42rem 0; }
+    h1 { font-size: 2.2rem; }
+    ol { max-height: none; overflow: visible; }
+    li, #tracks li { grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.3rem 0.6rem; padding: 0.42rem 0; }
+    li .chakra { grid-column: 2; font-size: 0.62rem; }
+    .actions { flex-wrap: wrap; }
+    #begin, #play, #local, #install, #form-play, #save-form { flex: 1 1 auto; padding: 0.85rem 1rem; }
+    #playlist-name { width: 100%; }
+    #end { top: max(1rem, env(safe-area-inset-top)); right: max(1rem, env(safe-area-inset-right)); padding: 0.6rem 0.9rem; }
+    #caption { bottom: max(6vh, calc(env(safe-area-inset-bottom) + 2rem)); padding: 0 1.2rem; }
+  }
 </style>
 </head>
 <body>
@@ -1333,12 +1362,15 @@ addEventListener("keydown", (event) => {
   }
 });
 let wake = 0;
-addEventListener("mousemove", () => {
+// A mouse move or a tap shows End sitting for a moment.
+function rouse() {
   if (!document.body.classList.contains("sitting")) return;
   document.body.classList.add("awake");
   clearTimeout(wake);
   wake = setTimeout(() => document.body.classList.remove("awake"), 2500);
-});
+}
+addEventListener("mousemove", rouse);
+addEventListener("pointerdown", rouse);
 
 fetch("/collection", { cache: "no-store" })
   .then((response) => response.json())

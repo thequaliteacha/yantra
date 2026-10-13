@@ -52,6 +52,14 @@ Forms you save stay in that browser.
   to five listeners, each added by email under User Management. Your own
 audio files and the silenced notifications belong to the desktop app.
 
+### On a phone (Android or iPhone)
+
+Open the link and add Yantra to the home screen: on Android, Chrome's menu ›
+*Add to Home screen* (or *Install app*); on iPhone, Safari's Share › *Add to
+Home Screen*. It then opens full screen like an app, keeps the screen awake
+during a sitting, and a tap shows *End sitting*. Spotify plays through the
+Spotify app on the phone, so open Spotify once before the first sit.
+
 ## Running the desktop app
 
 It currently runs on Linux (built on Omarchy / Hyprland, with PipeWire audio).

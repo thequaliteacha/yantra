@@ -1,0 +1,15 @@
+{
+  "name": "Yantra",
+  "short_name": "Yantra",
+  "description": "A sitting companion for students of Rama.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#05040a",
+  "theme_color": "#05040a",
+  "orientation": "any",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

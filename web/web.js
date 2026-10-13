@@ -527,8 +527,20 @@
     async play(body) {
       // Unlocks audio for the in-page player; it has to run inside the tap.
       if (this.player && this.player.activateElement) this.player.activateElement();
-      const target = this.deviceId ? "?device_id=" + this.deviceId : "";
-      const response = await this.api("PUT", "/me/player/play" + target, body);
+      let target = this.deviceId ? "?device_id=" + this.deviceId : "";
+      let response = await this.api("PUT", "/me/player/play" + target, body);
+      if (response && response.status === 404 && !this.deviceId) {
+        // Phones cannot host the in-page player. Play on the listener's Spotify app
+        // (the phone first), as long as it has been opened recently.
+        const list = await this.api("GET", "/me/player/devices");
+        const devices = list && list.ok ? ((await list.json().catch(() => ({}))).devices || []) : [];
+        const usable = devices.filter((device) => !device.is_restricted);
+        const pick = usable.find((device) => device.type === "Smartphone") || usable[0];
+        if (pick) {
+          target = "?device_id=" + pick.id;
+          response = await this.api("PUT", "/me/player/play" + target, body);
+        }
+      }
       if (!response || !(response.ok || response.status === 204)) return false;
       this.api("PUT", "/me/player/shuffle?state=false" + (this.deviceId ? "&device_id=" + this.deviceId : ""));
       this.api("PUT", "/me/player/repeat?state=off" + (this.deviceId ? "&device_id=" + this.deviceId : ""));
@@ -801,8 +813,29 @@
     return [{ ok: false, error: "Your own copies play in the desktop app." }, 403];
   }
 
+  /* Keeps a phone's screen from sleeping while a sitting runs. */
+  let screenLock = null;
+  function holdScreen(on) {
+    if (!on) {
+      if (screenLock) screenLock.release().catch(() => {});
+      screenLock = null;
+      return;
+    }
+    if (screenLock || !navigator.wakeLock) return;
+    navigator.wakeLock.request("screen").then((lock) => {
+      screenLock = lock;
+      lock.addEventListener("release", () => { if (screenLock === lock) screenLock = null; });
+    }).catch(() => {});
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && document.body && document.body.classList.contains("sitting")) holdScreen(true);
+  });
+
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
   function sit(on) {
     const root = document.documentElement;
+    holdScreen(on);
     if (on) {
       startMic();
       if (!document.fullscreenElement && root.requestFullscreen) root.requestFullscreen().catch(() => {});

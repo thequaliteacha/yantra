@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Yantra</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#05040a">
 <style>html,body{margin:0;height:100%;background:#05040a}</style>
 </head>
 <body>
@@ -14,7 +18,17 @@ fetch("../index.html", { cache: "no-store" })
   .then((response) => response.text())
   .then((html) => {
     html = html
-      .replace("<head>", '<head>\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<script src="web.js"><\/script>')
+      .replace("<head>", [
+        "<head>",
+        '<link rel="manifest" href="manifest.webmanifest">',
+        '<link rel="icon" href="icons/icon.svg" type="image/svg+xml">',
+        '<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">',
+        '<meta name="apple-mobile-web-app-capable" content="yes">',
+        '<meta name="mobile-web-app-capable" content="yes">',
+        '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
+        '<meta name="apple-mobile-web-app-title" content="Yantra">',
+        '<script src="web.js"><\/script>',
+      ].join("\n"))
       .replace(
         '"Name each file with its track title, then install it in Music/yantra/" + disc.id + "."',
         '"This disc is not on Spotify or Apple Music. It plays from your own copies in the desktop app."'
