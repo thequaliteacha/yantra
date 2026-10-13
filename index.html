@@ -546,35 +546,13 @@ function paintScene(name, cx, cy, R, reveal) {
   else drawCircles(ctx, cx, cy, R * 1.15, 2);
 }
 
-function cutThirds(count) {
-  return [0, Math.floor(count / 3), Math.floor((2 * count) / 3), count];
-}
-
+/* Each song draws the whole yantra, from first line to full figure, over its own length. */
 function revealOf(series) {
   const lengths = series.lengths || [];
-  const count = lengths.length;
-  if (!count) return 0;
-  const cuts = cutThirds(count);
-  const index = Math.max(0, Math.min(count - 1, series.index || 0));
-  let set = 2;
-  if (index < cuts[1]) set = 0;
-  else if (index < cuts[2]) set = 1;
-  const from = cuts[set];
-  const to = cuts[set + 1];
-  let total = 0;
-  let done = 0;
-  for (let i = from; i < to; i++) {
-    let len = lengths[i] || 0;
-    if (i === index && series.length > 1) len = series.length;
-    if (len < 1) len = 1;
-    total += len;
-    if (i < index) done += len;
-  }
-  const cur = series.length > 1 ? series.length : (lengths[index] || 1);
-  const pos = Math.max(0, Math.min(cur, series.position || 0));
-  done += pos;
-  const local = total > 0 ? Math.min(1, done / total) : 0;
-  return (set + local) / 3;
+  const index = Math.max(0, Math.min(lengths.length - 1, series.index || 0));
+  const length = series.length > 1 ? series.length : (lengths[index] || 0);
+  if (length < 1) return 0;
+  return Math.max(0, Math.min(1, (series.position || 0) / length));
 }
 
 function advancePace(state, series, now) {
@@ -637,7 +615,8 @@ function frame(now) {
     let portion = window.ink.portion || 0;
     if (live && live.lengths && live.lengths.length) {
       const paced = advancePace(window.pace, live, now);
-      const inkKey = (window.drawEpoch || 0) + ":" + (live.key || "");
+      // The song is part of the key, so the drawing starts over with each new song.
+      const inkKey = (window.drawEpoch || 0) + ":" + (live.key || "") + ":" + (live.index || 0);
       portion = forwardPortion(window.ink, inkKey, revealOf(paced));
     }
     reveal = stageReveal(portion);

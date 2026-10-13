@@ -348,6 +348,11 @@
     return "";
   }
 
+  /* Song lengths in form order; the page paces the drawing with them. */
+  function planOf(items) {
+    return items.map((item) => (DISCS[item.discId].tracks.find((row) => row.n === item.n) || {}).length || 0);
+  }
+
   function publishSong() {
     const item = queue.items[queue.index];
     if (!item) return;
@@ -357,7 +362,7 @@
       connected: true, status: "Playing", title: track.title, artist: disc.artist, album: disc.title,
       track: item.n, length: track.length || 0, position: 0, discId: disc.id, allowed: true,
       form: queue.name, formIndex: queue.index, formTotal: queue.items.length,
-      chakra: chakraOf(disc, item.n), source: queue.prefer,
+      formPlan: planOf(queue.items), chakra: chakraOf(disc, item.n), source: queue.prefer,
     });
     queue.startedAt = performance.now();
   }
@@ -662,6 +667,7 @@
       discId: disc.id, allowed: true, source: live.service,
       form: live.form ? live.name : "", formIndex: live.form ? index : 0,
       formTotal: live.form ? live.items.length : 0, chakra: live.form ? chakraOf(disc, item.n) : "",
+      formPlan: live.form ? planOf(live.items) : [],
     });
   }
 
