@@ -18,6 +18,9 @@
   .shelf {
     width: min(76rem, 94vw);
     max-height: 90vh;
+    /* The same height for Albums and Playlists, so switching does not jump. */
+    min-height: min(37rem, 88vh);
+    align-content: start;
     display: grid;
     grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
     gap: 1rem 2.4rem;
@@ -84,8 +87,11 @@
   #form-tracks { max-height: 52vh; }
   li.wait { opacity: 0.38; }
   .saved-row { display: flex; gap: 0.9rem; align-items: baseline; }
-  .saved-row .name { flex: 1; text-align: left; }
-  .saved-row .name.on { color: #f7edd4; }
+  .saved-row .name {
+    flex: 1; text-align: left; background: transparent; border: 0; cursor: pointer;
+    font: inherit; font-size: 0.95rem; padding: 0.18rem 0; color: rgba(232, 204, 146, 0.62);
+  }
+  .saved-row .name:hover, .saved-row .name.on { color: #f7edd4; }
   #playlist-name {
     background: transparent; color: #f3e6c8; border: 0;
     border-bottom: 1px solid rgba(230, 201, 138, 0.35);
@@ -93,10 +99,21 @@
   }
   button:disabled { opacity: 0.4; cursor: default; }
   .mini { border: 0; padding: 0 0.25rem; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.68rem; }
+  #sizes { gap: 0.8rem; margin: 0.7rem 0 0.2rem; }
   #sizes button {
-    border: 1px solid rgba(230, 201, 138, 0.35);
-    padding: 0.35rem 0.7rem; letter-spacing: 0.14em;
+    width: 2.7rem; height: 2.7rem; border-radius: 50%; padding: 0;
+    background: transparent; color: rgba(243, 230, 200, 0.8); font: inherit; font-size: 0.95rem;
+    border: 1px solid rgba(230, 201, 138, 0.3); cursor: pointer;
   }
+  #sizes button:hover { border-color: rgba(230, 201, 138, 0.75); color: #f7edd4; background: rgba(230, 201, 138, 0.06); }
+  /* Calm motion: colors drift rather than snap, and a view settles in when it opens. */
+  button { transition: color 0.45s ease, background-color 0.45s ease, border-color 0.45s ease, opacity 0.45s ease; }
+  #circles button:hover, #discs button:hover, .mini:hover, .menus button:hover { color: #f7edd4; }
+  button:focus { outline: none; }
+  button:focus-visible, #playlist-name:focus-visible { outline: 1px solid rgba(230, 201, 138, 0.45); outline-offset: 4px; }
+  #playlist-name::placeholder { color: rgba(232, 204, 146, 0.45); }
+  @keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .index:not([hidden]), .face:not([hidden]) { animation: settle 0.7s ease both; }
   #saved { gap: 0.2rem; margin-top: 0.7rem; }
   #begin, #play, #apple, #local, #install, #form-play, #save-form {
     background: transparent; color: #f3e6c8;
