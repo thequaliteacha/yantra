@@ -28,6 +28,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 PORT = 8765
+# Apple Music is off for now. The Apple ids stay in discs.json; set True to bring it back.
+APPLE_MUSIC = False
 LEVEL = {"rms": 0.0}
 COLLECTION = json.loads((ROOT / "discs.json").read_text())
 DISCS = {disc["id"]: disc for disc in COLLECTION["discs"]}
@@ -91,7 +93,10 @@ def album_names(disc):
 
 
 def apple_id(disc):
-    """Catalog id already stored on the disc as source apple:<id>."""
+    """Catalog id already stored on the disc as source apple:<id>.
+    Empty while Apple Music is switched off, so every Apple path stays closed."""
+    if not APPLE_MUSIC:
+        return ""
     source = str(disc.get("source") or "")
     if not source.startswith("apple:"):
         return ""

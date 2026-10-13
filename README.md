@@ -5,9 +5,10 @@
 A sitting companion for students of Rama. It draws a slow, sacred-geometry
 yantra that breathes with the music, and the music is limited to the
 meditation discs of the lineage: Zazen, Vayu Meditation, Lumikara, and the
-lineage recordings. The shelf shows the 25 albums on Spotify or Apple Music;
-the other nine Zazen discs stay hidden until they reach a catalog or you
-install your own copies.
+lineage recordings. The shelf shows the 24 albums on Spotify; the rest stay
+hidden until they reach Spotify or you install your own copies. (Apple Music
+support is switched off for now: set `APPLE_MUSIC` in `yantra.py`, `index.html`
+and `web/web.js` to bring it back.)
 
 ## What it does
 
@@ -32,12 +33,11 @@ computer, and everything stays on that machine.
 
 ## In the browser
 
-The link above opens the web edition on any computer or phone. Choose
-Spotify or Apple Music under *Listen on* and press *Connect* once. After that,
+The link above opens the web edition on any computer or phone. Press
+*Connect* beside *Listen on Spotify* once. After that,
 *Begin sitting* and a form's *Sit* play every song right in the page, in order,
 and the caption follows the whole sit. There are no other windows and nothing
-to press until the sit ends. Spotify needs Premium; Apple Music needs a
-subscription. On a phone, Spotify plays through the Spotify app that is open on
+to press until the sit ends. Spotify needs Premium. On a phone, Spotify plays through the Spotify app that is open on
 it.
 
 Without a connection the web edition still works: the album or song opens in a
@@ -47,16 +47,12 @@ Forms you save stay in that browser.
 
 ### Setting up the connections (once, by the site owner)
 
-`web/config.json` holds two public values:
+`web/config.json` holds one public value:
 
 - **`spotifyClientId`**: create an app at developer.spotify.com (the owner needs
   Premium). Add `https://thequaliteacha.github.io/yantra/web/` as a Redirect URI,
   and choose Web API and Web Playback SDK. In Development Mode the app serves up
-  to five listeners, each added by email under User Management.
-- **`appleDeveloperToken`**: with an Apple Developer account, make a MusicKit
-  key, then run `python3 web/make_apple_token.py --key AuthKey_XXXX.p8 --key-id
-  XXXX --team-id YYYY`. The token works only from this site and lasts about six
-  months. Keep the `.p8` file out of the repo. Your own
+  to five listeners, each added by email under User Management. Your own
 audio files and the silenced notifications belong to the desktop app.
 
 ## Running the desktop app

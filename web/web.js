@@ -32,7 +32,11 @@
 
   /* ---- the shelf ---- */
 
+  // Apple Music is off for now, as on the desktop. The Apple links stay in the data.
+  const APPLE_MUSIC = false;
+
   function appleId(disc) {
+    if (!APPLE_MUSIC) return "";
     const source = String(disc.source || "");
     if (!source.startsWith("apple:")) return "";
     const id = source.slice(6).trim();
@@ -340,7 +344,7 @@
   function songLink(item, prefer) {
     const row = (links[item.discId] || {})[String(item.n)] || {};
     const order = prefer === "apple" ? ["apple", "spotify"] : ["spotify", "apple"];
-    for (const name of order) if (row[name]) return row[name];
+    for (const name of order) if (row[name] && (name !== "apple" || APPLE_MUSIC)) return row[name];
     return "";
   }
 
@@ -543,7 +547,7 @@
   const apple = {
     music: null,
     loading: null,
-    available() { return !!config.appleDeveloperToken; },
+    available() { return APPLE_MUSIC && !!config.appleDeveloperToken; },
     connected() { return !!(this.music && this.music.isAuthorized); },
     load() {
       if (!this.available()) return Promise.resolve();

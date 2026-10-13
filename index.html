@@ -692,10 +692,15 @@ let heardId = "";
 let playNote = "";
 
 /* Where the music plays when a sitting begins. The choice is kept in this browser. */
+// Apple Music is off for now; its choice is removed below. Set true to bring it back.
+const APPLE_MUSIC = false;
 let listenOn = "spotify";
 try {
-  if (localStorage.getItem("yantra.listenOn") === "apple") listenOn = "apple";
+  if (APPLE_MUSIC && localStorage.getItem("yantra.listenOn") === "apple") listenOn = "apple";
 } catch (e) {}
+if (!APPLE_MUSIC) {
+  document.querySelectorAll('#listen button[data-source="apple"]').forEach((node) => node.remove());
+}
 
 function paintListen() {
   document.querySelectorAll("#listen button").forEach((button) => {
