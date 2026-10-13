@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Yantra</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #05040a; overflow: hidden; color: #f3e6c8; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  button, ol { font: inherit; }
+  #gate {
+    position: fixed; inset: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    padding: 4vh 4vw;
+    background: rgba(5, 4, 10, 0.5);
+    transition: opacity 0.8s ease;
+  }
+  body.sitting #gate { opacity: 0; pointer-events: none; }
+  .shelf {
+    width: min(76rem, 94vw);
+    max-height: 90vh;
+    display: grid;
+    grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+    gap: 1rem 2.4rem;
+    background: rgba(5, 4, 10, 0.62);
+    padding: 1.15rem 1.6rem 1.2rem;
+    overflow: auto;
+  }
+  .menus { grid-column: 1 / -1; display: flex; gap: 1.6rem; }
+  .menus button {
+    background: transparent; border: 0; padding: 0.15rem 0; cursor: pointer; font: inherit;
+    letter-spacing: 0.22em; text-transform: uppercase; font-size: 0.72rem;
+    color: rgba(232, 204, 146, 0.45);
+  }
+  .menus button.on { color: #f7edd4; }
+  .index, .face { min-width: 0; min-height: 0; }
+  .kicker, .year {
+    letter-spacing: 0.28em; text-transform: uppercase;
+    font-size: 0.72rem; color: rgba(232, 204, 146, 0.72); margin: 0;
+  }
+  h1 {
+    font-family: Palatino, "Iowan Old Style", "Times New Roman", serif;
+    font-weight: 500; font-size: clamp(2.1rem, 4vw, 3.5rem); line-height: 0.95;
+    margin: 0.15rem 0 0.35rem; color: #f7edd4;
+  }
+  .line { max-width: 36rem; color: rgba(243, 230, 200, 0.78); line-height: 1.45; margin: 0.4rem 0; }
+  #circles { display: flex; flex-wrap: wrap; gap: 0.35rem 0.7rem; margin: 0.8rem 0 0.5rem; }
+  #circles button, #discs button, #play, #apple, #local, #install, #form-play, #save-form, .mini {
+    background: transparent; color: rgba(232, 204, 146, 0.62);
+    border: 0; padding: 0.18rem 0; text-align: left; cursor: pointer; font: inherit;
+  }
+  #circles button { letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.78rem; }
+  #discs button.hearing { color: #e6c98a; }
+  #circles button.on, #discs button.on, #discs button.on.hearing { color: #f7edd4; }
+  #discs, #saved {
+    max-height: 68vh; overflow: auto; display: flex; flex-direction: column;
+    scrollbar-width: thin; scrollbar-color: rgba(230, 201, 138, 0.35) transparent;
+  }
+  #discs button { font-size: 0.95rem; }
+  #now { min-height: 1.2rem; color: #e6c98a; margin: 0.35rem 0 0; }
+  #note { min-height: 1.2rem; color: rgba(232, 204, 146, 0.7); font-size: 0.92rem; margin: 0.15rem 0 0.4rem; }
+  .actions { display: flex; gap: 0.7rem; align-items: center; }
+  ol {
+    list-style: none; margin: 0.5rem 0 0.9rem; padding: 0;
+    max-height: 52vh; overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(230, 201, 138, 0.35) transparent;
+  }
+  ol::-webkit-scrollbar { width: 4px; }
+  ol::-webkit-scrollbar-thumb { background: rgba(230, 201, 138, 0.35); }
+  li {
+    display: grid; grid-template-columns: 1.6rem 1fr auto auto; gap: 0.55rem 0.7rem;
+    padding: 0.16rem 0; color: rgba(232, 204, 146, 0.45); font-size: 0.92rem;
+    align-items: baseline;
+  }
+  #tracks li { grid-template-columns: 1.6rem minmax(0, 1fr) auto auto auto; }
+  li.on, #tracks li.picked { color: #f7edd4; }
+  #form-hint { min-height: 1.2rem; }
+  .chakra { letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.68rem; color: rgba(232, 204, 146, 0.55); }
+  #form-tracks { max-height: 52vh; }
+  li.wait { opacity: 0.38; }
+  .saved-row { display: flex; gap: 0.9rem; align-items: baseline; }
+  .saved-row .name { flex: 1; text-align: left; }
+  .saved-row .name.on { color: #f7edd4; }
+  #playlist-name {
+    background: transparent; color: #f3e6c8; border: 0;
+    border-bottom: 1px solid rgba(230, 201, 138, 0.35);
+    font: inherit; width: min(16rem, 40vw); padding: 0.35rem 0;
+  }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .mini { border: 0; padding: 0 0.25rem; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.68rem; }
+  #sizes button {
+    border: 1px solid rgba(230, 201, 138, 0.35);
+    padding: 0.35rem 0.7rem; letter-spacing: 0.14em;
+  }
+  #saved { gap: 0.2rem; margin-top: 0.7rem; }
+  #begin, #play, #apple, #local, #install, #form-play, #save-form {
+    background: transparent; color: #f3e6c8;
+    border: 1px solid rgba(230, 201, 138, 0.7);
+    padding: 0.7rem 1.1rem; letter-spacing: 0.14em; text-transform: uppercase;
+    cursor: pointer;
+  }
+  #play, #apple, #local, #install, #form-play, #save-form { border-color: rgba(230, 201, 138, 0.35); color: rgba(243, 230, 200, 0.8); }
+  #begin:hover, #play:hover, #apple:hover, #local:hover, #install:hover, #form-play:hover, #save-form:hover { background: rgba(230, 201, 138, 0.1); }
+  #caption {
+    position: fixed; left: 0; right: 0; bottom: 6vh; z-index: 3;
+    text-align: center; pointer-events: none;
+    opacity: 0; transition: opacity 1.2s ease;
+  }
+  body.sitting #caption.show { opacity: 1; }
+  body.sitting.quiet #caption.show { opacity: 0.38; }
+  #cap-title {
+    font-family: Palatino, "Iowan Old Style", serif;
+    font-size: 1.35rem; margin: 0; color: rgba(247, 237, 212, 0.88);
+  }
+  #cap-place { margin: 0.25rem 0 0.45rem; letter-spacing: 0.18em; font-size: 0.72rem; text-transform: uppercase; color: rgba(230, 201, 138, 0.7); }
+  #cap-bar { width: min(16rem, 40vw); height: 1px; margin: 0 auto; background: rgba(230, 201, 138, 0.18); }
+  #cap-bar span { display: block; height: 1px; background: rgba(243, 230, 200, 0.8); width: 0; }
+  #end {
+    position: fixed; top: 1.2rem; right: 1.2rem; z-index: 4;
+    background: transparent; color: rgba(243, 230, 200, 0.8);
+    border: 1px solid rgba(230, 201, 138, 0.35);
+    padding: 0.4rem 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+    font-size: 0.72rem; cursor: pointer;
+    opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+  }
+  body.sitting.awake #end { opacity: 1; pointer-events: auto; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="gate">
+  <div class="shelf">
+    <div class="menus">
+      <button id="menu-albums" type="button" class="on">Albums</button>
+      <button id="menu-forms" type="button">Playlists</button>
+    </div>
+    <div class="index" id="album-index">
+      <p class="kicker">Students of Rama</p>
+      <div id="circles"></div>
+      <div id="discs"></div>
+    </div>
+    <div class="face" id="album-face">
+      <h1 id="disc-title">Samurai</h1>
+      <p class="year" id="disc-meta">Zazen · 1993</p>
+      <p class="line" id="disc-line"></p>
+      <p id="now"></p>
+      <p id="note"></p>
+      <ol id="tracks"></ol>
+      <div class="actions">
+        <button id="play" type="button">Open in Spotify</button>
+        <button id="apple" type="button" hidden>Open in Apple Music</button>
+        <button id="local" type="button" hidden>Play installed</button>
+        <button id="install" type="button" hidden>Install tracks</button>
+        <button id="begin" type="button">Begin sitting</button>
+      </div>
+      <input id="install-file" type="file" accept="audio/*,.mp3,.flac,.m4a,.ogg,.wav,.aiff,.aac,.opus" multiple hidden>
+    </div>
+    <div class="index" id="form-index" hidden>
+      <p class="kicker">Playlists</p>
+      <div id="saved"></div>
+    </div>
+    <div class="face" id="form-face" hidden>
+      <p class="kicker">Naval, heart, third eye</p>
+      <h1 id="form-title">A form</h1>
+      <div class="actions" id="sizes"></div>
+      <p id="form-hint" class="line"></p>
+      <ol id="form-tracks"></ol>
+      <div class="actions">
+        <input id="playlist-name" type="text" maxlength="80" placeholder="Name this form">
+        <button id="save-form" type="button">Save</button>
+        <button id="form-play" type="button">Sit</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="caption">
+  <p id="cap-title"></p>
+  <p id="cap-place"></p>
+  <div id="cap-bar"><span id="cap-fill"></span></div>
+</div>
+<button id="end" type="button">End sitting</button>
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+const RAW = [
+  [53.65669559977147, 123.20508075688774, 250, 246.34330440022853],
+  [52.984011026495736, 174.24660560764943, 50, 247.01598897350425],
+  [98.71823312733801, 220.03828947357886, 123.20508075688774, 201.281766872662],
+  [78.26467997914015, 197.92315674002487, 78.10499177949904, 221.73532002085986],
+  [90.4856922951427, 78.10499177949904, 160.66014976539617, 209.51430770485734],
+  [80.98384838952128, 103.12199145016105, 220.03828947357886, 219.0161516104787],
+  [114.9488500600036, 160.66014976539617, 103.12199145016105, 185.0511499399964],
+  [116.35142605010424, 134.30757626706648, 197.92315674002487, 183.64857394989576],
+  [124.61190803072795, 144.79777263138968, 174.24660560764943, 175.38809196927207],
+];
+const CENTER = 150;
+const UNIT = 100;
+
+let level = 0;
+let shown = 0;
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.floor(innerWidth * dpr);
+  canvas.height = Math.floor(innerHeight * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener("resize", resize);
+resize();
+
+async function poll() {
+  try {
+    const data = await (await fetch("/audio", { cache: "no-store" })).json();
+    level = data.rms || 0;
+  } catch (e) {}
+  setTimeout(poll, 180);
+}
+poll();
+
+function mapPoint(x, y, cx, cy, R) {
+  return [cx + ((x - CENTER) / UNIT) * R, cy + ((y - CENTER) / UNIT) * R];
+}
+function triangle(raw, cx, cy, R) {
+  const [lx, y1, y2, rx] = raw;
+  const mx = (lx + rx) / 2;
+  return [mapPoint(lx, y1, cx, cy, R), mapPoint(rx, y1, cx, cy, R), mapPoint(mx, y2, cx, cy, R)];
+}
+function span(pts) {
+  let m = 0;
+  for (const p of pts) m = Math.max(m, Math.hypot(p[0], p[1]));
+  return m;
+}
+
+function partial(ctx, pts, portion) {
+  if (portion <= 0) return;
+  const ring = pts.concat([pts[0]]);
+  const lens = [];
+  let total = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const d = Math.hypot(ring[i + 1][0] - ring[i][0], ring[i + 1][1] - ring[i][1]);
+    lens.push(d);
+    total += d;
+  }
+  let left = total * Math.min(1, portion);
+  ctx.moveTo(ring[0][0], ring[0][1]);
+  for (let i = 0; i < lens.length && left > 0; i++) {
+    const t = Math.min(1, left / lens[i]);
+    ctx.lineTo(
+      ring[i][0] + (ring[i + 1][0] - ring[i][0]) * t,
+      ring[i][1] + (ring[i + 1][1] - ring[i][1]) * t
+    );
+    left -= lens[i];
+  }
+}
+
+function arcPortion(ctx, cx, cy, r, portion) {
+  if (portion <= 0) return;
+  const start = -Math.PI / 2;
+  const end = start + Math.min(1, portion) * Math.PI * 2;
+  ctx.moveTo(cx + Math.cos(start) * r, cy + Math.sin(start) * r);
+  ctx.arc(cx, cy, r, start, end);
+}
+
+function petalPoints(cx, cy, angle, rIn, rOut, half) {
+  const steps = 56;
+  const pts = [];
+  const edge = (sign) => {
+    for (let i = 0; i <= steps; i++) {
+      const t = sign === 1 ? i / steps : 1 - (i / steps);
+      const along = sign === 1 ? t : 1 - t;
+      const bulge = Math.sin(along * Math.PI) * half * 0.42;
+      const r = rIn + (rOut - rIn) * Math.pow(along, 0.72);
+      const a = angle + sign * (half * (1 - along) + bulge);
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+    }
+  };
+  edge(-1);
+  edge(1);
+  return pts;
+}
+
+function petal(ctx, cx, cy, angle, rIn, rOut, half) {
+  const steps = 16;
+  let started = false;
+  const edge = (sign) => {
+    for (let i = 0; i <= steps; i++) {
+      const t = sign === 1 ? i / steps : 1 - (i / steps);
+      const along = sign === 1 ? t : 1 - t;
+      const bulge = Math.sin(along * Math.PI) * half * 0.42;
+      const r = rIn + (rOut - rIn) * Math.pow(along, 0.72);
+      const a = angle + sign * (half * (1 - along) + bulge);
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    }
+  };
+  edge(-1);
+  edge(1);
+  ctx.closePath();
+}
+
+function circle(ctx, cx, cy, r) {
+  ctx.moveTo(cx + r, cy);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+}
+
+function bhupura(ctx, cx, cy, R, grow) {
+  if (grow <= 0) return;
+  const layers = [2.08, 2.2, 2.34];
+  const gap = R * 0.2;
+  const depth = R * 0.18 * grow;
+  for (const k of layers) {
+    const half = R * k;
+    const segs = [
+      [[-half, -half], [-gap, -half]],
+      [[gap, -half], [half, -half]],
+      [[half, -half], [half, -gap]],
+      [[half, gap], [half, half]],
+      [[half, half], [gap, half]],
+      [[-gap, half], [-half, half]],
+      [[-half, half], [-half, gap]],
+      [[-half, -gap], [-half, -half]],
+    ];
+    for (const [a, b] of segs) {
+      ctx.moveTo(cx + a[0], cy + a[1]);
+      ctx.lineTo(cx + a[0] + (b[0] - a[0]) * grow, cy + a[1] + (b[1] - a[1]) * grow);
+    }
+  }
+  const doors = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const half = R * 2.34;
+  for (const [dx, dy] of doors) {
+    if (dx !== 0) {
+      const x0 = cx + dx * half;
+      const x1 = cx + dx * (half + depth);
+      ctx.moveTo(x0, cy - gap); ctx.lineTo(x1, cy - gap);
+      ctx.lineTo(x1, cy + gap); ctx.lineTo(x0, cy + gap);
+    } else {
+      const y0 = cy + dy * half;
+      const y1 = cy + dy * (half + depth);
+      ctx.moveTo(cx - gap, y0); ctx.lineTo(cx - gap, y1);
+      ctx.lineTo(cx + gap, y1); ctx.lineTo(cx + gap, y0);
+    }
+  }
+}
+
+function gold(ctx, alpha, blur, glow) {
+  ctx.lineWidth = Math.max(1.15, Math.min(innerWidth, innerHeight) * 0.0018);
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.strokeStyle = `rgba(232, 204, 146, ${alpha})`;
+  const lift = glow == null ? 0.35 + shown * 0.35 : glow;
+  ctx.shadowColor = `rgba(214, 164, 72, ${lift})`;
+  ctx.shadowBlur = blur;
+}
+
+function drawSri(ctx, cx, cy, R, reveal, bloom) {
+  bloom = bloom || 0;
+  const tris = RAW.map((raw) => triangle(raw, cx, cy, R));
+  tris.sort((a, b) => span(a.map((p) => [p[0] - cx, p[1] - cy])) - span(b.map((p) => [p[0] - cx, p[1] - cy])));
+
+  ctx.beginPath();
+  const binduEnd = 0.07;
+  if (reveal > 0.01) {
+    const br = R * 0.018 * Math.min(1, reveal / binduEnd);
+    circle(ctx, cx, cy, br);
+  }
+
+  const triStart = 0.07;
+  const triEnd = 0.6;
+  const triSpan = (triEnd - triStart) / tris.length;
+  tris.forEach((pts, i) => {
+    const local = (reveal - (triStart + i * triSpan)) / triSpan;
+    partial(ctx, pts, local);
+  });
+
+  const eightStart = 0.6;
+  const eightEnd = 0.78;
+  const eightSpan = (eightEnd - eightStart) / 8;
+  arcPortion(ctx, cx, cy, R * 1.03, Math.min(1, Math.max(0, (reveal - eightStart) / 0.04)));
+  arcPortion(ctx, cx, cy, R * 1.08, Math.min(1, Math.max(0, (reveal - eightStart) / 0.04)));
+  for (let i = 0; i < 8; i++) {
+    const local = (reveal - (eightStart + i * eightSpan)) / eightSpan;
+    if (local <= 0) continue;
+    const a = -Math.PI / 2 + (i * Math.PI * 2) / 8;
+    partial(ctx, petalPoints(cx, cy, a, R * 1.12, R * 1.46, (Math.PI / 8) * 0.72), local);
+  }
+  arcPortion(ctx, cx, cy, R * 1.5, Math.min(1, Math.max(0, (reveal - 0.74) / 0.04)));
+
+  const sixteenStart = 0.78;
+  const sixteenEnd = 0.9;
+  const sixteenSpan = (sixteenEnd - sixteenStart) / 16;
+  for (let i = 0; i < 16; i++) {
+    const local = (reveal - (sixteenStart + i * sixteenSpan)) / sixteenSpan;
+    if (local <= 0) continue;
+    const a = -Math.PI / 2 + (i * Math.PI * 2) / 16;
+    partial(ctx, petalPoints(cx, cy, a, R * 1.54, R * 1.9, (Math.PI / 16) * 0.7), local);
+  }
+  arcPortion(ctx, cx, cy, R * 1.94, Math.min(1, Math.max(0, (reveal - 0.88) / 0.03)));
+  arcPortion(ctx, cx, cy, R * 2.0, Math.min(1, Math.max(0, (reveal - 0.88) / 0.03)));
+  bhupura(ctx, cx, cy, R, Math.min(1, Math.max(0, (reveal - 0.9) / 0.1)));
+  ctx.stroke();
+
+  if (reveal > 0.02) {
+    const pulse = 1;
+    const hot = 0.7 + bloom * 0.2;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.16 * pulse);
+    g.addColorStop(0, "rgba(255, 248, 232, 0.95)");
+    g.addColorStop(0.18, `rgba(255, 206, 120, ${hot})`);
+    g.addColorStop(1, "rgba(255, 170, 50, 0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.16 * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255, 250, 240, 0.95)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(1.5, R * 0.012), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawStar(ctx, cx, cy, R) {
+  ctx.beginPath();
+  circle(ctx, cx, cy, R);
+  circle(ctx, cx, cy, R * 0.92);
+  const up = [];
+  const down = [];
+  for (let i = 0; i < 3; i++) {
+    up.push([cx + Math.cos(-Math.PI / 2 + i * 2 * Math.PI / 3) * R * 0.86,
+             cy + Math.sin(-Math.PI / 2 + i * 2 * Math.PI / 3) * R * 0.86]);
+    down.push([cx + Math.cos(Math.PI / 2 + i * 2 * Math.PI / 3) * R * 0.86,
+               cy + Math.sin(Math.PI / 2 + i * 2 * Math.PI / 3) * R * 0.86]);
+  }
+  partial(ctx, up, 1);
+  partial(ctx, down, 1);
+  ctx.moveTo(cx + R * 0.02, cy);
+  ctx.arc(cx, cy, Math.max(2, R * 0.02), 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawCircles(ctx, cx, cy, R, rings) {
+  ctx.beginPath();
+  const r = R * 0.34;
+  circle(ctx, cx, cy, r);
+  for (let i = 0; i < 6; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 3;
+    circle(ctx, cx + Math.cos(a) * r, cy + Math.sin(a) * r, r);
+    if (rings > 1) {
+      circle(ctx, cx + Math.cos(a) * r * 2, cy + Math.sin(a) * r * 2, r);
+      const b = a + Math.PI / 6;
+      circle(ctx, cx + Math.cos(b) * r * Math.sqrt(3), cy + Math.sin(b) * r * Math.sqrt(3), r);
+    }
+  }
+  ctx.stroke();
+}
+
+function field(w, h, t) {
+  const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h * 0.48, Math.max(w, h) * 0.72);
+  const breath = 0.5 + 0.5 * Math.sin(t * 0.00015);
+  g.addColorStop(0, `rgba(${22 + breath * 10}, ${12 + breath * 6}, ${36 + breath * 8}, 1)`);
+  g.addColorStop(0.45, "#0c0816");
+  g.addColorStop(1, "#05040a");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+}
+
+function dots(cx, cy, R, t) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(t * 0.00004);
+  ctx.fillStyle = "rgba(214, 176, 106, 0.28)";
+  const n = 108;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const rad = R * 2.72;
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * rad, Math.sin(a) * rad, i % 9 === 0 ? 1.7 : 0.9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+const SCENES = [
+  { name: "sri", hold: 150 },
+  { name: "star", hold: 70 },
+  { name: "seed", hold: 60 },
+  { name: "flower", hold: 75 },
+];
+const FADE = 14;
+const BUILD = 75;
+
+function place(t) {
+  const still = new URLSearchParams(location.search).get("still");
+  if (still) {
+    const names = SCENES.map((sc) => sc.name);
+    const i = Math.max(0, names.indexOf(still));
+    return { i, reveal: 1, fade: 0 };
+  }
+  const cycle = SCENES.reduce((s, sc) => s + sc.hold, 0) + FADE * SCENES.length;
+  let x = (t / 1000) % cycle;
+  for (let i = 0; i < SCENES.length; i++) {
+    const build = SCENES[i].name === "sri" ? BUILD : 0;
+    const span = SCENES[i].hold + FADE;
+    if (x <= span) {
+      const reveal = SCENES[i].name === "sri" ? Math.min(1, x / BUILD) : 1;
+      const fade = x > SCENES[i].hold ? (x - SCENES[i].hold) / FADE : 0;
+      return { i, reveal, fade };
+    }
+    x -= span;
+  }
+  return { i: 0, reveal: 1, fade: 0 };
+}
+
+function paintScene(name, cx, cy, R, reveal) {
+  if (name === "sri") drawSri(ctx, cx, cy, R, reveal);
+  else if (name === "star") drawStar(ctx, cx, cy, R * 1.35);
+  else if (name === "seed") drawCircles(ctx, cx, cy, R * 1.7, 1);
+  else drawCircles(ctx, cx, cy, R * 1.15, 2);
+}
+
+function cutThirds(count) {
+  return [0, Math.floor(count / 3), Math.floor((2 * count) / 3), count];
+}
+
+function revealOf(series) {
+  const lengths = series.lengths || [];
+  const count = lengths.length;
+  if (!count) return 0;
+  const cuts = cutThirds(count);
+  const index = Math.max(0, Math.min(count - 1, series.index || 0));
+  let set = 2;
+  if (index < cuts[1]) set = 0;
+  else if (index < cuts[2]) set = 1;
+  const from = cuts[set];
+  const to = cuts[set + 1];
+  let total = 0;
+  let done = 0;
+  for (let i = from; i < to; i++) {
+    let len = lengths[i] || 0;
+    if (i === index && series.length > 1) len = series.length;
+    if (len < 1) len = 1;
+    total += len;
+    if (i < index) done += len;
+  }
+  const cur = series.length > 1 ? series.length : (lengths[index] || 1);
+  const pos = Math.max(0, Math.min(cur, series.position || 0));
+  done += pos;
+  const local = total > 0 ? Math.min(1, done / total) : 0;
+  return (set + local) / 3;
+}
+
+function advancePace(state, series, now) {
+  const key = (series.key || "") + ":" + (series.index || 0);
+  const playing = series.status === "Playing";
+  if (state.key !== key) {
+    state.key = key;
+    state.pos = Math.max(0, series.position || 0);
+    state.at = now;
+  } else {
+    const frame = Math.min(0.25, Math.max(0, (now - (state.at || now)) / 1000));
+    state.at = now;
+    if (playing) state.pos += frame;
+    const projected = (series.position || 0) + (playing ? Math.max(0, (now - (series.at || now)) / 1000) : 0);
+    if (projected > state.pos) state.pos = projected;
+  }
+  const listed = (series.lengths || [])[series.index] || 0;
+  const cap = series.length > 1 ? series.length : listed;
+  if (cap > 1 && state.pos > cap) state.pos = cap;
+  return Object.assign({}, series, { position: state.pos });
+}
+
+function forwardPortion(state, key, portion) {
+  const next = Math.max(0, Math.min(1, portion || 0));
+  if (state.key !== key) {
+    state.key = key;
+    state.portion = next;
+  } else if (next > state.portion) {
+    state.portion = next;
+  }
+  return state.portion;
+}
+
+function stageReveal(portion) {
+  const p = Math.max(0, Math.min(1, portion));
+  if (p <= 1 / 3) return 0.045 + (p * 3) * 0.555;
+  if (p <= 2 / 3) return 0.6 + ((p - 1 / 3) * 3) * 0.18;
+  return 0.78 + ((p - 2 / 3) * 3) * 0.22;
+}
+
+function frame(now) {
+  const w = innerWidth;
+  const h = innerHeight;
+  shown += (level - shown) * 0.08;
+  field(w, h, now);
+  const cx = w / 2;
+  const cy = h / 2;
+  const R = Math.min(w, h) * 0.155;
+  const sitting = document.body.classList.contains("sitting");
+  const breath = sitting ? 1 : 1 + Math.sin(now * 0.00035) * 0.012 + shown * 0.028;
+  let reveal = 1;
+  let fade = 0;
+  let name = "sri";
+  let nextName = "star";
+  let bloom = 0;
+  if (sitting) {
+    if (!window.ink) window.ink = { key: "", portion: 0 };
+    if (!window.pace) window.pace = { key: "", pos: 0 };
+    const live = window.series;
+    let portion = window.ink.portion || 0;
+    if (live && live.lengths && live.lengths.length) {
+      const paced = advancePace(window.pace, live, now);
+      const inkKey = (window.drawEpoch || 0) + ":" + (live.key || "");
+      portion = forwardPortion(window.ink, inkKey, revealOf(paced));
+    }
+    reveal = stageReveal(portion);
+    const key = live ? live.key + ":" + live.index : "";
+    if (key !== window.lastSeriesKey) {
+      window.lastSeriesKey = key;
+      window.seriesEdge = now;
+    }
+    const age = now - (window.seriesEdge || now);
+    bloom = age >= 0 && age < 1700 ? 1 - age / 1700 : 0;
+  } else {
+    window.pace.key = "";
+    window.pace.pos = 0;
+    window.ink.key = "";
+    window.ink.portion = 0;
+    dots(cx, cy, R, now);
+    const placed = place(now);
+    reveal = placed.reveal;
+    fade = placed.fade;
+    name = SCENES[placed.i].name;
+    nextName = SCENES[(placed.i + 1) % SCENES.length].name;
+  }
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(breath, breath);
+  ctx.translate(-cx, -cy);
+  if (sitting) {
+    gold(ctx, 0.92, 16, 0.55);
+    drawSri(ctx, cx, cy, R, reveal, bloom);
+  } else {
+    gold(ctx, 0.9 * (1 - fade), 10 + shown * 16);
+    ctx.globalAlpha = 1 - fade;
+    paintScene(name, cx, cy, R, name === "sri" ? reveal : 1);
+    if (fade > 0) {
+      ctx.globalAlpha = fade;
+      gold(ctx, 0.9, 10 + shown * 16);
+      paintScene(nextName, cx, cy, R, nextName === "sri" ? fade : 1);
+    }
+  }
+  ctx.restore();
+  requestAnimationFrame(frame);
+}
+window.pace = { key: "", pos: 0 };
+window.ink = { key: "", portion: 0 };
+window.drawEpoch = 0;
+requestAnimationFrame(frame);
+</script>
+<script>
+const params = new URLSearchParams(location.search);
+const gateNow = document.getElementById("now");
+const note = document.getElementById("note");
+const tracks = document.getElementById("tracks");
+const circles = document.getElementById("circles");
+const discs = document.getElementById("discs");
+const discTitle = document.getElementById("disc-title");
+const discMeta = document.getElementById("disc-meta");
+const discLine = document.getElementById("disc-line");
+const caption = document.getElementById("caption");
+const capTitle = document.getElementById("cap-title");
+const capPlace = document.getElementById("cap-place");
+const capFill = document.getElementById("cap-fill");
+
+let collection = null;
+let selectedId = "samurai";
+let circleId = "zazen";
+let following = true;
+let heardId = "";
+let playNote = "";
+let snap = null;
+let snapAt = 0;
+let shownTrack = 0;
+let quietTimer = 0;
+
+function selected() {
+  if (!collection) return null;
+  return collection.discs.find((disc) => disc.id === selectedId) || collection.discs[0];
+}
+
+function fold(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function settle() {
+  clearTimeout(quietTimer);
+  document.body.classList.remove("quiet");
+  if (!document.body.classList.contains("sitting")) return;
+  quietTimer = setTimeout(() => document.body.classList.add("quiet"), 8000);
+}
+
+function clock(seconds) {
+  const s = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(s / 60);
+  return m + ":" + String(s % 60).padStart(2, "0");
+}
+
+function renderShelf() {
+  const disc = selected();
+  if (!disc || !collection) return;
+  discTitle.textContent = disc.title;
+  discMeta.textContent = disc.artist + "  ·  " + disc.year;
+  discLine.textContent = collection.line;
+  circles.replaceChildren();
+  for (const circle of collection.circles) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = circle.name;
+    button.classList.toggle("on", circle.id === circleId);
+    button.addEventListener("click", () => {
+      circleId = circle.id;
+      const current = collection.discs.find((item) => item.id === selectedId);
+      if (!current || current.circle !== circleId) {
+        const first = collection.discs.find((item) => item.circle === circleId);
+        if (first) selectedId = first.id;
+        following = selectedId === heardId;
+      }
+      renderShelf();
+      applyNow();
+    });
+    circles.append(button);
+  }
+  discs.replaceChildren();
+  for (const item of collection.discs.filter((item) => item.circle === circleId)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = item.title;
+    button.dataset.id = item.id;
+    button.classList.toggle("on", item.id === selectedId);
+    button.classList.toggle("hearing", item.id === heardId);
+    button.addEventListener("click", () => {
+      selectedId = item.id;
+      circleId = item.circle;
+      following = item.id === heardId;
+      renderShelf();
+      applyNow();
+    });
+    discs.append(button);
+  }
+  tracks.replaceChildren();
+  for (const track of disc.tracks) {
+    const li = document.createElement("li");
+    li.dataset.n = String(track.n);
+    li.dataset.title = fold(track.title);
+    const num = document.createElement("span");
+    num.textContent = String(track.n);
+    const name = document.createElement("span");
+    name.textContent = track.title;
+    const len = document.createElement("span");
+    len.textContent = track.length ? clock(track.length) : "";
+    const tag = document.createElement("span");
+    tag.className = "chakra";
+    tag.textContent = chakraLabel(track.chakra);
+    const picked = draft.some((item) => item.discId === disc.id && item.n === track.n);
+    li.classList.toggle("picked", picked);
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "mini";
+    add.textContent = picked ? "Added" : "Add";
+    add.addEventListener("click", () => {
+      editForm({ op: "take", tracks: draft, discId: disc.id, n: track.n });
+    });
+    li.append(num, name, len, tag, add);
+    tracks.append(li);
+  }
+  paintActions();
+}
+
+function chakraLabel(id) {
+  const found = collection && collection.chakras && collection.chakras.find((item) => item.id === id);
+  if (found) return found.name;
+  if (id === "naval") return "Naval chakra";
+  if (id === "heart") return "Heart chakra";
+  if (id === "eye") return "Third eye chakra";
+  return "";
+}
+
+function installedCount(disc) {
+  if (snap && snap.installed && disc && snap.installed[disc.id] != null) return Number(snap.installed[disc.id]) || 0;
+  return disc ? Number(disc.installed) || 0 : 0;
+}
+
+function paintActions() {
+  const disc = selected();
+  const play = document.getElementById("play");
+  const apple = document.getElementById("apple");
+  const local = document.getElementById("local");
+  const install = document.getElementById("install");
+  const onSpotify = !!(disc && disc.onSpotify);
+  const onApple = !!(disc && disc.onApple);
+  const count = installedCount(disc);
+  play.hidden = !onSpotify && onApple;
+  play.disabled = !onSpotify;
+  play.textContent = onSpotify ? "Open in Spotify" : "Not on Spotify";
+  apple.hidden = !onApple;
+  apple.disabled = false;
+  local.hidden = onSpotify || onApple || count < 1;
+  local.textContent = "Play installed (" + count + ")";
+  install.hidden = onSpotify || onApple;
+}
+
+function shelfHint(disc) {
+  if (!disc) return "";
+  if (!disc.onSpotify && !disc.onApple && installedCount(disc) < 1) {
+    return "Name each file with its track title, then install it in Music/yantra/" + disc.id + ".";
+  }
+  if (!disc.onSpotify && !disc.onApple) return "The installed tracks play in album order.";
+  return "";
+}
+
+function livePosition() {
+  if (!snap) return 0;
+  let pos = Number(snap.position) || 0;
+  if (snap.status === "Playing") pos += (performance.now() - snapAt) / 1000;
+  const length = Number(snap.length) || 0;
+  if (length > 0) pos = Math.min(pos, length);
+  return Math.max(0, pos);
+}
+
+function applyNow() {
+  const disc = selected();
+  if (!disc) return;
+  const connected = !!(snap && snap.connected);
+  const onDisc = !!(snap && snap.discId === disc.id);
+  const current = snap && snap.track ? Number(snap.track) : 0;
+  const heardTitle = fold(snap && snap.title);
+  tracks.querySelectorAll("li").forEach((li) => {
+    const byNumber = onDisc && current && Number(li.dataset.n) === current;
+    const byTitle = onDisc && !current && heardTitle && li.dataset.title === heardTitle;
+    const on = byNumber || byTitle;
+    li.classList.toggle("on", on);
+    if (on && current !== shownTrack) li.scrollIntoView({ block: "nearest" });
+  });
+  if (current !== shownTrack) {
+    shownTrack = current;
+    settle();
+  }
+  paintActions();
+  const playing = snap && snap.discId ? [snap.artist, snap.title].filter(Boolean).join(" — ") : "";
+  if (playNote) {
+    note.textContent = playNote;
+    if (!(snap && snap.discId)) gateNow.textContent = "";
+  } else if (snap && snap.blocked) {
+    gateNow.textContent = "";
+    const who = [snap.blockedArtist, snap.blockedTitle].filter(Boolean).join(" — ");
+    note.textContent = (who || "That music") + " is outside this school.";
+  } else if (snap && snap.form && snap.title) {
+    gateNow.textContent = (snap.status === "Playing" ? "Playing  " : snap.status + "  ") + snap.title;
+    note.textContent = snap.form + "  ·  " + chakraLabel(snap.chakra);
+  } else if (!connected && !(snap && snap.source === "local")) {
+    gateNow.textContent = "";
+    note.textContent = shelfHint(disc);
+  } else if (!snap.discId) {
+    gateNow.textContent = "";
+    note.textContent = shelfHint(disc);
+  } else if (!onDisc) {
+    const heard = collection.discs.find((item) => item.id === snap.discId);
+    gateNow.textContent = playing;
+    note.textContent = heard ? "Hearing " + heard.title + "." : "";
+  } else {
+    gateNow.textContent = snap.status === "Playing" ? "Playing  " + snap.title : snap.status + "  " + snap.title;
+    note.textContent = snap.source === "local" ? "Playing the installed disc, in order." : "In album order.";
+  }
+  if (snap && snap.form && snap.title) {
+    capTitle.textContent = snap.title;
+    const place = (Number(snap.formIndex) + 1) + "  /  " + (Number(snap.formTotal) || 0);
+    const length = Number(snap.length) || 0;
+    const mark = chakraLabel(snap.chakra);
+    capPlace.textContent = length ? place + "    " + clock(livePosition()) + (mark ? "    " + mark : "") : place;
+    capFill.style.width = length ? Math.min(100, (livePosition() / length) * 100) + "%" : "0%";
+  } else {
+    capTitle.textContent = onDisc && snap.title ? snap.title : disc.title;
+    const place = onDisc && current ? current + "  /  " + disc.tracks.length : disc.artist;
+    const length = onDisc && snap ? Number(snap.length) || 0 : 0;
+    capPlace.textContent = length ? place + "    " + clock(livePosition()) : place;
+    capFill.style.width = length ? Math.min(100, (livePosition() / length) * 100) + "%" : "0%";
+  }
+  noteSeries();
+}
+
+function noteSeries() {
+  if (!snap) {
+    window.series = null;
+    return;
+  }
+  if (snap.form && Array.isArray(snap.formPlan) && snap.formPlan.length) {
+    window.series = {
+      key: "form:" + snap.form,
+      lengths: snap.formPlan.map((n) => Number(n) || 0),
+      index: Number(snap.formIndex) || 0,
+      position: Number(snap.position) || 0,
+      length: Number(snap.length) || 0,
+      status: snap.status,
+      at: snapAt || performance.now(),
+    };
+    return;
+  }
+  const disc = collection && collection.discs.find((item) => item.id === snap.discId);
+  if (disc && snap.track) {
+    window.series = {
+      key: "disc:" + disc.id,
+      lengths: disc.tracks.map((track) => Number(track.length) || 0),
+      index: Math.max(0, Number(snap.track) - 1),
+      position: Number(snap.position) || 0,
+      length: Number(snap.length) || 0,
+      status: snap.status,
+      at: snapAt || performance.now(),
+    };
+    return;
+  }
+  window.series = null;
+}
+
+function followHearing() {
+  if (!snap || !snap.discId || snap.discId === heardId) {
+    heardId = snap && snap.discId ? snap.discId : "";
+    applyNow();
+    return;
+  }
+  const previous = heardId;
+  heardId = snap.discId;
+  if (following || selectedId === previous) {
+    selectedId = heardId;
+    const disc = selected();
+    if (disc) circleId = disc.circle;
+    following = true;
+    renderShelf();
+  } else {
+    discs.querySelectorAll("button").forEach((button) => {
+      button.classList.toggle("hearing", button.dataset.id === heardId);
+    });
+  }
+  applyNow();
+}
+
+function begin() {
+  window.drawEpoch = (window.drawEpoch || 0) + 1;
+  document.body.classList.add("sitting");
+  caption.classList.add("show");
+  document.body.classList.remove("awake");
+  settle();
+  fetch("/sit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ on: true }),
+  }).catch(() => {});
+}
+
+function endSitting() {
+  document.body.classList.remove("sitting", "awake");
+  caption.classList.remove("show");
+  fetch("/sit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ on: false }),
+  }).catch(() => {});
+}
+
+let draft = [];
+let draftId = "";
+let savedForms = [];
+
+function chakraCounts(tracks) {
+  const counts = { naval: 0, heart: 0, eye: 0 };
+  (tracks || []).forEach((track) => {
+    if (counts[track.chakra] != null) counts[track.chakra] += 1;
+  });
+  return counts;
+}
+
+function formShape(tracks) {
+  const counts = chakraCounts(tracks);
+  const n = counts.naval;
+  return n > 0 && n === counts.heart && n === counts.eye && [3, 6, 9, 12].includes(n * 3);
+}
+
+function renderForm() {
+  const list = document.getElementById("form-tracks");
+  list.replaceChildren();
+  const counts = chakraCounts(draft);
+  const starts = { naval: 0, heart: counts.naval, eye: counts.naval + counts.heart };
+  draft.forEach((track, index) => {
+    const li = document.createElement("li");
+    const num = document.createElement("span");
+    num.textContent = String(index + 1);
+    const name = document.createElement("span");
+    name.textContent = track.title + "  ·  " + track.disc;
+    const tag = document.createElement("span");
+    tag.className = "chakra";
+    tag.textContent = chakraLabel(track.chakra);
+    const tools = document.createElement("span");
+    const start = starts[track.chakra] || 0;
+    const end = start + (counts[track.chakra] || 0);
+    const up = document.createElement("button");
+    up.type = "button";
+    up.className = "mini";
+    up.textContent = "Up";
+    up.disabled = index <= start;
+    up.addEventListener("click", () => editForm({ op: "move", tracks: draft, index, direction: -1 }));
+    const down = document.createElement("button");
+    down.type = "button";
+    down.className = "mini";
+    down.textContent = "Down";
+    down.disabled = index + 1 >= end;
+    down.addEventListener("click", () => editForm({ op: "move", tracks: draft, index, direction: 1 }));
+    const another = document.createElement("button");
+    another.type = "button";
+    another.className = "mini";
+    another.textContent = "Another";
+    another.addEventListener("click", () => editForm({ op: "swap", tracks: draft, index }));
+    const out = document.createElement("button");
+    out.type = "button";
+    out.className = "mini";
+    out.textContent = "Out";
+    out.addEventListener("click", () => editForm({ op: "take", tracks: draft, discId: track.discId, n: track.n }));
+    tools.append(up, down, another, out);
+    li.classList.toggle("wait", track.playable === false);
+    li.append(num, name, tag, tools);
+    list.append(li);
+  });
+  const hint = document.getElementById("form-hint");
+  if (!draft.length) {
+    hint.textContent = "Choose songs from the albums, or a number above.";
+  } else if (!formShape(draft)) {
+    hint.textContent = "Naval " + counts.naval + "  ·  Heart " + counts.heart + "  ·  Third eye " + counts.eye + ". The three stay equal.";
+  } else {
+    hint.textContent = "";
+  }
+  const named = document.getElementById("playlist-name").value.trim();
+  document.getElementById("form-title").textContent = named || "A form";
+  document.getElementById("form-play").disabled = !formReady(draft);
+  const saved = document.getElementById("saved");
+  saved.replaceChildren();
+  savedForms.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "saved-row";
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "name";
+    open.classList.toggle("on", item.id === draftId);
+    open.textContent = item.name;
+    open.addEventListener("click", () => {
+      draft = item.tracks.slice();
+      draftId = item.id;
+      document.getElementById("playlist-name").value = item.name;
+      renderForm();
+    });
+    row.append(open);
+    if (formReady(item.tracks)) {
+      const sit = document.createElement("button");
+      sit.type = "button";
+      sit.className = "mini";
+      sit.textContent = "Sit";
+      sit.addEventListener("click", () => sitSaved(item));
+      row.append(sit);
+    }
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "mini";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => editForm({ op: "delete", id: item.id }));
+    row.append(remove);
+    saved.append(row);
+  });
+}
+
+function formReady(tracks) {
+  return formShape(tracks) && tracks.every((track) => track.playable);
+}
+
+async function playForm(name, id, tracks) {
+  if (!formReady(tracks)) return;
+  playNote = "Opening " + name + ".";
+  applyNow();
+  try {
+    const data = await (await fetch("/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source: "playlist", id: id || "", name, tracks }),
+    })).json();
+    if (!data.ok) {
+      playNote = data.error || "This form did not play.";
+      applyNow();
+      return;
+    }
+    playNote = "";
+    begin();
+  } catch (e) {
+    playNote = "This form did not play.";
+    applyNow();
+  }
+}
+
+async function sitSaved(item) {
+  if (!formReady(item.tracks)) return;
+  draft = item.tracks.slice();
+  draftId = item.id;
+  document.getElementById("playlist-name").value = item.name;
+  renderForm();
+  await playForm(item.name, item.id, item.tracks);
+}
+
+async function editForm(body) {
+  const data = await (await fetch("/playlists", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })).json();
+  if (body.op === "form") draftId = "";
+  if (data.tracks) draft = data.tracks;
+  if (data.playlists) {
+    savedForms = data.playlists;
+    if (body.op === "delete" && body.id === draftId) draftId = "";
+  }
+  if (data.id) draftId = data.id;
+  if (!data.ok && data.error) {
+    playNote = data.error;
+    applyNow();
+  }
+  renderForm();
+  if (collection) renderShelf();
+}
+
+async function openDisc() {
+  const disc = selected();
+  if (!disc || !disc.onSpotify) return;
+  playNote = "Opening " + disc.title + ".";
+  applyNow();
+  try {
+    const response = await fetch("/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: disc.id, source: "spotify" }),
+    });
+    const data = await response.json();
+    playNote = data.ok ? "Opening " + disc.title + "." : (data.error || "This disc did not open.");
+  } catch (e) {
+    playNote = "This disc did not open.";
+  }
+  applyNow();
+  setTimeout(() => {
+    playNote = "";
+    applyNow();
+  }, 6000);
+}
+
+async function openApple() {
+  const disc = selected();
+  if (!disc || !disc.onApple) return;
+  playNote = "Opening " + disc.title + ".";
+  applyNow();
+  try {
+    const response = await fetch("/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: disc.id, source: "apple" }),
+    });
+    const data = await response.json();
+    playNote = data.ok ? "Opening " + disc.title + "." : (data.error || "This disc did not open.");
+  } catch (e) {
+    playNote = "This disc did not open.";
+  }
+  applyNow();
+  setTimeout(() => {
+    playNote = "";
+    applyNow();
+  }, 6000);
+}
+
+async function openInstalled() {
+  const disc = selected();
+  if (!disc || disc.onSpotify || disc.onApple) return;
+  playNote = "Playing the installed " + disc.title + ".";
+  applyNow();
+  try {
+    const data = await (await fetch("/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: disc.id, source: "local" }),
+    })).json();
+    playNote = data.ok ? "Playing the installed tracks in order." : (data.error || "The installed tracks did not play.");
+  } catch (e) {
+    playNote = "The installed tracks did not play.";
+  }
+  applyNow();
+}
+
+async function installChosen(fileList) {
+  const disc = selected();
+  if (!disc || disc.onSpotify || disc.onApple) return;
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  let kept = 0;
+  let refused = "";
+  for (const file of files) {
+    const body = new FormData();
+    body.append("id", disc.id);
+    body.append("file", file, file.name);
+    const data = await (await fetch("/install", { method: "POST", body })).json();
+    if (data.ok) kept += 1;
+    else refused = data.error || "That file does not match a track on this disc.";
+  }
+  playNote = kept
+    ? "Installed " + kept + (kept === 1 ? " track." : " tracks.") + (refused ? " " + refused : "")
+    : refused;
+  collection = await (await fetch("/collection", { cache: "no-store" })).json();
+  renderShelf();
+  applyNow();
+}
+
+document.getElementById("begin").addEventListener("click", begin);
+document.getElementById("play").addEventListener("click", openDisc);
+document.getElementById("apple").addEventListener("click", openApple);
+document.getElementById("local").addEventListener("click", openInstalled);
+document.getElementById("install").addEventListener("click", () => document.getElementById("install-file").click());
+document.getElementById("install-file").addEventListener("change", (event) => {
+  installChosen(event.target.files);
+  event.target.value = "";
+});
+document.getElementById("save-form").addEventListener("click", () => {
+  const name = document.getElementById("playlist-name").value;
+  editForm({ op: "save", id: draftId, name, tracks: draft });
+});
+document.getElementById("form-play").addEventListener("click", () => {
+  const name = document.getElementById("playlist-name").value.trim() || "Form";
+  playForm(name, draftId, draft);
+});
+let menu = params.get("menu") === "playlists" ? "playlists" : "albums";
+function showMenu() {
+  const albums = menu === "albums";
+  document.getElementById("album-index").hidden = !albums;
+  document.getElementById("album-face").hidden = !albums;
+  document.getElementById("form-index").hidden = albums;
+  document.getElementById("form-face").hidden = albums;
+  document.getElementById("menu-albums").classList.toggle("on", albums);
+  document.getElementById("menu-forms").classList.toggle("on", !albums);
+}
+document.getElementById("menu-albums").addEventListener("click", () => {
+  menu = "albums";
+  showMenu();
+});
+document.getElementById("menu-forms").addEventListener("click", () => {
+  menu = "playlists";
+  showMenu();
+});
+showMenu();
+document.getElementById("end").addEventListener("click", endSitting);
+addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.body.classList.contains("sitting")) {
+    event.preventDefault();
+    endSitting();
+  }
+});
+let wake = 0;
+addEventListener("mousemove", () => {
+  if (!document.body.classList.contains("sitting")) return;
+  document.body.classList.add("awake");
+  clearTimeout(wake);
+  wake = setTimeout(() => document.body.classList.remove("awake"), 2500);
+});
+
+fetch("/collection", { cache: "no-store" })
+  .then((response) => response.json())
+  .then((data) => {
+    collection = data;
+    if (snap && snap.discId) {
+      selectedId = snap.discId;
+      const disc = selected();
+      if (disc) circleId = disc.circle;
+      heardId = snap.discId;
+    }
+    renderShelf();
+    const sizes = document.getElementById("sizes");
+    sizes.replaceChildren();
+    for (const size of data.forms || [3, 6, 9, 12]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = String(size);
+      button.addEventListener("click", () => editForm({ op: "form", size }));
+      sizes.append(button);
+    }
+    fetch("/playlists", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((payload) => {
+        savedForms = payload.playlists || [];
+        renderForm();
+      })
+      .catch(() => {});
+    applyNow();
+    if (params.get("sit") === "1") begin();
+  })
+  .catch(() => {
+    note.textContent = "The disc shelf has not loaded yet.";
+  });
+
+async function pollNow() {
+  try {
+    snap = await (await fetch("/now", { cache: "no-store" })).json();
+    snapAt = performance.now();
+    followHearing();
+  } catch (e) {}
+  setTimeout(pollNow, 1000);
+}
+pollNow();
+setInterval(() => {
+  if (document.body.classList.contains("sitting")) applyNow();
+}, 250);
+</script>
+</body>
+</html>

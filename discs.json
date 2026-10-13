@@ -1,0 +1,2524 @@
+{
+  "line": "For the students of Rama. These discs only.",
+  "circles": [
+    {
+      "id": "zazen",
+      "name": "Zazen"
+    },
+    {
+      "id": "vayu",
+      "name": "Vayu Meditation"
+    },
+    {
+      "id": "lumikara",
+      "name": "Lumikara"
+    },
+    {
+      "id": "lineage",
+      "name": "Lineage"
+    }
+  ],
+  "discs": [
+    {
+      "id": "mystery-school",
+      "circle": "zazen",
+      "title": "Mystery School",
+      "artist": "Zazen",
+      "year": 1984,
+      "aliases": [
+        "Mystery School"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "apple:1517832825",
+      "spotifyAlbum": "6Apiw2MKhaUN5zdhqrm4Bp",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Crystal Dome (feat. Joaquin Lievano)",
+          "length": 540
+        },
+        {
+          "n": 2,
+          "title": "Harvest Time (feat. Joaquin Lievano)",
+          "length": 453
+        },
+        {
+          "n": 3,
+          "title": "Telepathy (feat. Joaquin Lievano)",
+          "length": 318
+        },
+        {
+          "n": 4,
+          "title": "Fertility Rite (feat. Joaquin Lievano)",
+          "length": 410
+        },
+        {
+          "n": 5,
+          "title": "High Priest (feat. Joaquin Lievano)",
+          "length": 518
+        },
+        {
+          "n": 6,
+          "title": "Nile Melody (feat. Joaquin Lievano)",
+          "length": 508
+        },
+        {
+          "n": 7,
+          "title": "Mystery School (feat. Joaquin Lievano)",
+          "length": 696
+        },
+        {
+          "n": 8,
+          "title": "Atlantis Rising (feat. Joaquin Lievano)",
+          "length": 894
+        }
+      ]
+    },
+    {
+      "id": "samsara",
+      "circle": "zazen",
+      "title": "Samsara",
+      "artist": "Zazen",
+      "year": 1986,
+      "aliases": [
+        "Samsara",
+        "Samsara Live At Wilshire Hall",
+        "Live At The Wilshire Ebell"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "discogs:10781544",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Parrot Talk",
+          "length": 0
+        },
+        {
+          "n": 2,
+          "title": "Territories",
+          "length": 0
+        },
+        {
+          "n": 3,
+          "title": "The Happy Clam",
+          "length": 0
+        },
+        {
+          "n": 4,
+          "title": "Midnight Kundalini",
+          "length": 0
+        },
+        {
+          "n": 5,
+          "title": "Looking Within",
+          "length": 0
+        },
+        {
+          "n": 6,
+          "title": "Shih",
+          "length": 0
+        },
+        {
+          "n": 7,
+          "title": "Spaceflakes",
+          "length": 0
+        },
+        {
+          "n": 8,
+          "title": "Alien States",
+          "length": 0
+        }
+      ]
+    },
+    {
+      "id": "mandala-of-light",
+      "circle": "zazen",
+      "title": "Mandala of Light",
+      "artist": "Zazen",
+      "year": 1987,
+      "aliases": [
+        "Mandala of Light"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "apple:1554914439",
+      "spotifyAlbum": "2DZrgJyEAlbZP2rXRySdL6",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Kalki's Journey in Ten Thousand States",
+          "length": 572
+        },
+        {
+          "n": 2,
+          "title": "Cosmic Shuffle",
+          "length": 342
+        },
+        {
+          "n": 3,
+          "title": "Tibetan Rhapsody",
+          "length": 251
+        },
+        {
+          "n": 4,
+          "title": "Kali Yuga Blues and Greens",
+          "length": 565
+        },
+        {
+          "n": 5,
+          "title": "Lord Vishnu's Forest Vision",
+          "length": 295
+        },
+        {
+          "n": 6,
+          "title": "Pacific Coast Sundance",
+          "length": 350
+        }
+      ]
+    },
+    {
+      "id": "occult-dancer",
+      "circle": "zazen",
+      "title": "Occult Dancer",
+      "artist": "Zazen",
+      "year": 1987,
+      "aliases": [
+        "Occult Dancer"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "apple:1520142810",
+      "spotifyAlbum": "3BeWzA5DuHNI7NS96vvdkg",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Sunrise",
+          "length": 406
+        },
+        {
+          "n": 2,
+          "title": "Noon",
+          "length": 550
+        },
+        {
+          "n": 3,
+          "title": "Sunset I",
+          "length": 367
+        },
+        {
+          "n": 4,
+          "title": "Sunset II",
+          "length": 443
+        },
+        {
+          "n": 5,
+          "title": "Midnight",
+          "length": 390
+        },
+        {
+          "n": 6,
+          "title": "4 A.M.",
+          "length": 245
+        }
+      ]
+    },
+    {
+      "id": "tantra",
+      "circle": "zazen",
+      "title": "Tantra",
+      "artist": "Zazen",
+      "year": 1989,
+      "aliases": [
+        "Tantra"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "apple:1597936038",
+      "spotifyAlbum": "4IQGevj0YM9YHXHbBj2BDO",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "To Live and Die in Benares (feat. Joaquin Lievano)",
+          "length": 415
+        },
+        {
+          "n": 2,
+          "title": "Ganges Melody",
+          "length": 457
+        },
+        {
+          "n": 3,
+          "title": "Temple of Vishnu",
+          "length": 576
+        },
+        {
+          "n": 4,
+          "title": "Shiva Dancing",
+          "length": 399
+        },
+        {
+          "n": 5,
+          "title": "Lao Tzu Rock",
+          "length": 459
+        },
+        {
+          "n": 6,
+          "title": "Pagoda",
+          "length": 532
+        },
+        {
+          "n": 7,
+          "title": "Temple Bells",
+          "length": 673
+        },
+        {
+          "n": 8,
+          "title": "Buddhist Symphony",
+          "length": 411
+        },
+        {
+          "n": 9,
+          "title": "Clear Light",
+          "length": 582
+        },
+        {
+          "n": 10,
+          "title": "Mandala for Tara",
+          "length": 488
+        },
+        {
+          "n": 11,
+          "title": "The Great Chod Ritual",
+          "length": 375
+        },
+        {
+          "n": 12,
+          "title": "Rama's Song",
+          "length": 623
+        },
+        {
+          "n": 13,
+          "title": "Refugee from L.A.",
+          "length": 534
+        },
+        {
+          "n": 14,
+          "title": "Money Talks, Nobody Walks",
+          "length": 456
+        },
+        {
+          "n": 15,
+          "title": "American Tantra",
+          "length": 424
+        },
+        {
+          "n": 16,
+          "title": "Zazen",
+          "length": 382
+        }
+      ]
+    },
+    {
+      "id": "light-saber",
+      "circle": "zazen",
+      "title": "Light Saber",
+      "artist": "Zazen",
+      "year": 1990,
+      "aliases": [
+        "Light Saber"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "apple:1520323841",
+      "spotifyAlbum": "4h84ePhoMMg7EvBgHxwTMV",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Shire Dance",
+          "length": 255
+        },
+        {
+          "n": 2,
+          "title": "Journey to Mordor",
+          "length": 243
+        },
+        {
+          "n": 3,
+          "title": "Song of the Cave Dwarves",
+          "length": 228
+        },
+        {
+          "n": 4,
+          "title": "Gandalf the Wizard",
+          "length": 269
+        },
+        {
+          "n": 5,
+          "title": "Entmoot",
+          "length": 261
+        },
+        {
+          "n": 6,
+          "title": "Bilbo's Song",
+          "length": 287
+        },
+        {
+          "n": 7,
+          "title": "Hobbit Plane",
+          "length": 272
+        },
+        {
+          "n": 8,
+          "title": "Lothiorien",
+          "length": 243
+        },
+        {
+          "n": 9,
+          "title": "Light Saber",
+          "length": 419
+        }
+      ]
+    },
+    {
+      "id": "breathless",
+      "circle": "zazen",
+      "title": "Breathless",
+      "artist": "Zazen",
+      "year": 1992,
+      "aliases": [
+        "Breathless"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "discogs:7360080",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Levi's Song",
+          "length": 0
+        },
+        {
+          "n": 2,
+          "title": "Quark",
+          "length": 0
+        },
+        {
+          "n": 3,
+          "title": "Rama's Dream",
+          "length": 0
+        },
+        {
+          "n": 4,
+          "title": "Zen Mind",
+          "length": 0
+        },
+        {
+          "n": 5,
+          "title": "The Bodhi Tree",
+          "length": 0
+        },
+        {
+          "n": 6,
+          "title": "Most Excellent Satori",
+          "length": 0
+        },
+        {
+          "n": 7,
+          "title": "Sarah Connor's Theme",
+          "length": 0
+        },
+        {
+          "n": 8,
+          "title": "Unified Scottie Theorem",
+          "length": 0
+        },
+        {
+          "n": 9,
+          "title": "Malibu Beach",
+          "length": 0
+        },
+        {
+          "n": 10,
+          "title": "New Mexican Rhapsody",
+          "length": 0
+        },
+        {
+          "n": 11,
+          "title": "Martin Riggs",
+          "length": 0
+        },
+        {
+          "n": 12,
+          "title": "Atlantian Love Song",
+          "length": 0
+        },
+        {
+          "n": 13,
+          "title": "Chelsea's Song",
+          "length": 0
+        },
+        {
+          "n": 14,
+          "title": "Love Song For Enlightenment",
+          "length": 0
+        }
+      ]
+    },
+    {
+      "id": "canyons-of-light",
+      "circle": "zazen",
+      "title": "Canyons of Light",
+      "artist": "Zazen",
+      "year": 1992,
+      "aliases": [
+        "Canyons of Light"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "discogs:7360073",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Utah",
+          "length": 0
+        },
+        {
+          "n": 2,
+          "title": "New Mexico",
+          "length": 0
+        },
+        {
+          "n": 3,
+          "title": "Arizona, Part One",
+          "length": 0
+        },
+        {
+          "n": 4,
+          "title": "Arizona, Part Two",
+          "length": 0
+        },
+        {
+          "n": 5,
+          "title": "California",
+          "length": 0
+        },
+        {
+          "n": 6,
+          "title": "Nevada",
+          "length": 0
+        }
+      ]
+    },
+    {
+      "id": "ecstasy",
+      "circle": "zazen",
+      "title": "Ecstasy",
+      "artist": "Zazen",
+      "year": 1992,
+      "aliases": [
+        "Ecstasy"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "apple:1516357136",
+      "spotifyAlbum": "6bsNebOSbPI4rqVYKXvj9Z",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Sunday Pastoral",
+          "length": 240
+        },
+        {
+          "n": 2,
+          "title": "Inner City Blues",
+          "length": 280
+        },
+        {
+          "n": 3,
+          "title": "Street Celebration",
+          "length": 268
+        },
+        {
+          "n": 4,
+          "title": "Fall Reflections",
+          "length": 275
+        },
+        {
+          "n": 5,
+          "title": "The Wilshire Hustle",
+          "length": 239
+        },
+        {
+          "n": 6,
+          "title": "Ecstasy",
+          "length": 241
+        },
+        {
+          "n": 7,
+          "title": "Summer Heat",
+          "length": 278
+        },
+        {
+          "n": 8,
+          "title": "Tiffany's Song",
+          "length": 248
+        },
+        {
+          "n": 9,
+          "title": "Caribbean Rhapsody",
+          "length": 270
+        },
+        {
+          "n": 10,
+          "title": "Satin Sheets",
+          "length": 143
+        }
+      ]
+    },
+    {
+      "id": "enlightenment",
+      "circle": "zazen",
+      "title": "Enlightenment",
+      "artist": "Zazen",
+      "year": 1992,
+      "aliases": [
+        "Enlightenment"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "discogs:5083809",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Brook",
+          "length": 279
+        },
+        {
+          "n": 2,
+          "title": "Rain",
+          "length": 293
+        },
+        {
+          "n": 3,
+          "title": "Ocean",
+          "length": 270
+        },
+        {
+          "n": 4,
+          "title": "Spring Storm",
+          "length": 289
+        },
+        {
+          "n": 5,
+          "title": "Desert Wind",
+          "length": 294
+        },
+        {
+          "n": 6,
+          "title": "Mountain Wind",
+          "length": 239
+        },
+        {
+          "n": 7,
+          "title": "On The Plains",
+          "length": 264
+        },
+        {
+          "n": 8,
+          "title": "In The City",
+          "length": 237
+        },
+        {
+          "n": 9,
+          "title": "In The Upper Atmosphere",
+          "length": 239
+        },
+        {
+          "n": 10,
+          "title": "Brush Fire",
+          "length": 307
+        },
+        {
+          "n": 11,
+          "title": "Kundalini",
+          "length": 295
+        },
+        {
+          "n": 12,
+          "title": "Forest Fire",
+          "length": 230
+        },
+        {
+          "n": 13,
+          "title": "Dragon ~ Within The Earth",
+          "length": 242
+        },
+        {
+          "n": 14,
+          "title": "Dragon ~ On Top Of The Mountain",
+          "length": 206
+        },
+        {
+          "n": 15,
+          "title": "Dragon ~ Swallows The Earth",
+          "length": 256
+        }
+      ]
+    },
+    {
+      "id": "retrograde-planet",
+      "circle": "zazen",
+      "title": "Retrograde Planet",
+      "artist": "Zazen",
+      "year": 1992,
+      "aliases": [
+        "Retrograde Planet",
+        "Retrograde Planet: Live On The Planet Mars"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "discogs:1774797",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Voice Over",
+          "length": 0
+        },
+        {
+          "n": 2,
+          "title": "The Sun",
+          "length": 0
+        },
+        {
+          "n": 3,
+          "title": "Mercury",
+          "length": 0
+        },
+        {
+          "n": 4,
+          "title": "Venus",
+          "length": 0
+        },
+        {
+          "n": 5,
+          "title": "Earth",
+          "length": 0
+        },
+        {
+          "n": 6,
+          "title": "Mars",
+          "length": 0
+        },
+        {
+          "n": 7,
+          "title": "Jupiter",
+          "length": 0
+        },
+        {
+          "n": 8,
+          "title": "Saturn",
+          "length": 0
+        },
+        {
+          "n": 9,
+          "title": "Uranus",
+          "length": 0
+        },
+        {
+          "n": 10,
+          "title": "Neptune",
+          "length": 0
+        },
+        {
+          "n": 11,
+          "title": "Pluto",
+          "length": 0
+        }
+      ]
+    },
+    {
+      "id": "samadhi",
+      "circle": "zazen",
+      "title": "Samadhi",
+      "artist": "Zazen",
+      "year": 1992,
+      "aliases": [
+        "Samadhi"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "apple:1520149345",
+      "spotifyAlbum": "4NpMOTjAS8qUUkZvDX8Vko",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "The Waking",
+          "length": 288
+        },
+        {
+          "n": 2,
+          "title": "Samadhi",
+          "length": 238
+        },
+        {
+          "n": 3,
+          "title": "The Magic of Love",
+          "length": 221
+        },
+        {
+          "n": 4,
+          "title": "Just Friends, For Now",
+          "length": 252
+        },
+        {
+          "n": 5,
+          "title": "Night Shadows",
+          "length": 252
+        },
+        {
+          "n": 6,
+          "title": "Open Water",
+          "length": 223
+        },
+        {
+          "n": 7,
+          "title": "Waves of Light",
+          "length": 237
+        },
+        {
+          "n": 8,
+          "title": "Solarization",
+          "length": 242
+        },
+        {
+          "n": 9,
+          "title": "Torrey Pines",
+          "length": 251
+        },
+        {
+          "n": 10,
+          "title": "Sandy's Song",
+          "length": 248
+        },
+        {
+          "n": 11,
+          "title": "White Magic",
+          "length": 222
+        },
+        {
+          "n": 12,
+          "title": "Dancing with Waves",
+          "length": 264
+        },
+        {
+          "n": 13,
+          "title": "One Perfect Moment",
+          "length": 228
+        },
+        {
+          "n": 14,
+          "title": "Jewel in the Lotus",
+          "length": 250
+        }
+      ]
+    },
+    {
+      "id": "samurai",
+      "circle": "zazen",
+      "title": "Samurai",
+      "artist": "Zazen",
+      "year": 1993,
+      "aliases": [
+        "Samurai"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "apple:1520118471",
+      "spotifyAlbum": "4BmZ5uc2M93Bs6Iy3WDOp0",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "The Samurai Prepares",
+          "length": 301
+        },
+        {
+          "n": 2,
+          "title": "The Samurai Confronts Himself",
+          "length": 261
+        },
+        {
+          "n": 3,
+          "title": "The Samurai in Battle",
+          "length": 347
+        },
+        {
+          "n": 4,
+          "title": "The Emptiness of Life",
+          "length": 276
+        },
+        {
+          "n": 5,
+          "title": "The Emptiness of Space",
+          "length": 307
+        },
+        {
+          "n": 6,
+          "title": "Transience",
+          "length": 232
+        },
+        {
+          "n": 7,
+          "title": "After Battle",
+          "length": 321
+        },
+        {
+          "n": 8,
+          "title": "Completion Is Beginning Again",
+          "length": 316
+        },
+        {
+          "n": 9,
+          "title": "The Sword of the Samurai",
+          "length": 226
+        },
+        {
+          "n": 10,
+          "title": "Surprise Attack",
+          "length": 210
+        },
+        {
+          "n": 11,
+          "title": "Samurai's Victory Song",
+          "length": 264
+        },
+        {
+          "n": 12,
+          "title": "Elegance in Combat",
+          "length": 284
+        },
+        {
+          "n": 13,
+          "title": "Defeating Death",
+          "length": 157
+        },
+        {
+          "n": 14,
+          "title": "Merging with the Tao",
+          "length": 266
+        }
+      ]
+    },
+    {
+      "id": "surfing-the-himalayas",
+      "circle": "zazen",
+      "title": "Surfing the Himalayas",
+      "artist": "Zazen",
+      "year": 1996,
+      "aliases": [
+        "Surfing the Himalayas",
+        "Surfing the Himalayas - A Musical Inspiration"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "discogs:19120297",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Rain (from Enlightenment)",
+          "length": 0
+        },
+        {
+          "n": 2,
+          "title": "Bandelier (from Canyons of Light)",
+          "length": 0
+        },
+        {
+          "n": 3,
+          "title": "Night Shadows",
+          "length": 0
+        },
+        {
+          "n": 4,
+          "title": "Joshua Tree (from Canyons of Light)",
+          "length": 0
+        },
+        {
+          "n": 5,
+          "title": "Desert Wind (from Enlightenment)",
+          "length": 0
+        },
+        {
+          "n": 6,
+          "title": "Ecologie",
+          "length": 0
+        },
+        {
+          "n": 7,
+          "title": "Canyons of Light",
+          "length": 0
+        },
+        {
+          "n": 8,
+          "title": "In the Upper Atmosphere (from Enlightenment)",
+          "length": 0
+        },
+        {
+          "n": 9,
+          "title": "Waves of Light",
+          "length": 0
+        },
+        {
+          "n": 10,
+          "title": "Himalayan",
+          "length": 0
+        }
+      ]
+    },
+    {
+      "id": "cayman-blue",
+      "circle": "zazen",
+      "title": "Cayman Blue",
+      "artist": "Zazen",
+      "year": 1997,
+      "aliases": [
+        "Cayman Blue"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "discogs:3871218",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Hurricane Vayu",
+          "length": 267
+        },
+        {
+          "n": 2,
+          "title": "Cayman Blue",
+          "length": 235
+        },
+        {
+          "n": 3,
+          "title": "Zazen In Paradise",
+          "length": 240
+        },
+        {
+          "n": 4,
+          "title": "St. Bart's Chic",
+          "length": 243
+        },
+        {
+          "n": 5,
+          "title": "Virgin Island Sunset",
+          "length": 215
+        },
+        {
+          "n": 6,
+          "title": "Bonaire Sunrise",
+          "length": 275
+        },
+        {
+          "n": 7,
+          "title": "Blue Flash Over Havana",
+          "length": 265
+        },
+        {
+          "n": 8,
+          "title": "Saba Diving",
+          "length": 239
+        },
+        {
+          "n": 9,
+          "title": "Jamaican Love Song",
+          "length": 242
+        },
+        {
+          "n": 10,
+          "title": "Turks & Caicos Coffee",
+          "length": 259
+        },
+        {
+          "n": 11,
+          "title": "Bahamian Melody",
+          "length": 250
+        },
+        {
+          "n": 12,
+          "title": "Haitian High Priest",
+          "length": 513
+        }
+      ]
+    },
+    {
+      "id": "techno-zen-master",
+      "circle": "zazen",
+      "title": "Techno Zen Master",
+      "artist": "Zazen",
+      "year": 1999,
+      "aliases": [
+        "Techno Zen Master"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "discogs:19194469",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Death Is Sexual",
+          "length": 0
+        },
+        {
+          "n": 2,
+          "title": "What Is Dancing?",
+          "length": 0
+        },
+        {
+          "n": 3,
+          "title": "Dancing (Naughty Remix)",
+          "length": 0
+        },
+        {
+          "n": 4,
+          "title": "This Is Techno Zen Master",
+          "length": 0
+        },
+        {
+          "n": 5,
+          "title": "Couldn't Get A Job",
+          "length": 0
+        },
+        {
+          "n": 6,
+          "title": "Climbing Up The Mountain",
+          "length": 0
+        },
+        {
+          "n": 7,
+          "title": "Why Is All Of This?",
+          "length": 0
+        },
+        {
+          "n": 8,
+          "title": "One Hand Clapping",
+          "length": 0
+        },
+        {
+          "n": 9,
+          "title": "Garden Of Life",
+          "length": 0
+        },
+        {
+          "n": 10,
+          "title": "Loving You Is Meditation",
+          "length": 0
+        },
+        {
+          "n": 11,
+          "title": "What Is Emptiness?",
+          "length": 0
+        },
+        {
+          "n": 12,
+          "title": "All These Worlds",
+          "length": 0
+        },
+        {
+          "n": 13,
+          "title": "We're Going To Live Forever (Death Is Sexual Remix)",
+          "length": 0
+        }
+      ]
+    },
+    {
+      "id": "urban-destruction",
+      "circle": "zazen",
+      "title": "Urban Destruction",
+      "artist": "Zazen",
+      "year": 2003,
+      "aliases": [
+        "Urban Destruction"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "source": "discogs:1774876",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Freeway Nightmares",
+          "length": 0
+        },
+        {
+          "n": 2,
+          "title": "Malibu",
+          "length": 0
+        },
+        {
+          "n": 3,
+          "title": "Death On Melrose",
+          "length": 0
+        },
+        {
+          "n": 4,
+          "title": "Urban Destruction",
+          "length": 0
+        },
+        {
+          "n": 5,
+          "title": "L.A. Digital Mindscapes",
+          "length": 0
+        },
+        {
+          "n": 6,
+          "title": "Bag Lady Blues",
+          "length": 0
+        },
+        {
+          "n": 7,
+          "title": "Psychotic Dog",
+          "length": 0
+        }
+      ]
+    },
+    {
+      "id": "oceans-of-light",
+      "circle": "vayu",
+      "title": "Oceans of Light",
+      "artist": "Vayu",
+      "year": 2012,
+      "aliases": [
+        "Oceans of Light"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:506336832",
+      "spotifyAlbum": "4SjJZTt4bZ1y63He9uYm74",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Diving Darshan",
+          "length": 277
+        },
+        {
+          "n": 2,
+          "title": "Dolphin Dive",
+          "length": 232
+        },
+        {
+          "n": 3,
+          "title": "Shark Chief",
+          "length": 324
+        },
+        {
+          "n": 4,
+          "title": "Undersea Awareness",
+          "length": 294
+        },
+        {
+          "n": 5,
+          "title": "Atlantean",
+          "length": 270
+        },
+        {
+          "n": 6,
+          "title": "Vanessa's Cove",
+          "length": 182
+        },
+        {
+          "n": 7,
+          "title": "Underwater Samadhi",
+          "length": 269
+        },
+        {
+          "n": 8,
+          "title": "Whale God",
+          "length": 288
+        },
+        {
+          "n": 9,
+          "title": "Ocean Goddess",
+          "length": 286
+        },
+        {
+          "n": 10,
+          "title": "Night Dive",
+          "length": 262
+        },
+        {
+          "n": 11,
+          "title": "Deep Dive",
+          "length": 294
+        },
+        {
+          "n": 12,
+          "title": "Ray",
+          "length": 267
+        }
+      ]
+    },
+    {
+      "id": "india-dream",
+      "circle": "vayu",
+      "title": "India Dream",
+      "artist": "Vayu Meditation",
+      "year": 2020,
+      "aliases": [
+        "India Dream"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1519073569",
+      "spotifyAlbum": "1UtaGIJldPchvnhfqneXa2",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Arunachala (feat. Joaquin Lievano)",
+          "length": 185
+        },
+        {
+          "n": 2,
+          "title": "Divine Ganga View",
+          "length": 254
+        },
+        {
+          "n": 3,
+          "title": "Maha Ananda Siddha",
+          "length": 191
+        },
+        {
+          "n": 4,
+          "title": "Richshaw Ride to Tapaswiji's",
+          "length": 182
+        },
+        {
+          "n": 5,
+          "title": "Sparsa by the Birds",
+          "length": 200
+        },
+        {
+          "n": 6,
+          "title": "Da Mantra Cafe",
+          "length": 223
+        },
+        {
+          "n": 7,
+          "title": "Ganga River Flow",
+          "length": 203
+        },
+        {
+          "n": 8,
+          "title": "Shiva Shakti",
+          "length": 179
+        },
+        {
+          "n": 9,
+          "title": "Tapaswiji",
+          "length": 232
+        },
+        {
+          "n": 10,
+          "title": "Arunachala Temple",
+          "length": 265
+        },
+        {
+          "n": 11,
+          "title": "Yogi Ramsuratkumar",
+          "length": 310
+        },
+        {
+          "n": 12,
+          "title": "Gorakhnath Cave",
+          "length": 278
+        },
+        {
+          "n": 13,
+          "title": "Shiva Parvati Temple",
+          "length": 275
+        },
+        {
+          "n": 14,
+          "title": "Ramana Maharshi (feat. Joaquin Lievano)",
+          "length": 257
+        }
+      ]
+    },
+    {
+      "id": "big-island",
+      "circle": "vayu",
+      "title": "Big Island",
+      "artist": "Vayu Meditation",
+      "year": 2021,
+      "aliases": [
+        "Big Island"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1589500046",
+      "spotifyAlbum": "46C53xNKrNOHjGm6SOs9om",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Long Mountain",
+          "length": 269
+        },
+        {
+          "n": 2,
+          "title": "Caldera",
+          "length": 303
+        },
+        {
+          "n": 3,
+          "title": "Night Marchers",
+          "length": 269
+        },
+        {
+          "n": 4,
+          "title": "HawaiianBirds",
+          "length": 290
+        },
+        {
+          "n": 5,
+          "title": "SeaBass",
+          "length": 210
+        },
+        {
+          "n": 6,
+          "title": "Coral Garden",
+          "length": 249
+        },
+        {
+          "n": 7,
+          "title": "On Nakoa's Boat",
+          "length": 226
+        },
+        {
+          "n": 8,
+          "title": "Parallel",
+          "length": 242
+        },
+        {
+          "n": 9,
+          "title": "Beach House",
+          "length": 267
+        },
+        {
+          "n": 10,
+          "title": "Ocean Sunset",
+          "length": 181
+        },
+        {
+          "n": 11,
+          "title": "Saddleback",
+          "length": 217
+        },
+        {
+          "n": 12,
+          "title": "Spelunker",
+          "length": 239
+        },
+        {
+          "n": 13,
+          "title": "Waikoloa Monastery",
+          "length": 257
+        },
+        {
+          "n": 14,
+          "title": "Aquadiscotheque",
+          "length": 242
+        },
+        {
+          "n": 15,
+          "title": "Gecko",
+          "length": 233
+        }
+      ]
+    },
+    {
+      "id": "great-teachers-of-enlightenment",
+      "circle": "vayu",
+      "title": "Great Teachers of Enlightenment",
+      "artist": "Vayu Meditation",
+      "year": 2021,
+      "aliases": [
+        "Great Teachers of Enlightenment"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1572000814",
+      "spotifyAlbum": "7iyIt3OIQaSV1rOHbbKNQw",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Padmasambhava",
+          "length": 244
+        },
+        {
+          "n": 2,
+          "title": "Babaji",
+          "length": 241
+        },
+        {
+          "n": 3,
+          "title": "Ramakrishna",
+          "length": 264
+        },
+        {
+          "n": 4,
+          "title": "Shankara",
+          "length": 249
+        },
+        {
+          "n": 5,
+          "title": "Atisha",
+          "length": 238
+        },
+        {
+          "n": 6,
+          "title": "Chuang Tzu",
+          "length": 227
+        },
+        {
+          "n": 7,
+          "title": "Milarepa",
+          "length": 251
+        },
+        {
+          "n": 8,
+          "title": "Gautama Buddha",
+          "length": 237
+        },
+        {
+          "n": 9,
+          "title": "Lao Tzu",
+          "length": 255
+        },
+        {
+          "n": 10,
+          "title": "Jesus of Nazareth",
+          "length": 245
+        },
+        {
+          "n": 11,
+          "title": "Kuan Yin",
+          "length": 243
+        },
+        {
+          "n": 12,
+          "title": "Bodhidharma",
+          "length": 226
+        },
+        {
+          "n": 13,
+          "title": "Yeshe Tsogyal",
+          "length": 281
+        },
+        {
+          "n": 14,
+          "title": "Krishna",
+          "length": 277
+        },
+        {
+          "n": 15,
+          "title": "Rama",
+          "length": 225
+        }
+      ]
+    },
+    {
+      "id": "mystic-scuba",
+      "circle": "vayu",
+      "title": "Mystic Scuba",
+      "artist": "Vayu Meditation",
+      "year": 2021,
+      "aliases": [
+        "Mystic Scuba"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1571989685",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Diving Darshan",
+          "length": 277
+        },
+        {
+          "n": 2,
+          "title": "Undersea Awareness",
+          "length": 295
+        },
+        {
+          "n": 3,
+          "title": "Vanessa's Cove",
+          "length": 183
+        },
+        {
+          "n": 4,
+          "title": "Atlantean",
+          "length": 204
+        },
+        {
+          "n": 5,
+          "title": "Every Fish Is Precious",
+          "length": 240
+        },
+        {
+          "n": 6,
+          "title": "Ocean Goddess",
+          "length": 288
+        },
+        {
+          "n": 7,
+          "title": "Diving into Enlightenment",
+          "length": 296
+        }
+      ]
+    },
+    {
+      "id": "mystical-creatures",
+      "circle": "vayu",
+      "title": "Mystical Creatures",
+      "artist": "Vayu Meditation",
+      "year": 2021,
+      "aliases": [
+        "Mystical Creatures"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1589499918",
+      "spotifyAlbum": "3jTARft2o9gweQpLvbapNS",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Ocean Dragon",
+          "length": 251
+        },
+        {
+          "n": 2,
+          "title": "Thunder Cloud Buffalo",
+          "length": 265
+        },
+        {
+          "n": 3,
+          "title": "Lake Naga",
+          "length": 257
+        },
+        {
+          "n": 4,
+          "title": "Chaddanta",
+          "length": 258
+        },
+        {
+          "n": 5,
+          "title": "Last Unicorn",
+          "length": 190
+        },
+        {
+          "n": 6,
+          "title": "Bliss",
+          "length": 280
+        },
+        {
+          "n": 7,
+          "title": "Snow Lion",
+          "length": 218
+        },
+        {
+          "n": 8,
+          "title": "Moon Frog",
+          "length": 251
+        },
+        {
+          "n": 9,
+          "title": "Nakula",
+          "length": 234
+        },
+        {
+          "n": 10,
+          "title": "Phoenix",
+          "length": 309
+        },
+        {
+          "n": 11,
+          "title": "Thunder Bird",
+          "length": 263
+        },
+        {
+          "n": 12,
+          "title": "Canyon Sphinx",
+          "length": 315
+        }
+      ]
+    },
+    {
+      "id": "napa",
+      "circle": "vayu",
+      "title": "Napa",
+      "artist": "Vayu Meditation",
+      "year": 2021,
+      "aliases": [
+        "Napa"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1571161870",
+      "spotifyAlbum": "1KqYry97Ek5DDrk1oOyP6e",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Kitchen Door",
+          "length": 257
+        },
+        {
+          "n": 2,
+          "title": "Walking the Vines",
+          "length": 216
+        },
+        {
+          "n": 3,
+          "title": "Volcanic Relaxation",
+          "length": 222
+        },
+        {
+          "n": 4,
+          "title": "Yountville",
+          "length": 209
+        },
+        {
+          "n": 5,
+          "title": "R&D Kitchen",
+          "length": 248
+        },
+        {
+          "n": 6,
+          "title": "Vineyard Mornings",
+          "length": 225
+        },
+        {
+          "n": 7,
+          "title": "Malolactic Fermentation",
+          "length": 224
+        },
+        {
+          "n": 8,
+          "title": "Valley Vista",
+          "length": 234
+        },
+        {
+          "n": 9,
+          "title": "William Hill",
+          "length": 233
+        },
+        {
+          "n": 10,
+          "title": "Napa Siesta",
+          "length": 272
+        },
+        {
+          "n": 11,
+          "title": "Silverado Trail Convoy",
+          "length": 201
+        },
+        {
+          "n": 12,
+          "title": "Highway 29 Cruise Control",
+          "length": 191
+        },
+        {
+          "n": 13,
+          "title": "Bouchon",
+          "length": 182
+        },
+        {
+          "n": 14,
+          "title": "The Oakville Grade",
+          "length": 216
+        },
+        {
+          "n": 15,
+          "title": "King of Cabs",
+          "length": 227
+        }
+      ]
+    },
+    {
+      "id": "the-city-of-lights",
+      "circle": "vayu",
+      "title": "The City of Lights",
+      "artist": "Vayu Meditation",
+      "year": 2021,
+      "aliases": [
+        "The City of Lights"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1571162646",
+      "spotifyAlbum": "5HP4nKJWucURH62BOSUKnv",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Notre Dame",
+          "length": 185
+        },
+        {
+          "n": 2,
+          "title": "Seine",
+          "length": 185
+        },
+        {
+          "n": 3,
+          "title": "Lintillac",
+          "length": 148
+        },
+        {
+          "n": 4,
+          "title": "Nympheas",
+          "length": 177
+        },
+        {
+          "n": 5,
+          "title": "Opera House",
+          "length": 206
+        },
+        {
+          "n": 6,
+          "title": "Montmartre Sunrise",
+          "length": 204
+        },
+        {
+          "n": 7,
+          "title": "Le Bristol Chandelier",
+          "length": 255
+        },
+        {
+          "n": 8,
+          "title": "Pont Neuf",
+          "length": 231
+        },
+        {
+          "n": 9,
+          "title": "Duck Pond Magic",
+          "length": 210
+        },
+        {
+          "n": 10,
+          "title": "The Tuleries",
+          "length": 208
+        },
+        {
+          "n": 11,
+          "title": "Light on the Seine",
+          "length": 242
+        },
+        {
+          "n": 12,
+          "title": "Faubourg",
+          "length": 222
+        },
+        {
+          "n": 13,
+          "title": "Palais Royal",
+          "length": 216
+        },
+        {
+          "n": 14,
+          "title": "Rain in Paris",
+          "length": 222
+        },
+        {
+          "n": 15,
+          "title": "Eiffel Tower",
+          "length": 268
+        }
+      ]
+    },
+    {
+      "id": "tuscany",
+      "circle": "vayu",
+      "title": "Tuscany",
+      "artist": "Vayu Meditation",
+      "year": 2021,
+      "aliases": [
+        "Tuscany"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1592549595",
+      "spotifyAlbum": "0hrwcOhF6L07JiiOKpciSW",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Mercato Centrale di San Lorenzo",
+          "length": 235
+        },
+        {
+          "n": 2,
+          "title": "Duomo Siena",
+          "length": 198
+        },
+        {
+          "n": 3,
+          "title": "Florence at Night",
+          "length": 217
+        },
+        {
+          "n": 4,
+          "title": "Ponte Vecchio",
+          "length": 161
+        },
+        {
+          "n": 5,
+          "title": "The Boticelli Room",
+          "length": 264
+        },
+        {
+          "n": 6,
+          "title": "Florentine Sunset",
+          "length": 256
+        },
+        {
+          "n": 7,
+          "title": "Il Paradiso di Frassina",
+          "length": 248
+        },
+        {
+          "n": 8,
+          "title": "San Gimignano",
+          "length": 200
+        },
+        {
+          "n": 9,
+          "title": "Zaza",
+          "length": 262
+        },
+        {
+          "n": 10,
+          "title": "Piazza del Campo",
+          "length": 274
+        },
+        {
+          "n": 11,
+          "title": "Volterra",
+          "length": 253
+        },
+        {
+          "n": 12,
+          "title": "Arno",
+          "length": 206
+        },
+        {
+          "n": 13,
+          "title": "Journey Through Siena",
+          "length": 272
+        },
+        {
+          "n": 14,
+          "title": "Tuscan Countryside",
+          "length": 232
+        },
+        {
+          "n": 15,
+          "title": "Uffizi",
+          "length": 271
+        }
+      ]
+    },
+    {
+      "id": "twelve-houses",
+      "circle": "vayu",
+      "title": "Twelve Houses",
+      "artist": "Vayu Meditation",
+      "year": 2021,
+      "aliases": [
+        "Twelve Houses"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1589500491",
+      "spotifyAlbum": "3NZ2q9jkoxa4GSheo2RoCb",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Fratres",
+          "length": 294
+        },
+        {
+          "n": 2,
+          "title": "Regnum",
+          "length": 307
+        },
+        {
+          "n": 3,
+          "title": "Solvo",
+          "length": 290
+        },
+        {
+          "n": 4,
+          "title": "Mors",
+          "length": 293
+        },
+        {
+          "n": 5,
+          "title": "Nati",
+          "length": 299
+        },
+        {
+          "n": 6,
+          "title": "Genitor",
+          "length": 299
+        },
+        {
+          "n": 7,
+          "title": "Uxor",
+          "length": 304
+        },
+        {
+          "n": 8,
+          "title": "Iter",
+          "length": 299
+        },
+        {
+          "n": 9,
+          "title": "Valetudo",
+          "length": 261
+        },
+        {
+          "n": 10,
+          "title": "Benefacta",
+          "length": 284
+        },
+        {
+          "n": 11,
+          "title": "Lucrum",
+          "length": 294
+        },
+        {
+          "n": 12,
+          "title": "Vita",
+          "length": 314
+        }
+      ]
+    },
+    {
+      "id": "anza-borrego",
+      "circle": "vayu",
+      "title": "Anza Borrego",
+      "artist": "Vayu Meditation",
+      "year": 2023,
+      "aliases": [
+        "Anza Borrego (feat. Joaquin Lievano)",
+        "Anza Borrego"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1696967841",
+      "spotifyAlbum": "4dY7Af2H7xydEETDorwqdJ",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Vayu's Wind Cave (feat. Joaquin Lievano)",
+          "length": 227
+        },
+        {
+          "n": 2,
+          "title": "Pilgrimage (feat. Joaquin Lievano)",
+          "length": 230
+        },
+        {
+          "n": 3,
+          "title": "Carrizo Wind (feat. Joaquin Lievano)",
+          "length": 215
+        },
+        {
+          "n": 4,
+          "title": "Fonts Point (feat. Joaquin Lievano)",
+          "length": 248
+        },
+        {
+          "n": 5,
+          "title": "The Moving Star (feat. Joaquin Lievano)",
+          "length": 200
+        },
+        {
+          "n": 6,
+          "title": "Sand Sukhavati (feat. Joaquin Lievano)",
+          "length": 258
+        },
+        {
+          "n": 7,
+          "title": "Sunrise in the Desert (feat. Joaquin Lievano)",
+          "length": 240
+        },
+        {
+          "n": 8,
+          "title": "Deep Gorge Wilderness (feat. Joaquin Lievano)",
+          "length": 227
+        },
+        {
+          "n": 9,
+          "title": "Interdimensional Vortex (feat. Joaquin Lievano)",
+          "length": 224
+        },
+        {
+          "n": 10,
+          "title": "The Current (Sacred Ground) [feat. Joaquin Lievano]",
+          "length": 232
+        }
+      ]
+    },
+    {
+      "id": "bodhi",
+      "circle": "vayu",
+      "title": "Bodhi",
+      "artist": "Vayu Meditation",
+      "year": 2024,
+      "aliases": [
+        "Bodhi (Extended) [feat. Joaquin Lievano]",
+        "Bodhi"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1754404119",
+      "spotifyAlbum": "5a4WERT1EbHP2Fjc1kRrM3",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Padmasambhava (Great Teachers of Enlightenment) [feat. Joaquin Lievano]",
+          "length": 240
+        },
+        {
+          "n": 2,
+          "title": "Waikoloa Monastery (The Big Island) [feat. Joaquin Lievano]",
+          "length": 260
+        },
+        {
+          "n": 3,
+          "title": "Arunachala (India Dream) [feat. Joaquin Lievano]",
+          "length": 186
+        },
+        {
+          "n": 4,
+          "title": "Atlantean (Diving Into Enlightenment) [feat. Joaquin Lievano]",
+          "length": 204
+        },
+        {
+          "n": 5,
+          "title": "Jesus of Nazareth (Great Teachers of Enlightenment) [feat. Joaquin Lievano]",
+          "length": 242
+        },
+        {
+          "n": 6,
+          "title": "Ocean Sunset (The Big Island) [feat. Joaquin Lievano]",
+          "length": 186
+        },
+        {
+          "n": 7,
+          "title": "Saddleback (The Big Island) [feat. Joaquin Lievano]",
+          "length": 230
+        },
+        {
+          "n": 8,
+          "title": "Light on the Seine (The City of Lights) [feat. Joaquin Lievano]",
+          "length": 242
+        },
+        {
+          "n": 9,
+          "title": "Canyon Sphinx (Mystical Creatures) [feat. Joaquin Lievano]",
+          "length": 307
+        },
+        {
+          "n": 10,
+          "title": "Ramana Maharshi (India Dream) [feat. Joaquin Lievano]",
+          "length": 254
+        },
+        {
+          "n": 11,
+          "title": "Rama (Great Teachers of Enlightenment) [feat. Joaquin Lievano]",
+          "length": 226
+        },
+        {
+          "n": 12,
+          "title": "Vita (Twelve Houses) [feat. Joaquin Lievano]",
+          "length": 316
+        }
+      ]
+    },
+    {
+      "id": "golden",
+      "circle": "vayu",
+      "title": "Golden",
+      "artist": "Vayu Meditation",
+      "year": 2024,
+      "aliases": [
+        "Golden"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "source": "apple:1754403362",
+      "spotifyAlbum": "09xsLEwaWArHCXys3PE70C",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Enchanted Taco",
+          "length": 224
+        },
+        {
+          "n": 2,
+          "title": "Gold Dragons",
+          "length": 238
+        },
+        {
+          "n": 3,
+          "title": "Király",
+          "length": 245
+        },
+        {
+          "n": 4,
+          "title": "Semplice",
+          "length": 222
+        },
+        {
+          "n": 5,
+          "title": "Spectre",
+          "length": 274
+        },
+        {
+          "n": 6,
+          "title": "Himmel",
+          "length": 236
+        },
+        {
+          "n": 7,
+          "title": "Themyscira",
+          "length": 550
+        }
+      ]
+    },
+    {
+      "id": "awake-in-anza-borrego",
+      "circle": "lumikara",
+      "title": "Awake in Anza Borrego",
+      "artist": "Lumikara",
+      "year": 2026,
+      "aliases": [
+        "Awake in Anza Borrego - EP",
+        "Awake in Anza Borrego"
+      ],
+      "artistKeys": [
+        "lumikara"
+      ],
+      "source": "apple:1887915499",
+      "spotifyAlbum": "0tcGgZTiyXLoNA7wjkH4f1",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Fonts Point Sunrise (feat. AgniKala)",
+          "length": 238
+        },
+        {
+          "n": 2,
+          "title": "Stream of Gems (feat. AgniKala)",
+          "length": 211
+        },
+        {
+          "n": 3,
+          "title": "Enjoy the Bloom (feat. AgniKala)",
+          "length": 223
+        },
+        {
+          "n": 4,
+          "title": "Fonts Point Sunrise",
+          "length": 242
+        },
+        {
+          "n": 5,
+          "title": "Stream of Gems",
+          "length": 211
+        },
+        {
+          "n": 6,
+          "title": "Enjoy the Bloom",
+          "length": 223
+        }
+      ]
+    },
+    {
+      "id": "mandala-of-light-lumikara",
+      "circle": "lumikara",
+      "title": "Mandala of Light",
+      "artist": "Lumikara",
+      "year": 2026,
+      "aliases": [
+        "Mandala of Light"
+      ],
+      "artistKeys": [
+        "lumikara"
+      ],
+      "source": "apple:1865229364",
+      "spotifyAlbum": "50quExrGfr38MdHthnY6aM",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Dharma of Meeting (feat. Vayu Meditation)",
+          "length": 235
+        },
+        {
+          "n": 2,
+          "title": "The Witness",
+          "length": 264
+        },
+        {
+          "n": 3,
+          "title": "Malibu Chic (feat. Alan L Lin)",
+          "length": 194
+        },
+        {
+          "n": 4,
+          "title": "Chop Wood, Carry Water",
+          "length": 185
+        },
+        {
+          "n": 5,
+          "title": "Road to Ananda Loa",
+          "length": 212
+        },
+        {
+          "n": 6,
+          "title": "Cosmic Playground",
+          "length": 212
+        },
+        {
+          "n": 7,
+          "title": "Yoga of Community",
+          "length": 220
+        },
+        {
+          "n": 8,
+          "title": "Morning Dive",
+          "length": 190
+        },
+        {
+          "n": 9,
+          "title": "Recapitulation (feat. Joaquin Lievano)",
+          "length": 275
+        },
+        {
+          "n": 10,
+          "title": "Dream Work Makes the Team Work",
+          "length": 239
+        },
+        {
+          "n": 11,
+          "title": "Career Yoga",
+          "length": 198
+        },
+        {
+          "n": 12,
+          "title": "Places of Power",
+          "length": 222
+        },
+        {
+          "n": 13,
+          "title": "Sangha Is the New Buddha (feat. Joaquin Lievano & Alan L Lin)",
+          "length": 227
+        },
+        {
+          "n": 14,
+          "title": "Chief Technologist",
+          "length": 208
+        },
+        {
+          "n": 15,
+          "title": "Black Belt Attention",
+          "length": 218
+        },
+        {
+          "n": 16,
+          "title": "Mandala Yoga",
+          "length": 260
+        },
+        {
+          "n": 17,
+          "title": "Many Hands Make Light Work",
+          "length": 183
+        },
+        {
+          "n": 18,
+          "title": "Bodhisattva World Tour (feat. Alan L Lin)",
+          "length": 211
+        },
+        {
+          "n": 19,
+          "title": "Past Life Party (feat. Alan L Lin)",
+          "length": 195
+        }
+      ]
+    },
+    {
+      "id": "night-vortex-in-shasta",
+      "circle": "lumikara",
+      "title": "Night Vortex in Shasta",
+      "artist": "Lumikara",
+      "year": 2026,
+      "aliases": [
+        "Night Vortex in Shasta - Single",
+        "Night Vortex in Shasta"
+      ],
+      "artistKeys": [
+        "lumikara"
+      ],
+      "source": "apple:6782257855",
+      "spotifyAlbum": "5OzrUWFs1iRxgd6iwFcUNn",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Medicine Lake at Sunset",
+          "length": 184
+        },
+        {
+          "n": 2,
+          "title": "Panther Meadows",
+          "length": 187
+        },
+        {
+          "n": 3,
+          "title": "Night Vortex",
+          "length": 229
+        }
+      ]
+    },
+    {
+      "id": "ecologie",
+      "circle": "lineage",
+      "title": "Ecologie",
+      "artist": "Joaquin Lievano",
+      "year": 1996,
+      "aliases": [
+        "Ecologie"
+      ],
+      "artistKeys": [
+        "joaquin",
+        "lievano"
+      ],
+      "source": "apple:1610040560",
+      "spotifyAlbum": "7HI7GhLWnOAR80cVJasYKj",
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Ecologie",
+          "length": 306
+        },
+        {
+          "n": 2,
+          "title": "Scottish Highlands Melody",
+          "length": 246
+        },
+        {
+          "n": 3,
+          "title": "Coral Sea",
+          "length": 256
+        },
+        {
+          "n": 4,
+          "title": "Rainforest Dance",
+          "length": 405
+        },
+        {
+          "n": 5,
+          "title": "Symbiosis",
+          "length": 217
+        },
+        {
+          "n": 6,
+          "title": "Desert Winds",
+          "length": 300
+        },
+        {
+          "n": 7,
+          "title": "Blue Dolphin",
+          "length": 246
+        },
+        {
+          "n": 8,
+          "title": "African Adventure",
+          "length": 371
+        },
+        {
+          "n": 9,
+          "title": "Asia",
+          "length": 346
+        },
+        {
+          "n": 10,
+          "title": "Himalayan Sunset",
+          "length": 409
+        }
+      ]
+    }
+  ]
+}
