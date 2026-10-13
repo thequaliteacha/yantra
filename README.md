@@ -15,13 +15,10 @@ and `web/web.js` to bring it back.)
 - **The shelf.** Pick an album, or a form you've saved. Nothing outside the
   shelf plays. If anything else plays, the yantra
   pauses and stays still.
-- **Three ways to listen.** It opens albums already in the Spotify or Apple
-  Music catalogs, or it plays your own copies from `~/Music/yantra`. A file
-  plays only when its name matches a track title from that album.
-- **Listen on.** Choose Spotify or Apple Music at the top of the shelf; the
-  choice is remembered. An album that is only on the other catalog plays there.
-- **The sitting.** Press *Begin sitting* and the album starts on your chosen
-  source while the shelf fades. The yantra fills the screen and moves with the
+- **Two ways to listen.** It plays albums from Spotify, or your own copies
+  from `~/Music/yantra`. A file plays only when its name matches a track title
+  from that album.
+- **The sitting.** Press *Begin sitting* and the album starts on Spotify while the shelf fades. The yantra fills the screen and moves with the
   sound. Notifications go silent until you press
   *End sitting*.
 - **Forms.** Build a sitting of 3, 6, 9, or 12 songs from the discs, kept
@@ -64,7 +61,7 @@ python3 yantra.py
 ```
 
 This opens the yantra in a Chromium window at `http://127.0.0.1:8765`. It needs
-Python 3 and Chromium, plus the Spotify desktop app, Apple Music, or `mpv` for
+Python 3 and Chromium, plus the Spotify desktop app, or `mpv` for
 your own files. There are no Python packages to install.
 
 ## Files
