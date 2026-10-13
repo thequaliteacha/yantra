@@ -14,12 +14,15 @@
   const DISCS = {};
   let collection = null;
   let starter = [];
+  let links = {};
 
   const ready = Promise.all([
     realFetch("../discs.json").then((r) => r.json()),
     realFetch("../playlists.json").then((r) => r.json()).catch(() => []),
-  ]).then(([discs, playlists]) => {
+    realFetch("tracks.json").then((r) => r.json()).catch(() => ({})),
+  ]).then(([discs, playlists, songs]) => {
     collection = discs;
+    links = songs || {};
     for (const disc of discs.discs) DISCS[disc.id] = disc;
     starter = Array.isArray(playlists) ? playlists : [];
   });
@@ -321,22 +324,117 @@
     try { return JSON.parse((init && init.body) || "{}"); } catch (e) { return {}; }
   }
 
+  /* Music opens in one named tab, so each new album or song replaces the last. */
+  function openPlayer(url) {
+    window.open(url, "yantra-player");
+  }
+
+  /* A form on the web: each song opens on its own in the player tab. A browser
+     only opens a page on a tap, so when a song ends the next one waits on the
+     Next button. The caption follows the form as the desktop does. */
+  const queue = { name: "", items: [], index: -1, prefer: "spotify", startedAt: 0 };
+
+  function songLink(item, prefer) {
+    const row = (links[item.discId] || {})[String(item.n)] || {};
+    const order = prefer === "apple" ? ["apple", "spotify"] : ["spotify", "apple"];
+    for (const name of order) if (row[name]) return row[name];
+    return "";
+  }
+
+  function publishSong() {
+    const item = queue.items[queue.index];
+    if (!item) return;
+    const disc = DISCS[item.discId];
+    const track = disc.tracks.find((row) => row.n === item.n);
+    Object.assign(NOW, {
+      connected: true, status: "Playing", title: track.title, artist: disc.artist, album: disc.title,
+      track: item.n, length: track.length || 0, position: 0, discId: disc.id, allowed: true,
+      form: queue.name, formIndex: queue.index, formTotal: queue.items.length,
+      chakra: chakraOf(disc, item.n), source: queue.prefer,
+    });
+    queue.startedAt = performance.now();
+  }
+
+  function playSong(index) {
+    const item = queue.items[index];
+    if (!item) return false;
+    const url = songLink(item, queue.prefer);
+    if (!url) return false;
+    queue.index = index;
+    openPlayer(url);
+    publishSong();
+    paintNext();
+    return true;
+  }
+
+  function stopQueue() {
+    queue.items = [];
+    queue.index = -1;
+    Object.assign(NOW, {
+      connected: false, status: "Stopped", title: "", artist: "", album: "", track: 0, length: 0,
+      position: 0, discId: "", allowed: false, form: "", formIndex: 0, formTotal: 0, chakra: "", source: "",
+    });
+    paintNext();
+  }
+
+  let nextButton = null;
+  function paintNext() {
+    if (!nextButton) return;
+    const next = queue.items[queue.index + 1];
+    if (!next) {
+      nextButton.hidden = true;
+      return;
+    }
+    const disc = DISCS[next.discId];
+    const track = disc.tracks.find((row) => row.n === next.n);
+    const length = Number(NOW.length) || 0;
+    const done = length > 0 && (performance.now() - queue.startedAt) / 1000 >= length;
+    nextButton.hidden = false;
+    nextButton.classList.toggle("due", done);
+    nextButton.textContent = (done ? "Next  ·  " : "Next song  ·  ") + track.title;
+  }
+  setInterval(() => {
+    if (queue.index >= 0) {
+      NOW.position = Math.min(Number(NOW.length) || 0, (performance.now() - queue.startedAt) / 1000);
+      paintNext();
+    }
+  }, 1000);
+
+  document.addEventListener("DOMContentLoaded", () => {
+    nextButton = document.createElement("button");
+    nextButton.type = "button";
+    nextButton.id = "web-next";
+    nextButton.hidden = true;
+    nextButton.addEventListener("click", () => playSong(queue.index + 1));
+    document.body.appendChild(nextButton);
+  });
+
   function play(payload) {
     if (payload.source === "playlist") {
-      const error = playlistError(payload.tracks || []);
-      return error ? [{ ok: false, error }, 400] : [{ ok: true, source: "playlist" }];
+      const tracks = payload.tracks || [];
+      const error = playlistError(tracks);
+      if (error) return [{ ok: false, error }, 400];
+      queue.name = String(payload.name || "Form");
+      queue.items = orderedDraft(tracks);
+      queue.prefer = payload.prefer === "apple" ? "apple" : "spotify";
+      if (!playSong(0)) {
+        stopQueue();
+        return [{ ok: false, error: "The first song did not open." }, 404];
+      }
+      return [{ ok: true, source: "playlist" }];
     }
+    stopQueue();
     const disc = DISCS[payload.id];
     if (!disc) return [{ ok: false, error: "That disc is not on the shelf." }, 404];
     if (payload.source === "apple") {
       const id = appleId(disc);
       if (!id) return [{ ok: false, error: "This disc is not on Apple Music." }, 403];
-      window.open("https://music.apple.com/us/album/" + id, "_blank", "noopener");
+      openPlayer("https://music.apple.com/us/album/" + id);
       return [{ ok: true, source: "apple" }];
     }
     if (payload.source === "spotify" || !payload.source) {
       if (!disc.spotifyAlbum) return [{ ok: false, error: "Not on Spotify." }, 403];
-      window.open("https://open.spotify.com/album/" + encodeURIComponent(disc.spotifyAlbum), "_blank", "noopener");
+      openPlayer("https://open.spotify.com/album/" + encodeURIComponent(disc.spotifyAlbum));
       return [{ ok: true, source: "spotify" }];
     }
     return [{ ok: false, error: "Your own copies play in the desktop app." }, 403];
@@ -347,8 +445,9 @@
     if (on) {
       startMic();
       if (!document.fullscreenElement && root.requestFullscreen) root.requestFullscreen().catch(() => {});
-    } else if (document.fullscreenElement && document.exitFullscreen) {
-      document.exitFullscreen().catch(() => {});
+    } else {
+      stopQueue();
+      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
     }
     return [{ ok: true, sitting: on }];
   }
@@ -388,6 +487,13 @@
   };
 
   const style = document.createElement("style");
-  style.textContent = "#local, #install { display: none !important; }";
+  style.textContent = [
+    "#local, #install { display: none !important; }",
+    "#web-next { position: fixed; left: 50%; bottom: 2.2rem; transform: translateX(-50%); z-index: 4;",
+    "  background: rgba(5, 4, 10, 0.55); color: rgba(243, 230, 200, 0.8); font: inherit; font-size: 0.8rem;",
+    "  border: 1px solid rgba(230, 201, 138, 0.35); padding: 0.55rem 1rem; letter-spacing: 0.08em; cursor: pointer; }",
+    "#web-next.due { color: #f7edd4; border-color: rgba(230, 201, 138, 0.8); }",
+    "body:not(.sitting) #web-next { display: none; }",
+  ].join("\n");
   document.head.appendChild(style);
 })();

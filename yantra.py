@@ -1112,7 +1112,8 @@ def run_form(name, tracks):
             track = next(row for row in disc["tracks"] if row["n"] == item["n"])
             local = (library().get(disc["id"]) or {}).get(track["n"])
             announce_form(name, tracks, index, "Opening")
-            if disc.get("spotifyAlbum"):
+            source = pick_source(disc)
+            if source == "spotify":
                 stop_local()
                 pause_apple()
                 uri = spotify_track_uri(disc, track["n"])
@@ -1150,7 +1151,7 @@ def run_form(name, tracks):
                         break
                     spotify_shuffle_off()
                     time.sleep(0.2 if snap["length"] and remaining < 3 else 0.6)
-            elif apple_id(disc):
+            elif source == "apple":
                 stop_local()
                 if spotify_running():
                     spotify_pause()
@@ -1259,10 +1260,11 @@ def direct_problem(tracks):
             track = next((row for row in disc["tracks"] if row["n"] == number), None)
         if not disc or not track:
             return "A song in this form is not from the shelf."
-        if disc.get("spotifyAlbum"):
+        source = pick_source(disc)
+        if source == "spotify":
             if not spotify_track_uri(disc, number):
                 return track["title"] + " did not open as its own song."
-        elif apple_id(disc):
+        elif source == "apple":
             if not apple_track_url(disc, number):
                 return track["title"] + " did not open as its own song."
         elif not (library().get(disc["id"]) or {}).get(number):
@@ -1270,20 +1272,27 @@ def direct_problem(tracks):
     return None
 
 
+def pick_source(disc):
+    """The listener's chosen catalog when the disc is there, else the other one,
+    else the installed copies."""
+    order = ("apple", "spotify") if PLAY.get("prefer") == "apple" else ("spotify", "apple")
+    for name in order:
+        if name == "spotify" and disc.get("spotifyAlbum"):
+            return "spotify"
+        if name == "apple" and apple_id(disc):
+            return "apple"
+    return "local"
+
+
 def announce_form(name, tracks, index, status):
     item = tracks[index]
     disc = DISCS[item["discId"]]
     track = next(row for row in disc["tracks"] if row["n"] == item["n"])
-    if disc.get("spotifyAlbum"):
-        source = "spotify"
-    elif apple_id(disc):
-        source = "apple"
-    else:
-        source = "local"
+    source = pick_source(disc)
     publish_form(name, index, len(tracks), disc, track, status, 0, int(track.get("length") or 0), source)
 
 
-def start_form(name, tracks):
+def start_form(name, tracks, prefer="spotify"):
     missing = [track_ref(item["discId"], item["n"]) for item in tracks]
     missing = [item for item in missing if not item["playable"]]
     if missing:
@@ -1296,6 +1305,7 @@ def start_form(name, tracks):
     if thread is not None and thread.is_alive():
         return "The previous form is still closing."
     PLAY["stop"] = False
+    PLAY["prefer"] = "apple" if prefer == "apple" else "spotify"
     problem = direct_problem(tracks)
     if problem:
         return problem
@@ -1841,7 +1851,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.json_response({"ok": False, "error": error}, 400)
                 return
             name = " ".join(str(payload.get("name") or "").split()) or "Form"
-            problem = start_form(name, tracks)
+            problem = start_form(name, tracks, payload.get("prefer") or "spotify")
             if problem:
                 self.json_response({"ok": False, "error": problem}, 409)
                 return

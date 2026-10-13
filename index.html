@@ -32,6 +32,11 @@
     color: rgba(232, 204, 146, 0.45);
   }
   .menus button.on { color: #f7edd4; }
+  .menus .listen { margin-left: auto; display: flex; gap: 1rem; align-items: baseline; }
+  .menus .listen span {
+    letter-spacing: 0.22em; text-transform: uppercase; font-size: 0.72rem;
+    color: rgba(232, 204, 146, 0.45);
+  }
   .index, .face { min-width: 0; min-height: 0; }
   .kicker, .year {
     letter-spacing: 0.28em; text-transform: uppercase;
@@ -133,6 +138,11 @@
     <div class="menus">
       <button id="menu-albums" type="button" class="on">Albums</button>
       <button id="menu-forms" type="button">Playlists</button>
+      <div class="listen" id="listen">
+        <span>Listen on</span>
+        <button type="button" data-source="spotify">Spotify</button>
+        <button type="button" data-source="apple">Apple Music</button>
+      </div>
     </div>
     <div class="index" id="album-index">
       <p class="kicker">Students of Rama</p>
@@ -680,6 +690,56 @@ let circleId = "zazen";
 let following = true;
 let heardId = "";
 let playNote = "";
+
+/* Where the music plays when a sitting begins. The choice is kept in this browser. */
+let listenOn = "spotify";
+try {
+  if (localStorage.getItem("yantra.listenOn") === "apple") listenOn = "apple";
+} catch (e) {}
+
+function paintListen() {
+  document.querySelectorAll("#listen button").forEach((button) => {
+    button.classList.toggle("on", button.dataset.source === listenOn);
+  });
+}
+
+/* The chosen catalog when the disc is there, else the other one, else installed copies. */
+function sourceFor(disc) {
+  if (!disc) return "";
+  const order = listenOn === "apple" ? ["apple", "spotify"] : ["spotify", "apple"];
+  for (const name of order) {
+    if (name === "spotify" && disc.onSpotify) return "spotify";
+    if (name === "apple" && disc.onApple) return "apple";
+  }
+  return installedCount(disc) > 0 ? "local" : "";
+}
+
+/* Begin sitting: the album starts on the chosen source and the yantra opens. */
+async function sitAlbum() {
+  const disc = selected();
+  const source = sourceFor(disc);
+  if (!source) {
+    begin();
+    return;
+  }
+  const where = { spotify: " in Spotify.", apple: " in Apple Music.", local: "." }[source];
+  playNote = (source === "local" ? "Playing the installed " : "Opening ") + disc.title + where;
+  // The request goes out inside the click, before anything waits, so a browser lets it open the player.
+  const request = fetch("/play", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: disc.id, source }),
+  });
+  begin();
+  applyNow();
+  try {
+    const data = await (await request).json();
+    playNote = data.ok ? "" : (data.error || "This disc did not open.");
+  } catch (e) {
+    playNote = "This disc did not open.";
+  }
+  applyNow();
+}
 let snap = null;
 let snapAt = 0;
 let shownTrack = 0;
@@ -1088,7 +1148,7 @@ async function playForm(name, id, tracks) {
     const data = await (await fetch("/play", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source: "playlist", id: id || "", name, tracks }),
+      body: JSON.stringify({ source: "playlist", id: id || "", name, tracks, prefer: listenOn }),
     })).json();
     if (!data.ok) {
       playNote = data.error || "This form did not play.";
@@ -1220,7 +1280,15 @@ async function installChosen(fileList) {
   applyNow();
 }
 
-document.getElementById("begin").addEventListener("click", begin);
+document.getElementById("begin").addEventListener("click", sitAlbum);
+document.querySelectorAll("#listen button").forEach((button) => {
+  button.addEventListener("click", () => {
+    listenOn = button.dataset.source;
+    try { localStorage.setItem("yantra.listenOn", listenOn); } catch (e) {}
+    paintListen();
+  });
+});
+paintListen();
 document.getElementById("play").addEventListener("click", openDisc);
 document.getElementById("apple").addEventListener("click", openApple);
 document.getElementById("local").addEventListener("click", openInstalled);
