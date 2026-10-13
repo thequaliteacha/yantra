@@ -32,12 +32,31 @@ computer, and everything stays on that machine.
 
 ## In the browser
 
-The link above opens the web edition on any computer or phone. *Begin
-sitting* opens the album in Spotify or Apple Music in a second tab, and the
-yantra moves with the room through
-the microphone while the music plays nearby. Without the microphone it
-breathes slowly on its own. A form opens one song at a time in that same tab; when a song ends, tap
-*Next* at the bottom of the yantra. Forms you save stay in that browser. Your own
+The link above opens the web edition on any computer or phone. Choose
+Spotify or Apple Music under *Listen on* and press *Connect* once. After that,
+*Begin sitting* and a form's *Sit* play every song right in the page, in order,
+and the caption follows the whole sit. There are no other windows and nothing
+to press until the sit ends. Spotify needs Premium; Apple Music needs a
+subscription. On a phone, Spotify plays through the Spotify app that is open on
+it.
+
+Without a connection the web edition still works: the album or song opens in a
+second tab, and a form waits on *Next* at the bottom of the yantra. The yantra
+moves with the room through the microphone, or breathes slowly on its own.
+Forms you save stay in that browser.
+
+### Setting up the connections (once, by the site owner)
+
+`web/config.json` holds two public values:
+
+- **`spotifyClientId`**: create an app at developer.spotify.com (the owner needs
+  Premium). Add `https://thequaliteacha.github.io/yantra/web/` as a Redirect URI,
+  and choose Web API and Web Playback SDK. In Development Mode the app serves up
+  to five listeners, each added by email under User Management.
+- **`appleDeveloperToken`**: with an Apple Developer account, make a MusicKit
+  key, then run `python3 web/make_apple_token.py --key AuthKey_XXXX.p8 --key-id
+  XXXX --team-id YYYY`. The token works only from this site and lasts about six
+  months. Keep the `.p8` file out of the repo. Your own
 audio files and the silenced notifications belong to the desktop app.
 
 ## Running the desktop app

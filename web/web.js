@@ -15,12 +15,15 @@
   let collection = null;
   let starter = [];
   let links = {};
+  const config = { spotifyClientId: "", appleDeveloperToken: "" };
 
   const ready = Promise.all([
     realFetch("../discs.json").then((r) => r.json()),
     realFetch("../playlists.json").then((r) => r.json()).catch(() => []),
     realFetch("tracks.json").then((r) => r.json()).catch(() => ({})),
-  ]).then(([discs, playlists, songs]) => {
+    realFetch("config.json", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
+  ]).then(([discs, playlists, songs, settings]) => {
+    Object.assign(config, settings || {});
     collection = discs;
     links = songs || {};
     for (const disc of discs.discs) DISCS[disc.id] = disc;
@@ -370,6 +373,7 @@
   function stopQueue() {
     queue.items = [];
     queue.index = -1;
+    if (live.service) return;
     Object.assign(NOW, {
       connected: false, status: "Stopped", title: "", artist: "", album: "", track: 0, length: 0,
       position: 0, discId: "", allowed: false, form: "", formIndex: 0, formTotal: 0, chakra: "", source: "",
@@ -400,12 +404,345 @@
     }
   }, 1000);
 
+
+  /* ---- playing inside the page ----
+     With a connected account the songs play right here: Spotify through its Web
+     Playback SDK (or the listener's open Spotify app), Apple Music through MusicKit.
+     The page follows each song and advances on its own, so the eyes stay on the
+     yantra. Without a connection, the tab and Next button above still work. */
+
+  function randomText(length) {
+    const bytes = crypto.getRandomValues(new Uint8Array(length));
+    return Array.from(bytes, (b) => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[b % 62]).join("");
+  }
+  async function challengeFor(verifier) {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+    return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  const returnTo = () => location.origin + location.pathname;
+
+  const spotify = {
+    token: null,
+    deviceId: "",
+    player: null,
+    sdk: false,
+    load() {
+      try { this.token = JSON.parse(localStorage.getItem("yantra.spotify") || "null"); } catch (e) {}
+    },
+    save() {
+      try { localStorage.setItem("yantra.spotify", JSON.stringify(this.token)); } catch (e) {}
+    },
+    available() { return !!config.spotifyClientId; },
+    connected() { return this.available() && !!(this.token && this.token.refresh); },
+    async connect() {
+      const verifier = randomText(64);
+      const state = randomText(16);
+      sessionStorage.setItem("yantra.verifier", verifier);
+      sessionStorage.setItem("yantra.state", state);
+      const query = new URLSearchParams({
+        client_id: config.spotifyClientId,
+        response_type: "code",
+        redirect_uri: returnTo(),
+        code_challenge_method: "S256",
+        code_challenge: await challengeFor(verifier),
+        state,
+        scope: "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state",
+      });
+      location.href = "https://accounts.spotify.com/authorize?" + query;
+    },
+    async tokenRequest(fields) {
+      const response = await realFetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(Object.assign({ client_id: config.spotifyClientId }, fields)),
+      });
+      if (!response.ok) return false;
+      const data = await response.json();
+      this.token = {
+        access: data.access_token,
+        refresh: data.refresh_token || (this.token && this.token.refresh),
+        expires: Date.now() + (data.expires_in - 60) * 1000,
+      };
+      this.save();
+      return true;
+    },
+    async finish(code, state) {
+      if (state !== sessionStorage.getItem("yantra.state")) return;
+      await this.tokenRequest({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: returnTo(),
+        code_verifier: sessionStorage.getItem("yantra.verifier") || "",
+      });
+      sessionStorage.removeItem("yantra.verifier");
+      sessionStorage.removeItem("yantra.state");
+    },
+    async access() {
+      if (!this.connected()) return "";
+      if (Date.now() > this.token.expires) {
+        if (!(await this.tokenRequest({ grant_type: "refresh_token", refresh_token: this.token.refresh }))) {
+          this.token = null;
+          this.save();
+          return "";
+        }
+      }
+      return this.token.access;
+    },
+    async api(method, path, body) {
+      const token = await this.access();
+      if (!token) return null;
+      return realFetch("https://api.spotify.com/v1" + path, {
+        method,
+        headers: Object.assign({ Authorization: "Bearer " + token }, body ? { "Content-Type": "application/json" } : {}),
+        body: body ? JSON.stringify(body) : undefined,
+      }).catch(() => null);
+    },
+    startSdk() {
+      if (this.sdk || !this.connected()) return;
+      this.sdk = true;
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        this.player = new window.Spotify.Player({
+          name: "Yantra",
+          getOAuthToken: (give) => this.access().then(give),
+          volume: 0.8,
+        });
+        this.player.addListener("ready", ({ device_id }) => { this.deviceId = device_id; });
+        this.player.addListener("not_ready", () => { this.deviceId = ""; });
+        this.player.connect();
+      };
+      const script = document.createElement("script");
+      script.src = "https://sdk.scdn.co/spotify-player.js";
+      script.async = true;
+      document.head.appendChild(script);
+    },
+    async play(body) {
+      // Unlocks audio for the in-page player; it has to run inside the tap.
+      if (this.player && this.player.activateElement) this.player.activateElement();
+      const target = this.deviceId ? "?device_id=" + this.deviceId : "";
+      const response = await this.api("PUT", "/me/player/play" + target, body);
+      if (!response || !(response.ok || response.status === 204)) return false;
+      this.api("PUT", "/me/player/shuffle?state=false" + (this.deviceId ? "&device_id=" + this.deviceId : ""));
+      this.api("PUT", "/me/player/repeat?state=off" + (this.deviceId ? "&device_id=" + this.deviceId : ""));
+      return true;
+    },
+    async state() {
+      const response = await this.api("GET", "/me/player");
+      if (!response || response.status !== 200) return null;
+      const data = await response.json().catch(() => null);
+      if (!data || !data.item) return null;
+      return {
+        key: data.item.uri,
+        position: (data.progress_ms || 0) / 1000,
+        length: (data.item.duration_ms || 0) / 1000,
+        playing: !!data.is_playing,
+      };
+    },
+    pause() { this.api("PUT", "/me/player/pause" + (this.deviceId ? "?device_id=" + this.deviceId : "")); },
+  };
+
+  const apple = {
+    music: null,
+    loading: null,
+    available() { return !!config.appleDeveloperToken; },
+    connected() { return !!(this.music && this.music.isAuthorized); },
+    load() {
+      if (!this.available()) return Promise.resolve();
+      if (!this.loading) {
+        this.loading = new Promise((resolve) => {
+          document.addEventListener("musickitloaded", async () => {
+            try {
+              this.music = await window.MusicKit.configure({
+                developerToken: config.appleDeveloperToken,
+                app: { name: "Yantra", build: "1.0" },
+              });
+            } catch (e) {}
+            paintConnect();
+            resolve();
+          });
+          const script = document.createElement("script");
+          script.src = "https://js-cdn.music.apple.com/musickit/v3/musickit.js";
+          script.async = true;
+          document.head.appendChild(script);
+        });
+      }
+      return this.loading;
+    },
+    async connect() {
+      await this.load();
+      if (this.music) await this.music.authorize().catch(() => {});
+    },
+    async play(queueOptions) {
+      await this.load();
+      if (!this.music) return false;
+      if (!this.music.isAuthorized) await this.music.authorize().catch(() => {});
+      if (!this.music.isAuthorized) return false;
+      try {
+        this.music.shuffleMode = 0;
+        this.music.repeatMode = 0;
+        await this.music.setQueue(Object.assign({ startPlaying: true }, queueOptions));
+        if (!this.music.isPlaying) await this.music.play();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    state() {
+      const music = this.music;
+      const item = music && music.nowPlayingItem;
+      if (!item) return null;
+      return {
+        key: String(item.id),
+        position: music.currentPlaybackTime || 0,
+        length: music.currentPlaybackDuration || 0,
+        playing: !!music.isPlaying,
+      };
+    },
+    pause() { if (this.music) this.music.pause(); },
+  };
+
+  /* Each song's key on each service, read from its direct link. */
+  function songKey(item, service) {
+    const url = ((links[item.discId] || {})[String(item.n)] || {})[service] || "";
+    if (service === "spotify") {
+      const match = url.match(/\/track\/([A-Za-z0-9]+)/);
+      return match ? "spotify:track:" + match[1] : "";
+    }
+    const match = url.match(/[?&]i=(\d+)/);
+    return match ? match[1] : "";
+  }
+
+  const services = { spotify, apple };
+  const live = { service: null, name: "", items: [], keys: [], seen: false, timer: 0, form: false };
+
+  function serviceFor(items, prefer) {
+    const order = prefer === "apple" ? ["apple", "spotify"] : ["spotify", "apple"];
+    for (const name of order) {
+      if (services[name].connected() && items.every((item) => songKey(item, name))) return name;
+    }
+    return "";
+  }
+
+  function liveStop(pause) {
+    if (live.service && pause) services[live.service].pause();
+    clearInterval(live.timer);
+    live.service = null;
+    live.items = [];
+    live.keys = [];
+    live.seen = false;
+  }
+
+  async function livePoll() {
+    if (!live.service) return;
+    const state = await services[live.service].state();
+    if (!live.service || !state) return;
+    const index = live.keys.indexOf(state.key);
+    if (index < 0) {
+      // The list has finished and the service went on to something else.
+      if (live.seen) {
+        services[live.service].pause();
+        NOW.status = "Stopped";
+        liveStop(false);
+      }
+      return;
+    }
+    live.seen = true;
+    const item = live.items[index];
+    const disc = DISCS[item.discId];
+    const track = disc.tracks.find((row) => row.n === item.n);
+    const last = index === live.items.length - 1;
+    Object.assign(NOW, {
+      connected: true,
+      status: state.playing ? "Playing" : (last && state.position < 1 ? "Stopped" : "Paused"),
+      title: track.title, artist: disc.artist, album: disc.title, track: item.n,
+      length: state.length || track.length || 0, position: state.position,
+      discId: disc.id, allowed: true, source: live.service,
+      form: live.form ? live.name : "", formIndex: live.form ? index : 0,
+      formTotal: live.form ? live.items.length : 0, chakra: live.form ? chakraOf(disc, item.n) : "",
+    });
+  }
+
+  /* Starts the list in the page. Returns false when no connected service can play all of it. */
+  function liveStart(name, items, prefer, form, albumOptions) {
+    const service = serviceFor(items, prefer);
+    if (!service) return false;
+    liveStop(true);
+    stopQueue();
+    Object.assign(live, { service, name, items, keys: items.map((item) => songKey(item, service)), seen: false, form });
+    const started = service === "spotify"
+      ? spotify.play(albumOptions && albumOptions.spotify ? albumOptions.spotify : { uris: live.keys })
+      : apple.play(albumOptions && albumOptions.apple ? albumOptions.apple : { songs: live.keys });
+    started.then((ok) => {
+      if (ok || live.service !== service) return;
+      liveStop(false);
+      offerTab(items, prefer, name, form);
+    });
+    live.timer = setInterval(livePoll, 1000);
+    return true;
+  }
+
+  /* When in-page play fails after the tap, a tap is needed again to open the service. */
+  function offerTab(items, prefer, name, form) {
+    queue.name = name;
+    queue.items = items;
+    queue.prefer = prefer;
+    queue.index = -1;
+    if (!nextButton) return;
+    nextButton.hidden = false;
+    nextButton.classList.add("due");
+    nextButton.textContent = "The music did not start here  ·  Tap to open it";
+    nextButton.onclick = () => {
+      nextButton.onclick = null;
+      playSong(0);
+    };
+  }
+
+  /* The Connect control beside Listen on. */
+  let connectButton = null;
+  function paintConnect() {
+    if (!connectButton) return;
+    let choice = "spotify";
+    try { if (localStorage.getItem("yantra.listenOn") === "apple") choice = "apple"; } catch (e) {}
+    const service = services[choice];
+    connectButton.hidden = !service.available();
+    connectButton.disabled = service.connected();
+    connectButton.textContent = service.connected() ? "Connected" : "Connect";
+    connectButton.dataset.service = choice;
+  }
+
+  ready.then(async () => {
+    spotify.load();
+    const query = new URLSearchParams(location.search);
+    if (query.get("code") && spotify.available()) {
+      await spotify.finish(query.get("code"), query.get("state"));
+      history.replaceState(null, "", returnTo());
+    }
+    spotify.startSdk();
+    apple.load();
+    paintConnect();
+  });
+
   document.addEventListener("DOMContentLoaded", () => {
+    const listen = document.getElementById("listen");
+    if (listen) {
+      connectButton = document.createElement("button");
+      connectButton.type = "button";
+      connectButton.id = "web-connect";
+      connectButton.hidden = true;
+      connectButton.addEventListener("click", () => {
+        const service = services[connectButton.dataset.service];
+        if (service && !service.connected()) service.connect().then(paintConnect);
+      });
+      listen.appendChild(connectButton);
+      listen.querySelectorAll("button[data-source]").forEach((button) => button.addEventListener("click", paintConnect));
+      paintConnect();
+    }
     nextButton = document.createElement("button");
     nextButton.type = "button";
     nextButton.id = "web-next";
     nextButton.hidden = true;
-    nextButton.addEventListener("click", () => playSong(queue.index + 1));
+    nextButton.addEventListener("click", () => {
+      if (!nextButton.onclick) playSong(queue.index + 1);
+    });
     document.body.appendChild(nextButton);
   });
 
@@ -414,9 +751,12 @@
       const tracks = payload.tracks || [];
       const error = playlistError(tracks);
       if (error) return [{ ok: false, error }, 400];
-      queue.name = String(payload.name || "Form");
+      const name = String(payload.name || "Form");
+      const prefer = payload.prefer === "apple" ? "apple" : "spotify";
+      if (liveStart(name, orderedDraft(tracks), prefer, true)) return [{ ok: true, source: "playlist" }];
+      queue.name = name;
       queue.items = orderedDraft(tracks);
-      queue.prefer = payload.prefer === "apple" ? "apple" : "spotify";
+      queue.prefer = prefer;
       if (!playSong(0)) {
         stopQueue();
         return [{ ok: false, error: "The first song did not open." }, 404];
@@ -426,6 +766,17 @@
     stopQueue();
     const disc = DISCS[payload.id];
     if (!disc) return [{ ok: false, error: "That disc is not on the shelf." }, 404];
+    if (payload.source === "spotify" || payload.source === "apple") {
+      const items = disc.tracks.map((track) => ({ discId: disc.id, n: track.n }));
+      const options = {
+        spotify: disc.spotifyAlbum ? { context_uri: "spotify:album:" + disc.spotifyAlbum } : null,
+        apple: appleId(disc) ? { album: appleId(disc) } : null,
+      };
+      if (options[payload.source] && liveStart(disc.title, items, payload.source, false, options)) {
+        return [{ ok: true, source: payload.source }];
+      }
+    }
+    liveStop(true);
     if (payload.source === "apple") {
       const id = appleId(disc);
       if (!id) return [{ ok: false, error: "This disc is not on Apple Music." }, 403];
@@ -446,6 +797,7 @@
       startMic();
       if (!document.fullscreenElement && root.requestFullscreen) root.requestFullscreen().catch(() => {});
     } else {
+      liveStop(true);
       stopQueue();
       if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
     }
