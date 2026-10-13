@@ -6,6 +6,8 @@
  * room through the microphone (or breathes slowly if the microphone is off).
  */
 (() => {
+  // Tells the page it runs as the web edition, so it opens on the morning/evening home.
+  window.YANTRA_WEB = true;
   const realFetch = window.fetch.bind(window);
   const CHAKRAS = ["naval", "heart", "eye"];
   const CHAKRA_NAME = { naval: "Naval chakra", heart: "Heart chakra", eye: "Third eye chakra" };
@@ -13,13 +15,16 @@
   const DISCS = {};
   let collection = null;
   let links = {};
+  let sets = null;
   const config = { spotifyClientId: "", appleDeveloperToken: "" };
 
   const ready = Promise.all([
     realFetch("../discs.json").then((r) => r.json()),
     realFetch("tracks.json").then((r) => r.json()).catch(() => ({})),
     realFetch("config.json", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
-  ]).then(([discs, songs, settings]) => {
+    realFetch("sets.json").then((r) => r.json()).catch(() => null),
+  ]).then(([discs, songs, settings, sessionSets]) => {
+    sets = sessionSets;
     Object.assign(config, settings || {});
     collection = discs;
     links = songs || {};
@@ -653,7 +658,29 @@
   }
 
   const services = { spotify, apple };
-  const live = { service: null, name: "", items: [], keys: [], seen: false, timer: 0, form: false };
+  const live = { service: null, name: "", items: [], keys: [], seen: false, timer: 0, form: false, chakras: null, lastHeard: false };
+
+  /* The morning and evening sets: 1 song is the heart song, 3 is one per chakra,
+     6 is two per chakra, 12 is four per chakra, always navel, heart, third eye. */
+  function sessionItems(theme, count) {
+    const set = sets && sets[theme];
+    if (!set) return null;
+    if (count === 1) {
+      const one = sets.oneSong && sets.oneSong[theme];
+      return one ? [{ discId: one.discId, n: one.n, chakra: "heart" }] : null;
+    }
+    const per = { 3: 1, 6: 2, 12: 4 }[count];
+    if (!per) return null;
+    const items = [];
+    for (const chakra of ["naval", "heart", "eye"]) {
+      for (const song of (set[chakra] || []).slice(0, per)) items.push({ discId: song.discId, n: song.n, chakra });
+    }
+    return items.length === per * 3 ? items : null;
+  }
+
+  function complete() {
+    dispatchEvent(new Event("yantra:complete"));
+  }
 
   function serviceFor(items, prefer) {
     const order = prefer === "apple" ? ["apple", "spotify"] : ["spotify", "apple"];
@@ -682,7 +709,9 @@
       if (live.seen) {
         services[live.service].pause();
         NOW.status = "Stopped";
+        const finished = live.lastHeard;
         liveStop(false);
+        if (finished) complete();
       }
       return;
     }
@@ -691,6 +720,14 @@
     const disc = DISCS[item.discId];
     const track = disc.tracks.find((row) => row.n === item.n);
     const last = index === live.items.length - 1;
+    if (last && state.playing) live.lastHeard = true;
+    // The last song has run out and Spotify stopped on it: the sit is complete.
+    if (last && live.lastHeard && !state.playing && (state.position < 1 || state.position >= state.length - 1.5)) {
+      NOW.status = "Stopped";
+      liveStop(false);
+      complete();
+      return;
+    }
     Object.assign(NOW, {
       connected: true,
       status: state.playing ? "Playing" : (last && state.position < 1 ? "Stopped" : "Paused"),
@@ -698,7 +735,7 @@
       length: state.length || track.length || 0, position: state.position,
       discId: disc.id, allowed: true, source: live.service,
       form: live.form ? live.name : "", formIndex: live.form ? index : 0,
-      formTotal: live.form ? live.items.length : 0, chakra: live.form ? chakraOf(disc, item.n) : "",
+      formTotal: live.form ? live.items.length : 0, chakra: live.form ? ((live.chakras && live.chakras[index]) || chakraOf(disc, item.n)) : "",
       formPlan: live.form ? planOf(live.items) : [],
     });
   }
@@ -764,7 +801,9 @@
     sessionStorage.removeItem("yantra.pending");
     if (!pending || !spotify.connected()) return;
     showResume("Spotify is connected.", () => {
-      if (pending.kind === "form" && typeof window.playForm === "function") {
+      if (pending.kind === "session" && typeof window.playSession === "function") {
+        window.playSession(pending.theme, pending.count);
+      } else if (pending.kind === "form" && typeof window.playForm === "function") {
         window.playForm(pending.name, pending.id, pending.tracks);
       } else if (pending.kind === "album") {
         window.fetch("/play", { method: "POST", body: JSON.stringify({ id: pending.id, source: "spotify" }) });
@@ -775,12 +814,15 @@
   }
 
   /* Starts the list in the page. Returns false when no connected service can play all of it. */
-  function liveStart(name, items, prefer, form, albumOptions, formId) {
+  function liveStart(name, items, prefer, form, albumOptions, formId, chakras) {
     const service = serviceFor(items, prefer);
     if (!service) return false;
     liveStop(true);
     stopQueue();
-    Object.assign(live, { service, name, items, keys: items.map((item) => songKey(item, service)), seen: false, form });
+    Object.assign(live, {
+      service, name, items, keys: items.map((item) => songKey(item, service)), seen: false, form,
+      chakras: chakras || null, lastHeard: false,
+    });
     // Unlocks audio for the in-page player; it has to run inside the tap.
     if (service === "spotify" && spotify.player && spotify.player.activateElement) spotify.player.activateElement();
     let started;
@@ -902,6 +944,28 @@
   });
 
   function play(payload) {
+    if (payload.source === "session") {
+      const theme = payload.theme === "evening" ? "evening" : "morning";
+      const count = Number(payload.count) || 3;
+      const picked = sessionItems(theme, count);
+      if (!picked) return [{ ok: false, error: "That sit is not available." }, 404];
+      const name = String(payload.name || theme);
+      const items = picked.map((item) => ({ discId: item.discId, n: item.n }));
+      if (spotify.available() && !spotify.connected()) {
+        return connectFirst({ kind: "session", theme, count, name });
+      }
+      if (liveStart(name, items, "spotify", true, null, "set-" + theme + "-" + count, picked.map((item) => item.chakra))) {
+        return [{ ok: true, source: "session" }];
+      }
+      queue.name = name;
+      queue.items = items;
+      queue.prefer = "spotify";
+      if (!playSong(0)) {
+        stopQueue();
+        return [{ ok: false, error: "The first song did not open." }, 404];
+      }
+      return [{ ok: true, source: "session" }];
+    }
     if (payload.source === "playlist") {
       const tracks = payload.tracks || [];
       const error = playlistError(tracks);

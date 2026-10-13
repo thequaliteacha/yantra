@@ -1,7 +1,7 @@
 {
   "name": "Yantra",
   "short_name": "Yantra",
-  "description": "A sitting companion for students of Rama.",
+  "description": "Morning and evening Vayu meditation for students of Rama, with a yantra that draws itself through each song.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,7 +9,22 @@
   "theme_color": "#05040a",
   "orientation": "any",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "health",
+    "lifestyle",
+    "music"
   ]
 }

@@ -1,0 +1,125 @@
+{
+ "source": "Morning and evening sets as curated in the Heart School meditation app; songs by Vayu Meditation.",
+ "morning": {
+  "naval": [
+   {
+    "discId": "anza-borrego",
+    "n": 1
+   },
+   {
+    "discId": "anza-borrego",
+    "n": 3
+   },
+   {
+    "discId": "mystical-creatures",
+    "n": 1
+   },
+   {
+    "discId": "great-teachers-of-enlightenment",
+    "n": 4
+   }
+  ],
+  "heart": [
+   {
+    "discId": "anza-borrego",
+    "n": 4
+   },
+   {
+    "discId": "anza-borrego",
+    "n": 5
+   },
+   {
+    "discId": "anza-borrego",
+    "n": 6
+   },
+   {
+    "discId": "mystical-creatures",
+    "n": 5
+   }
+  ],
+  "eye": [
+   {
+    "discId": "anza-borrego",
+    "n": 8
+   },
+   {
+    "discId": "anza-borrego",
+    "n": 9
+   },
+   {
+    "discId": "anza-borrego",
+    "n": 10
+   },
+   {
+    "discId": "mystical-creatures",
+    "n": 11
+   }
+  ]
+ },
+ "evening": {
+  "naval": [
+   {
+    "discId": "golden",
+    "n": 1
+   },
+   {
+    "discId": "golden",
+    "n": 2
+   },
+   {
+    "discId": "india-dream",
+    "n": 1
+   },
+   {
+    "discId": "india-dream",
+    "n": 6
+   }
+  ],
+  "heart": [
+   {
+    "discId": "golden",
+    "n": 4
+   },
+   {
+    "discId": "golden",
+    "n": 5
+   },
+   {
+    "discId": "india-dream",
+    "n": 7
+   },
+   {
+    "discId": "india-dream",
+    "n": 10
+   }
+  ],
+  "eye": [
+   {
+    "discId": "golden",
+    "n": 6
+   },
+   {
+    "discId": "golden",
+    "n": 7
+   },
+   {
+    "discId": "india-dream",
+    "n": 12
+   },
+   {
+    "discId": "india-dream",
+    "n": 14
+   }
+  ]
+ },
+ "oneSong": {
+  "morning": {
+   "discId": "anza-borrego",
+   "n": 4
+  },
+  "evening": {
+   "discId": "india-dream",
+   "n": 10
+  }
+ }
+}

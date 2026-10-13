@@ -30,6 +30,15 @@ computer, and everything stays on that machine.
 
 ## In the browser
 
+The web edition opens like the Heart School meditation app: **Morning
+Meditation** or **Evening Meditation**, then 1, 3, 6 or 12 songs. The sets
+follow the Heart School app's curation of Vayu Meditation songs (`web/sets.json`):
+one song is the heart song; three, six and twelve go navel, heart, third eye in
+equal parts. The songs play from the listener's own Spotify, the yantra draws
+itself once per song, and *Meditation Complete* closes the sit. *Albums and
+forms* opens the full shelf. *Getting Started* explains the practice and how to
+install the app on a phone.
+
 The link above opens the web edition on any computer or phone. Press
 *Connect* beside *Listen on Spotify* once. After that,
 *Begin sitting* and a form's *Sit* play every song right in the page, in order,

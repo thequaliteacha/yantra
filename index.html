@@ -149,6 +149,58 @@
   }
   body.sitting.awake #end { opacity: 1; pointer-events: auto; }
 
+
+  /* The app's front door on the web: morning and evening sits, as in the Heart School app. */
+  .room {
+    position: fixed; inset: 0; z-index: 3; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: max(2rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right))
+             max(2.4rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left));
+    background: radial-gradient(ellipse at center, rgba(5, 4, 10, 0.35), rgba(5, 4, 10, 0.82) 70%);
+    font-family: Palatino, "Iowan Old Style", "Times New Roman", serif;
+  }
+  .room[hidden], body.sitting .room { display: none; }
+  .room .inner { width: min(26rem, 100%); display: flex; flex-direction: column; gap: 0.9rem; }
+  .room:not([hidden]) .inner { animation: settle 0.8s ease both; }
+  .room h1 { font-size: clamp(2.2rem, 7vw, 3.1rem); margin: 0 0 0.2rem; }
+  .room h2 { font-family: inherit; font-weight: 500; font-size: 1.55rem; color: #f7edd4; margin: 0 0 1.2rem; }
+  .room .kicker { margin-bottom: 1.8rem; }
+  .room p { color: rgba(243, 230, 200, 0.82); line-height: 1.6; margin: 0; text-align: left; font-size: 1.02rem; }
+  .room p b { color: #f3e6c8; font-weight: 600; }
+  .room .choice {
+    width: 100%; padding: 1.05rem 0; font: inherit; font-size: 1.12rem; letter-spacing: 0.06em; cursor: pointer;
+    background: rgba(5, 4, 10, 0.4); color: #f7edd4; border: 1px solid rgba(230, 201, 138, 0.55);
+  }
+  .room .choice:hover { background: rgba(230, 201, 138, 0.1); border-color: rgba(230, 201, 138, 0.9); }
+  .room .choice.dawn { border-color: rgba(233, 162, 90, 0.75); }
+  .room .choice.dusk { border-color: rgba(120, 170, 165, 0.7); }
+  .room .quiet {
+    background: transparent; border: 0; font: inherit; cursor: pointer; padding: 0.4rem;
+    color: rgba(232, 204, 146, 0.7); text-decoration: underline; text-underline-offset: 4px; font-size: 0.95rem;
+  }
+  .room .quiet:hover { color: #f7edd4; }
+  .room .links { display: flex; justify-content: center; gap: 1.4rem; flex-wrap: wrap; margin-top: 1.6rem; }
+  .room .back {
+    position: fixed; left: max(1.4rem, env(safe-area-inset-left)); top: max(1.4rem, env(safe-area-inset-top));
+    background: transparent; border: 0; color: rgba(243, 230, 200, 0.8); font-size: 1.5rem; cursor: pointer; padding: 0.3rem 0.5rem;
+  }
+  .room .corner {
+    position: fixed; bottom: max(1.6rem, env(safe-area-inset-bottom)); width: 2.3rem; height: 2.3rem; border-radius: 50%;
+    border: 1px solid rgba(230, 201, 138, 0.5); background: transparent; color: rgba(243, 230, 200, 0.85);
+    font: inherit; cursor: pointer;
+  }
+  .room .corner.left { left: max(1.6rem, env(safe-area-inset-left)); }
+  .room .corner.right { right: max(1.6rem, env(safe-area-inset-right)); }
+  .room .tip {
+    position: fixed; left: max(1.6rem, env(safe-area-inset-left)); bottom: calc(max(1.6rem, env(safe-area-inset-bottom)) + 3rem);
+    width: min(24rem, calc(100vw - 3.2rem)); padding: 1.1rem 1.3rem; text-align: left;
+    background: rgba(5, 4, 10, 0.92); border: 1px solid rgba(230, 201, 138, 0.35); color: rgba(243, 230, 200, 0.88);
+    font-size: 0.95rem; line-height: 1.55;
+  }
+  .room .tip[hidden] { display: none; }
+  .room a { color: #e6c98a; }
+  #home-note { min-height: 1.3rem; color: rgba(232, 204, 146, 0.75); font-size: 0.92rem; text-align: center; }
+
   /* Phones and narrow windows: one column, room for thumbs, nothing under the notch. */
   @media (max-width: 760px) {
     #gate {
@@ -179,6 +231,63 @@
 </head>
 <body>
 <canvas id="c"></canvas>
+<div class="room" id="home" hidden>
+  <div class="inner">
+    <h1>Yantra</h1>
+    <p class="kicker" style="text-align:center">Vayu meditation · students of Rama</p>
+    <button class="choice dawn" type="button" data-theme="morning">Morning Meditation</button>
+    <button class="choice dusk" type="button" data-theme="evening">Evening Meditation</button>
+    <p id="home-note"></p>
+    <div class="links">
+      <button class="quiet" type="button" data-room="guide">Getting Started</button>
+      <button class="quiet" type="button" id="open-shelf">Albums and forms</button>
+      <button class="quiet" type="button" id="install-app" hidden>Install Yantra</button>
+    </div>
+  </div>
+</div>
+<div class="room" id="pick" hidden>
+  <button class="back" type="button" data-room="home" aria-label="Back">&#8592;</button>
+  <div class="inner">
+    <h2 id="pick-title">Begin your morning meditation</h2>
+    <button class="choice" type="button" data-count="1">1 Song</button>
+    <button class="choice" type="button" data-count="3">3 Songs</button>
+    <button class="choice" type="button" data-count="6">6 Songs</button>
+    <button class="choice" type="button" data-count="12">12 Songs</button>
+    <p id="pick-note" style="text-align:center;min-height:1.3rem;color:rgba(232,204,146,0.75);font-size:0.92rem"></p>
+  </div>
+  <button class="corner left" type="button" id="pick-help" aria-label="How many songs">?</button>
+  <button class="corner right" type="button" data-room="about" aria-label="About the music">&#9835;</button>
+  <div class="tip" id="pick-tip" hidden>Each song runs three to four minutes, so three songs make about twelve minutes and six songs about twenty-four.
+    <button class="quiet" type="button" data-room="guide">Read more</button></div>
+</div>
+<div class="room" id="guide" hidden>
+  <button class="back" type="button" data-room="back" aria-label="Back">&#8592;</button>
+  <div class="inner">
+    <h2>Getting Started</h2>
+    <p>Sit with three songs each morning and three each evening, about four minutes apiece. The first song is for the navel chakra, the second for the heart, the third for the third eye.</p>
+    <p>With time for only one song, meditate on the heart. If you need more grounding, take the navel instead.</p>
+    <p><b>Six songs:</b> two for the navel, then two for the heart, then two for the third eye.</p>
+    <p><b>Twelve songs:</b> four for each, in the same order.</p>
+    <p>The yantra draws itself once with each song. Tap the screen to show <b>End sitting</b>.</p>
+    <p><b>Keep it on your phone:</b> on Android, open the menu and choose <b>Install app</b> or <b>Add to Home screen</b>. On iPhone, tap <b>Share</b>, then <b>Add to Home Screen</b>.</p>
+  </div>
+</div>
+<div class="room" id="about" hidden>
+  <button class="back" type="button" data-room="back" aria-label="Back">&#8592;</button>
+  <div class="inner">
+    <h2>About the Music</h2>
+    <p>The music is by Vayu Meditation and plays from your own Spotify account (Premium). Nothing is copied or stored here.</p>
+    <p>The morning and evening sets follow the Heart School meditation app, made for the lineage's students.</p>
+    <p style="text-align:center"><a href="https://open.spotify.com/artist/3ScOP7YdhKlvEvlydSl2F1" target="_blank" rel="noopener">Vayu Meditation on Spotify</a></p>
+  </div>
+</div>
+<div class="room" id="done" hidden>
+  <div class="inner">
+    <h2>Meditation Complete</h2>
+    <p id="done-line" style="text-align:center">Well done. Your morning meditation is complete.</p>
+    <button class="choice" type="button" data-room="home" style="margin-top:1.4rem">Back to Home</button>
+  </div>
+</div>
 <div id="gate">
   <div class="shelf">
     <div class="menus">
@@ -1049,7 +1158,9 @@ function begin() {
 }
 
 function endSitting() {
+  const wasSitting = document.body.classList.contains("sitting");
   document.body.classList.remove("sitting", "awake");
+  if (wasSitting) dispatchEvent(new Event("yantra:ended"));
   caption.classList.remove("show");
   fetch("/sit", {
     method: "POST",
@@ -1335,6 +1446,108 @@ document.getElementById("form-play").addEventListener("click", () => {
   const name = document.getElementById("playlist-name").value.trim() || "Form";
   playForm(name, draftId, draft);
 });
+
+/* ---- Morning and evening sits (web edition) ---- */
+const rooms = ["home", "pick", "guide", "about", "done"];
+let roomTrail = [];
+let sessionTheme = "morning";
+let sessionLive = false;
+function showRoom(name) {
+  for (const id of rooms) document.getElementById(id).hidden = id !== name;
+  document.getElementById("gate").style.visibility = name ? "hidden" : "";
+  if (name) roomTrail.push(name);
+  if (name !== "pick") document.getElementById("pick-tip").hidden = true;
+}
+function roomBack() {
+  roomTrail.pop();
+  showRoom(roomTrail.pop() || "home");
+}
+async function playSession(theme, count) {
+  sessionTheme = theme;
+  const label = (theme === "morning" ? "Morning" : "Evening") + " · " + count + (count === 1 ? " song" : " songs");
+  const note = document.getElementById("pick-note");
+  note.textContent = "";
+  // The request goes out inside the tap, before anything waits.
+  const request = fetch("/play", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source: "session", theme, count, name: label, prefer: listenOn }),
+  });
+  sessionLive = true;
+  begin();
+  try {
+    const data = await (await request).json();
+    if (!data.ok) {
+      sessionLive = false;
+      endSitting();
+      showRoom("pick");
+      note.textContent = data.error || "The music did not start.";
+    }
+  } catch (e) {
+    sessionLive = false;
+    endSitting();
+    note.textContent = "The music did not start.";
+  }
+}
+window.playSession = playSession;
+if (window.YANTRA_WEB) {
+  document.querySelectorAll(".room [data-room]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const to = button.dataset.room;
+      if (to === "back") roomBack();
+      else { if (to === "home") roomTrail = []; showRoom(to); }
+    });
+  });
+  document.querySelectorAll("#home [data-theme]").forEach((button) => {
+    button.addEventListener("click", () => {
+      sessionTheme = button.dataset.theme;
+      document.getElementById("pick-title").textContent =
+        sessionTheme === "morning" ? "Begin your morning meditation" : "Begin your evening meditation";
+      document.getElementById("pick").dataset.theme = sessionTheme;
+      showRoom("pick");
+    });
+  });
+  document.querySelectorAll("#pick [data-count]").forEach((button) => {
+    button.addEventListener("click", () => playSession(sessionTheme, Number(button.dataset.count)));
+  });
+  document.getElementById("pick-help").addEventListener("click", () => {
+    const tip = document.getElementById("pick-tip");
+    tip.hidden = !tip.hidden;
+  });
+  document.getElementById("open-shelf").addEventListener("click", () => {
+    roomTrail = [];
+    showRoom("");
+  });
+  addEventListener("yantra:complete", () => {
+    if (!sessionLive) return;
+    sessionLive = false;
+    endSitting();
+    document.getElementById("done-line").textContent =
+      "Well done. Your " + sessionTheme + " meditation is complete.";
+    roomTrail = [];
+    showRoom("done");
+  });
+  addEventListener("yantra:ended", () => {
+    if (sessionLive) {
+      sessionLive = false;
+      roomTrail = [];
+      showRoom("home");
+    }
+  });
+  let installPrompt = null;
+  addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    installPrompt = event;
+    document.getElementById("install-app").hidden = false;
+  });
+  document.getElementById("install-app").addEventListener("click", () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    installPrompt = null;
+    document.getElementById("install-app").hidden = true;
+  });
+  if (!params.get("menu") && !params.get("sit")) showRoom("home");
+}
 let menu = params.get("menu") === "playlists" ? "playlists" : "albums";
 function showMenu() {
   const albums = menu === "albums";
