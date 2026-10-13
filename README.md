@@ -1,9 +1,13 @@
 # Yantra
 
+**[Open Yantra in your browser →](https://thequaliteacha.github.io/yantra/web/)**
+
 A sitting companion for students of Rama. It draws a slow, sacred-geometry
 yantra that breathes with the music, and the music is limited to the
 meditation discs of the lineage: Zazen, Vayu Meditation, Lumikara, and the
-lineage recordings. There are 34 albums on the shelf.
+lineage recordings. The shelf shows the 25 albums on Spotify or Apple Music;
+the other nine Zazen discs stay hidden until they reach a catalog or you
+install your own copies.
 
 ## What it does
 
@@ -17,12 +21,21 @@ lineage recordings. There are 34 albums on the shelf.
   the screen and moves with the sound. Notifications go silent until you press
   *End sitting*.
 - **Forms.** Build a sitting of 3, 6, 9, or 12 songs from the discs, kept
-  equal across navel, heart, and third eye. Name it and save it to use again.
+  equal across navel, heart, and third eye. Random forms draw only from songs
+  that can play. Name a form and save it to use again.
 
 No music is copied or uploaded. It listens to the speakers on your own
 computer, and everything stays on that machine.
 
-## Running it
+## In the browser
+
+The link above opens the web edition on any computer or phone. The albums
+open in Spotify or Apple Music, and the yantra moves with the room through
+the microphone while the music plays nearby. Without the microphone it
+breathes slowly on its own. Forms you save stay in that browser. Your own
+audio files and the silenced notifications belong to the desktop app.
+
+## Running the desktop app
 
 It currently runs on Linux (built on Omarchy / Hyprland, with PipeWire audio).
 
@@ -40,7 +53,8 @@ your own files. There are no Python packages to install.
 | --- | --- |
 | `yantra.py` | The local server: the shelf, the players, and the sitting |
 | `index.html` | The yantra itself and the shelf screen |
-| `discs.json` | The 34 albums, their track lists, and where to find each one |
+| `discs.json` | All 34 albums, their track lists, and where to find each one |
 | `playlists.json` | Saved forms |
+| `web/` | The browser edition: loads `index.html` and answers in place of `yantra.py` |
 
 Made by Stephen Fisher.

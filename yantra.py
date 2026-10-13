@@ -288,11 +288,30 @@ def track_ref(disc_id, number):
     }
 
 
+def playable_numbers(disc, have=None):
+    """Track numbers this desktop can play: the whole disc when it is on Spotify
+    or Apple Music, otherwise only the tracks installed from it."""
+    if disc.get("spotifyAlbum") or apple_id(disc):
+        return {track["n"] for track in disc["tracks"]}
+    have = library() if have is None else have
+    return set(have.get(disc["id"]) or {})
+
+
+def shown_discs():
+    """Discs on the shelf. One that is on neither catalog stays hidden until a
+    track from it is installed."""
+    have = library()
+    return [disc for disc in COLLECTION["discs"] if playable_numbers(disc, have)]
+
+
 def chakra_pool(chakra):
+    """Random forms draw only from songs that can play."""
     pool = []
+    have = library()
     for disc in COLLECTION["discs"]:
+        ready = playable_numbers(disc, have)
         for track in disc["tracks"]:
-            if chakra_of(disc, track["n"]) == chakra:
+            if track["n"] in ready and chakra_of(disc, track["n"]) == chakra:
                 pool.append((disc["id"], track["n"]))
     return pool
 
@@ -379,7 +398,10 @@ def take_song(tracks, disc_id, number):
     disc = DISCS.get(disc_id)
     if disc is None or not any(track["n"] == number for track in disc["tracks"]):
         return None, "That song is not on the shelf."
-    if any(item["discId"] == disc["id"] and item["n"] == number for item in ordered):
+    is_in = any(item["discId"] == disc["id"] and item["n"] == number for item in ordered)
+    if not is_in and number not in playable_numbers(disc):
+        return None, "That song is not on Spotify or Apple Music, and it is not installed."
+    if is_in:
         ordered = [item for item in ordered if not (item["discId"] == disc["id"] and item["n"] == number)]
         return ordered, None
     chakra = chakra_of(disc, number)
@@ -454,7 +476,7 @@ def public_playlists():
 def collection_payload():
     counts = installed_counts()
     discs = []
-    for disc in COLLECTION["discs"]:
+    for disc in shown_discs():
         item = dict(disc)
         have = library().get(disc["id"]) or {}
         item["tracks"] = []

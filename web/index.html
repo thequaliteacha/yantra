@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yantra</title>
+<style>html,body{margin:0;height:100%;background:#05040a}</style>
+</head>
+<body>
+<script>
+// The web edition loads the same yantra page the desktop app serves, then adds
+// web.js in place of the Python server.
+fetch("../index.html", { cache: "no-store" })
+  .then((response) => response.text())
+  .then((html) => {
+    html = html
+      .replace("<head>", '<head>\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<script src="web.js"><\/script>')
+      .replace(
+        '"Name each file with its track title, then install it in Music/yantra/" + disc.id + "."',
+        '"This disc is not on Spotify or Apple Music. It plays from your own copies in the desktop app."'
+      )
+      .replace('"The installed tracks play in album order."', '""');
+    document.open();
+    document.write(html);
+    document.close();
+  })
+  .catch(() => {
+    document.body.style.cssText = "color:#f3e6c8;font:16px Georgia,serif;display:grid;place-items:center";
+    document.body.textContent = "The yantra did not load. Refresh to try again.";
+  });
+</script>
+</body>
+</html>
