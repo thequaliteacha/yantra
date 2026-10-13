@@ -10,24 +10,20 @@
   const CHAKRAS = ["naval", "heart", "eye"];
   const CHAKRA_NAME = { naval: "Naval chakra", heart: "Heart chakra", eye: "Third eye chakra" };
   const FORM_SIZES = [3, 6, 9, 12];
-  const STORE = "yantra.forms.v1";
   const DISCS = {};
   let collection = null;
-  let starter = [];
   let links = {};
   const config = { spotifyClientId: "", appleDeveloperToken: "" };
 
   const ready = Promise.all([
     realFetch("../discs.json").then((r) => r.json()),
-    realFetch("../playlists.json").then((r) => r.json()).catch(() => []),
     realFetch("tracks.json").then((r) => r.json()).catch(() => ({})),
     realFetch("config.json", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
-  ]).then(([discs, playlists, songs, settings]) => {
+  ]).then(([discs, songs, settings]) => {
     Object.assign(config, settings || {});
     collection = discs;
     links = songs || {};
     for (const disc of discs.discs) DISCS[disc.id] = disc;
-    starter = Array.isArray(playlists) ? playlists : [];
   });
 
   /* ---- the shelf ---- */
@@ -216,16 +212,20 @@
     return null;
   }
 
-  /* Saved forms stay in this browser. The repo's own forms are the starting set. */
+  /* Saved forms belong to one listener: they are kept in this browser under the
+     connected Spotify account, so each person sees only their own. Nothing is shared. */
+  function formsKey() {
+    return "yantra.forms." + ((spotify.token && spotify.token.user) || "guest");
+  }
   function readForms() {
     try {
-      const kept = JSON.parse(localStorage.getItem(STORE) || "null");
+      const kept = JSON.parse(localStorage.getItem(formsKey()) || "null");
       if (Array.isArray(kept)) return kept;
     } catch (e) {}
-    return starter.slice();
+    return [];
   }
   function writeForms(items) {
-    try { localStorage.setItem(STORE, JSON.stringify(items)); } catch (e) {}
+    try { localStorage.setItem(formsKey(), JSON.stringify(items)); } catch (e) {}
   }
   function publicForms() {
     return readForms()
@@ -267,6 +267,7 @@
         items.push({ id, name, tracks: stored });
       }
       writeForms(items);
+      syncPlaylist({ id, name, items: orderedDraft(stored) }).catch(() => {});
       return [{ ok: true, id, playlists: publicForms() }];
     }
     if (op === "delete") {
@@ -455,7 +456,7 @@
         code_challenge_method: "S256",
         code_challenge: await challengeFor(verifier),
         state,
-        scope: "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state",
+        scope: "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-read-private playlist-modify-private",
       });
       location.href = "https://accounts.spotify.com/authorize?" + query;
     },
@@ -468,12 +469,33 @@
       if (!response.ok) return false;
       const data = await response.json();
       this.token = {
+        user: this.token && this.token.user,
         access: data.access_token,
         refresh: data.refresh_token || (this.token && this.token.refresh),
         expires: Date.now() + (data.expires_in - 60) * 1000,
       };
       this.save();
       return true;
+    },
+    /* Who is listening. A Spotify account missing from the app's User Management
+       list is refused here, so the page can say so plainly. */
+    async identify() {
+      const response = await this.api("GET", "/me");
+      if (!response) return "";
+      if (!response.ok) {
+        if (response.status === 403) {
+          this.token = null;
+          this.save();
+          return "unlisted";
+        }
+        return "";
+      }
+      const me = await response.json().catch(() => ({}));
+      if (me.id) {
+        this.token.user = me.id;
+        this.save();
+      }
+      return "";
     },
     async finish(code, state) {
       if (state !== sessionStorage.getItem("yantra.state")) return;
@@ -525,8 +547,6 @@
       document.head.appendChild(script);
     },
     async play(body) {
-      // Unlocks audio for the in-page player; it has to run inside the tap.
-      if (this.player && this.player.activateElement) this.player.activateElement();
       let target = this.deviceId ? "?device_id=" + this.deviceId : "";
       let response = await this.api("PUT", "/me/player/play" + target, body);
       if (response && response.status === 404 && !this.deviceId) {
@@ -683,16 +703,99 @@
     });
   }
 
+  /* Each saved form has a private playlist in the listener's own Spotify library,
+     named "Yantra · <form name>". Saving or sitting the form brings it up to date. */
+  function listsKey() {
+    return "yantra.lists." + ((spotify.token && spotify.token.user) || "guest");
+  }
+  async function syncPlaylist(form) {
+    if (!spotify.connected() || !form.id) return "";
+    const uris = form.items.map((item) => songKey(item, "spotify"));
+    if (!uris.length || uris.some((uri) => !uri)) return "";
+    let map = {};
+    try { map = JSON.parse(localStorage.getItem(listsKey()) || "{}") || {}; } catch (e) {}
+    const title = "Yantra · " + form.name;
+    let id = map[form.id] || "";
+    if (id) {
+      const replaced = await spotify.api("PUT", "/playlists/" + id + "/items", { uris });
+      if (replaced && replaced.ok) {
+        spotify.api("PUT", "/playlists/" + id, { name: title });
+        return id;
+      }
+      id = "";
+    }
+    const made = await spotify.api("POST", "/me/playlists", {
+      name: title,
+      public: false,
+      description: "Made in Yantra: naval, heart and third eye, in order.",
+    });
+    if (!made || !made.ok) return "";
+    id = ((await made.json().catch(() => ({}))).id) || "";
+    if (!id) return "";
+    const filled = await spotify.api("PUT", "/playlists/" + id + "/items", { uris });
+    if (!filled || !filled.ok) return "";
+    map[form.id] = id;
+    try { localStorage.setItem(listsKey(), JSON.stringify(map)); } catch (e) {}
+    return id;
+  }
+
+  /* Not connected yet: remember the sit, connect once, then offer it on return. */
+  function connectFirst(pending) {
+    try { sessionStorage.setItem("yantra.pending", JSON.stringify(pending)); } catch (e) {}
+    spotify.connect();
+    return [{ ok: false, error: "Connecting to Spotify. You will come right back here." }, 409];
+  }
+
+  let resume = null;
+  function showResume(text, action) {
+    if (!resume) return;
+    resume.querySelector("span").textContent = text;
+    const go = resume.querySelector("button");
+    go.hidden = !action;
+    go.onclick = () => {
+      resume.hidden = true;
+      if (action) action();
+    };
+    resume.hidden = false;
+  }
+  function offerPending() {
+    let pending = null;
+    try { pending = JSON.parse(sessionStorage.getItem("yantra.pending") || "null"); } catch (e) {}
+    sessionStorage.removeItem("yantra.pending");
+    if (!pending || !spotify.connected()) return;
+    showResume("Spotify is connected.", () => {
+      if (pending.kind === "form" && typeof window.playForm === "function") {
+        window.playForm(pending.name, pending.id, pending.tracks);
+      } else if (pending.kind === "album") {
+        window.fetch("/play", { method: "POST", body: JSON.stringify({ id: pending.id, source: "spotify" }) });
+        if (typeof window.begin === "function") window.begin();
+      }
+    });
+    resume.querySelector("button").textContent = "Begin " + (pending.name || "the sit");
+  }
+
   /* Starts the list in the page. Returns false when no connected service can play all of it. */
-  function liveStart(name, items, prefer, form, albumOptions) {
+  function liveStart(name, items, prefer, form, albumOptions, formId) {
     const service = serviceFor(items, prefer);
     if (!service) return false;
     liveStop(true);
     stopQueue();
     Object.assign(live, { service, name, items, keys: items.map((item) => songKey(item, service)), seen: false, form });
-    const started = service === "spotify"
-      ? spotify.play(albumOptions && albumOptions.spotify ? albumOptions.spotify : { uris: live.keys })
-      : apple.play(albumOptions && albumOptions.apple ? albumOptions.apple : { songs: live.keys });
+    // Unlocks audio for the in-page player; it has to run inside the tap.
+    if (service === "spotify" && spotify.player && spotify.player.activateElement) spotify.player.activateElement();
+    let started;
+    if (service === "spotify" && albumOptions && albumOptions.spotify) {
+      started = spotify.play(albumOptions.spotify);
+    } else if (service === "spotify") {
+      // A saved form plays from its own private Spotify playlist, so the songs keep
+      // going in order on Spotify even if this page is closed or the phone sleeps.
+      started = (async () => {
+        const playlist = formId ? await syncPlaylist({ id: formId, name, items }).catch(() => "") : "";
+        return spotify.play(playlist ? { context_uri: "spotify:playlist:" + playlist } : { uris: live.keys });
+      })();
+    } else {
+      started = apple.play(albumOptions && albumOptions.apple ? albumOptions.apple : { songs: live.keys });
+    }
     started.then((ok) => {
       if (ok || live.service !== service) return;
       liveStop(false);
@@ -731,16 +834,40 @@
     connectButton.dataset.service = choice;
   }
 
-  ready.then(async () => {
+  let notice = "";
+  const session = ready.then(async () => {
     spotify.load();
     const query = new URLSearchParams(location.search);
     if (query.get("code") && spotify.available()) {
       await spotify.finish(query.get("code"), query.get("state"));
       history.replaceState(null, "", returnTo());
+    } else if (query.get("error")) {
+      history.replaceState(null, "", returnTo());
     }
+    if (spotify.connected() && !spotify.token.user) {
+      if ((await spotify.identify()) === "unlisted") {
+        notice = "This Spotify account is not on Yantra's listener list yet. Ask Stephen to add it.";
+      }
+    }
+    // Forms saved before accounts existed move to the first account that connects here.
+    try {
+      const old = localStorage.getItem("yantra.forms.v1");
+      if (old && spotify.connected() && !localStorage.getItem(formsKey())) {
+        localStorage.setItem(formsKey(), old);
+        localStorage.removeItem("yantra.forms.v1");
+      }
+    } catch (e) {}
     spotify.startSdk();
     apple.load();
     paintConnect();
+  });
+  session.then(() => {
+    const show = () => {
+      if (notice) showResume(notice, null);
+      else offerPending();
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", show);
+    else show();
   });
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -758,6 +885,12 @@
       listen.querySelectorAll("button[data-source]").forEach((button) => button.addEventListener("click", paintConnect));
       paintConnect();
     }
+    resume = document.createElement("div");
+    resume.id = "web-resume";
+    resume.hidden = true;
+    resume.append(document.createElement("span"), document.createElement("button"));
+    resume.querySelector("button").type = "button";
+    document.body.appendChild(resume);
     nextButton = document.createElement("button");
     nextButton.type = "button";
     nextButton.id = "web-next";
@@ -775,7 +908,10 @@
       if (error) return [{ ok: false, error }, 400];
       const name = String(payload.name || "Form");
       const prefer = payload.prefer === "apple" ? "apple" : "spotify";
-      if (liveStart(name, orderedDraft(tracks), prefer, true)) return [{ ok: true, source: "playlist" }];
+      if (prefer === "spotify" && spotify.available() && !spotify.connected()) {
+        return connectFirst({ kind: "form", name, id: payload.id || "", tracks });
+      }
+      if (liveStart(name, orderedDraft(tracks), prefer, true, null, payload.id || "")) return [{ ok: true, source: "playlist" }];
       queue.name = name;
       queue.items = orderedDraft(tracks);
       queue.prefer = prefer;
@@ -788,6 +924,9 @@
     stopQueue();
     const disc = DISCS[payload.id];
     if (!disc) return [{ ok: false, error: "That disc is not on the shelf." }, 404];
+    if (payload.source === "spotify" && spotify.available() && !spotify.connected()) {
+      return connectFirst({ kind: "album", name: disc.title, id: disc.id });
+    }
     if (payload.source === "spotify" || payload.source === "apple") {
       const items = disc.tracks.map((track) => ({ discId: disc.id, n: track.n }));
       const options = {
@@ -873,7 +1012,7 @@
         const answer = route(path, method, init);
         return Promise.resolve(reply(answer[0], answer[1]));
       }
-      return ready.then(() => {
+      return session.then(() => {
         const answer = route(path, method, init);
         return answer ? reply(answer[0], answer[1]) : reply({ ok: false }, 404);
       });
@@ -889,6 +1028,13 @@
     "  border: 1px solid rgba(230, 201, 138, 0.35); padding: 0.55rem 1rem; letter-spacing: 0.08em; cursor: pointer; }",
     "#web-next.due { color: #f7edd4; border-color: rgba(230, 201, 138, 0.8); }",
     "body:not(.sitting) #web-next { display: none; }",
+    "#web-resume { position: fixed; left: 50%; bottom: max(2.2rem, env(safe-area-inset-bottom)); transform: translateX(-50%);",
+    "  z-index: 5; display: flex; gap: 1rem; align-items: center; padding: 0.7rem 1rem; max-width: 92vw;",
+    "  background: rgba(5, 4, 10, 0.85); border: 1px solid rgba(230, 201, 138, 0.35); color: rgba(243, 230, 200, 0.85); }",
+    "#web-resume[hidden] { display: none; }",
+    "#web-resume button { background: transparent; color: #f7edd4; font: inherit; cursor: pointer; letter-spacing: 0.12em;",
+    "  text-transform: uppercase; font-size: 0.8rem; border: 1px solid rgba(230, 201, 138, 0.7); padding: 0.55rem 0.9rem; }",
+    "body.sitting #web-resume { display: none; }",
   ].join("\n");
   document.head.appendChild(style);
 })();

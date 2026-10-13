@@ -37,7 +37,16 @@ and the caption follows the whole sit. There are no other windows and nothing
 to press until the sit ends. Spotify needs Premium. On a phone, Spotify plays through the Spotify app that is open on
 it.
 
-Without a connection the web edition still works: the album or song opens in a
+Each listener's forms are their own. On the web they are kept in that browser
+under the listener's Spotify account, and every saved form also becomes a
+private playlist in the listener's own Spotify library, named "Yantra · " and
+the form's name. A sit plays from that playlist, so the songs keep going in
+order even if the page closes or the phone sleeps. Nobody else sees them.
+
+If Spotify is not connected yet, pressing *Sit* or *Begin sitting* connects
+first and brings you straight back with the sit ready to begin.
+
+Without Spotify set up at all the web edition still works: the album or song opens in a
 second tab, and a form waits on *Next* at the bottom of the yantra. The yantra
 moves with the room through the microphone, or breathes slowly on its own.
 Forms you save stay in that browser.
@@ -79,7 +88,7 @@ your own files. There are no Python packages to install.
 | `yantra.py` | The local server: the shelf, the players, and the sitting |
 | `index.html` | The yantra itself and the shelf screen |
 | `discs.json` | All 34 albums, their track lists, and where to find each one |
-| `playlists.json` | Saved forms |
+| `playlists.json` | The desktop app's saved forms (kept on your computer, not in this repo) |
 | `web/` | The browser edition: loads `index.html` and answers in place of `yantra.py`; `tracks.json` holds each song's direct link (rebuild with `python3 web/build_tracks.py`) |
 
 Made by Stephen Fisher.
