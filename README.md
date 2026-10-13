@@ -7,8 +7,8 @@ lineage recordings. There are 34 albums on the shelf.
 
 ## What it does
 
-- **The shelf.** Pick an album or one of your own playlists built from the
-  discs. Nothing outside the shelf plays. If anything else plays, the yantra
+- **The shelf.** Pick an album, or a form you've saved. Nothing outside the
+  shelf plays. If anything else plays, the yantra
   pauses and stays still.
 - **Three ways to listen.** It opens albums already in the Spotify or Apple
   Music catalogs, or it plays your own copies from `~/Music/yantra`. A file
@@ -16,8 +16,8 @@ lineage recordings. There are 34 albums on the shelf.
 - **The sitting.** Press *Begin sitting* and the shelf fades. The yantra fills
   the screen and moves with the sound. Notifications go silent until you press
   *End sitting*.
-- **Points of focus.** You can set the form and its focal points (navel,
-  heart, third eye) for the sitting.
+- **Forms.** Build a sitting of 3, 6, 9, or 12 songs from the discs, kept
+  equal across navel, heart, and third eye. Name it and save it to use again.
 
 No music is copied or uploaded. It listens to the speakers on your own
 computer, and everything stays on that machine.
@@ -41,6 +41,6 @@ your own files. There are no Python packages to install.
 | `yantra.py` | The local server: the shelf, the players, and the sitting |
 | `index.html` | The yantra itself and the shelf screen |
 | `discs.json` | The 34 albums, their track lists, and where to find each one |
-| `playlists.json` | Saved playlists built from the discs |
+| `playlists.json` | Saved forms |
 
 Made by Stephen Fisher.
