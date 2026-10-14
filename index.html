@@ -291,6 +291,7 @@
 <div id="gate">
   <div class="shelf">
     <div class="menus">
+      <button id="menu-home" type="button" hidden>&#8592; Home</button>
       <button id="menu-albums" type="button" class="on">Albums</button>
       <button id="menu-forms" type="button">Playlists</button>
       <div class="listen" id="listen">
@@ -321,12 +322,12 @@
       <input id="install-file" type="file" accept="audio/*,.mp3,.flac,.m4a,.ogg,.wav,.aiff,.aac,.opus" multiple hidden>
     </div>
     <div class="index" id="form-index" hidden>
-      <p class="kicker">Playlists</p>
+      <p class="kicker">Saved forms</p>
       <div id="saved"></div>
     </div>
     <div class="face" id="form-face" hidden>
       <p class="kicker">Naval, heart, third eye</p>
-      <h1 id="form-title">A form</h1>
+      <h1 id="form-title" hidden></h1>
       <div class="actions" id="sizes"></div>
       <p id="form-hint" class="line"></p>
       <ol id="form-tracks"></ol>
@@ -1240,7 +1241,9 @@ function renderForm() {
     hint.textContent = "";
   }
   const named = document.getElementById("playlist-name").value.trim();
-  document.getElementById("form-title").textContent = named || "A form";
+  const title = document.getElementById("form-title");
+  title.textContent = named;
+  title.hidden = !named;
   document.getElementById("form-play").disabled = !formReady(draft);
   const saved = document.getElementById("saved");
   saved.replaceChildren();
@@ -1517,6 +1520,12 @@ if (window.YANTRA_WEB) {
   document.getElementById("open-shelf").addEventListener("click", () => {
     roomTrail = [];
     showRoom("");
+  });
+  const menuHome = document.getElementById("menu-home");
+  menuHome.hidden = false;
+  menuHome.addEventListener("click", () => {
+    roomTrail = [];
+    showRoom("home");
   });
   addEventListener("yantra:complete", () => {
     if (!sessionLive) return;
