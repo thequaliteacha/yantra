@@ -209,12 +209,22 @@
                max(0.8rem, env(safe-area-inset-bottom)) max(0.6rem, env(safe-area-inset-left));
     }
     .shelf {
-      width: 100%; max-height: none; min-height: 0; height: 100%;
-      grid-template-columns: 1fr; gap: 0.6rem; padding: 1rem 1.05rem 1.4rem;
+      box-sizing: border-box; width: 100%; max-height: none; min-height: 0; height: 100%;
+      grid-template-columns: 1fr; gap: 1.1rem; padding: 1.1rem 1.15rem 0;
       -webkit-overflow-scrolling: touch;
     }
-    .menus { flex-wrap: wrap; gap: 0.6rem 1.4rem; }
+    .menus { flex-wrap: wrap; gap: 0.9rem 1.4rem; padding-bottom: 0.9rem; border-bottom: 1px solid rgba(230, 201, 138, 0.14); }
     .menus .listen { margin-left: 0; width: 100%; }
+    #circles { margin: 0.9rem 0 0.6rem; gap: 0.2rem 1rem; }
+    #now:empty, #note:empty { display: none; }
+    .line { margin: 0.6rem 0 0.2rem; }
+    /* Play and Sit stay pinned to the bottom of the screen, clear of the gesture bar. */
+    .face .actions:last-of-type {
+      position: sticky; bottom: 0; z-index: 1; gap: 0.6rem;
+      margin: 0 -1.15rem; padding: 0.8rem 1.15rem max(1rem, env(safe-area-inset-bottom));
+      background: linear-gradient(rgba(5, 4, 10, 0.86), rgba(5, 4, 10, 0.97) 30%);
+      border-top: 1px solid rgba(230, 201, 138, 0.14);
+    }
     #discs, #saved { max-height: 30vh; }
     #circles button, #discs button, .saved-row .name { padding: 0.42rem 0; }
     h1 { font-size: 2.2rem; }
@@ -222,7 +232,10 @@
     li, #tracks li { grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 0.3rem 0.6rem; padding: 0.42rem 0; }
     li .chakra { grid-column: 2; font-size: 0.62rem; }
     .actions { flex-wrap: wrap; }
-    #begin, #play, #local, #install, #form-play, #save-form { flex: 1 1 auto; padding: 0.85rem 1rem; }
+    #begin, #play, #local, #install, #form-play, #save-form {
+      flex: 1 1 40%; padding: 0.95rem 0.6rem; text-align: center; white-space: nowrap;
+      font-size: 0.86rem; letter-spacing: 0.1em;
+    }
     #playlist-name { width: 100%; }
     #end { top: max(1rem, env(safe-area-inset-top)); right: max(1rem, env(safe-area-inset-right)); padding: 0.6rem 0.9rem; }
     #caption { bottom: max(6vh, calc(env(safe-area-inset-bottom) + 2rem)); padding: 0 1.2rem; }
