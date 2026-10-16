@@ -18,8 +18,29 @@ const COOKIE = "yantra";
 const YEAR = 365 * 24 * 3600;
 const PUBLIC = /^\/(web\/manifest\.webmanifest|web\/icons\/[\w.-]+|favicon\.ico)$/;
 
+/* Privacy and safety headers on every response: no referrer sent to other sites,
+   no framing, no MIME sniffing, HTTPS pinned, and only the microphone allowed
+   (the yantra can follow the room when no music service is connected). */
+const SAFETY = {
+  "referrer-policy": "no-referrer",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "strict-transport-security": "max-age=31536000; includeSubDomains",
+  "permissions-policy": "camera=(), geolocation=(), payment=(), usb=(), microphone=(self), autoplay=(self)",
+  "cross-origin-opener-policy": "same-origin",
+};
+
 export default {
   async fetch(request, env) {
+    const response = await route(request, env);
+    const headers = new Headers(response.headers);
+    for (const [name, value] of Object.entries(SAFETY)) headers.set(name, value);
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  },
+};
+
+async function route(request, env) {
+  {
     const url = new URL(request.url);
     // One home address: www and the old workers.dev link both move to yantramedi.app.
     if (url.hostname === "www.yantramedi.app" || url.hostname.endsWith(".workers.dev")) {
@@ -47,8 +68,8 @@ export default {
     // points back at the loader, so serve the page itself.
     if (url.pathname === "/index.html") return env.ASSETS.fetch(new Request(new URL("/", url), request));
     return env.ASSETS.fetch(request);
-  },
-};
+  }
+}
 
 /* ---- What each listener sees ---- */
 
