@@ -213,6 +213,10 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .room .kicker { margin-bottom: 1.8rem; }
   .room p { color: rgba(243, 230, 200, 0.82); line-height: 1.6; margin: 0; text-align: left; font-size: 1.02rem; }
   .room p b { color: #f3e6c8; font-weight: 600; }
+  #done-words { margin: 1.6rem auto 0; max-width: 30rem; text-align: center; }
+  #done-words p { text-align: center; font-style: italic; color: #f3e6c8; }
+  #done-words cite { display: block; margin-top: 0.6rem; font-style: normal; font-size: 0.9rem; color: rgba(243, 230, 200, 0.62); }
+  #done-words a { color: inherit; }
   .room .choice {
     width: 100%; padding: 1.05rem 0; font: inherit; font-size: 1.12rem; letter-spacing: 0.06em; cursor: pointer;
     background: rgba(5, 4, 10, 0.4); color: #f7edd4; border: 1px solid rgba(230, 201, 138, 0.55);
@@ -345,6 +349,10 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <div class="inner">
     <h2>Meditation Complete</h2>
     <p id="done-line" style="text-align:center">Well done. Your morning meditation is complete.</p>
+    <blockquote id="done-words" hidden>
+      <p id="done-quote"></p>
+      <cite>&mdash; Rama, <a id="done-talk" target="_blank" rel="noopener"></a></cite>
+    </blockquote>
     <button class="choice" type="button" data-room="home" style="margin-top:1.4rem">Back to Home</button>
   </div>
 </div>
@@ -436,6 +444,19 @@ const UNIT = 100;
 
 let level = 0;
 let shown = 0;
+
+/* A few words from Rama to greet the student after the sit: short verbatim lines from
+   The Enlightenment Cycle talks, each linked to its talk. [text, talk, page] */
+const RAMA_WORDS = [
+  ["It’s a decision that you make every day and that you renew, that you strengthen. You decide to be happy.", "Balance", "https://www.ramameditationsociety.org/free-resource/balance/"],
+  ["And the shortcut to happiness, to spiritual balance, is to meditate.", "Balance", "https://www.ramameditationsociety.org/free-resource/balance/"],
+  ["Each time you meditate, you take the journey. Each time, you become more conscious, you love more, you feel more, you increase your depth.", "Enlightenment", "https://www.ramameditationsociety.org/free-resource/enlightenment-cycle-talk/"],
+  ["Meditation is to stop thought, to silence the mind, to move the ego aside and to simply be still, open, clear, bright and fully conscious.", "Enlightenment", "https://www.ramameditationsociety.org/free-resource/enlightenment-cycle-talk/"],
+  ["What makes us happy is contact with Light. As you have experiences with the inner light, which are gained through the practice of meditation and Buddhism, it immediately delights you.", "Personal Happiness", "https://www.ramameditationsociety.org/free-resource/personal-happiness/"],
+  ["But the real miracle, obviously, is the transformation of consciousness from limitation and pain to enlightenment and ecstasy.", "Miracles", "https://www.ramameditationsociety.org/free-resource/miracles/"],
+  ["In intermediate meditation, you’re touching light more deeply than in introductory meditation.", "Intermediate Meditation", "https://www.ramameditationsociety.org/free-resource/intermediate-meditation/"],
+  ["As an enlightened teacher of Buddhism, I’d like to welcome you to the pathway to enlightenment.", "The Enlightenment Cycle", "https://www.ramameditationsociety.org/free-resource/enlightenment-cycle/"],
+];
 
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1838,6 +1859,12 @@ if (window.YANTRA_WEB) {
     endSitting();
     document.getElementById("done-line").textContent =
       "Well done. Your " + sessionTheme + " meditation is complete.";
+    const [words, talk, page] = RAMA_WORDS[Math.floor(Math.random() * RAMA_WORDS.length)];
+    document.getElementById("done-quote").textContent = "\u201c" + words + "\u201d";
+    const link = document.getElementById("done-talk");
+    link.textContent = talk;
+    link.href = page;
+    document.getElementById("done-words").hidden = false;
     roomTrail = [];
     showRoom("done");
   });

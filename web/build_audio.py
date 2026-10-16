@@ -3,6 +3,9 @@
 
   python3 web/build_audio.py ~/Music/vayu-sangha            # check and stage
   python3 web/build_audio.py ~/Music/vayu-sangha --add-discs  # also add albums missing from discs.json
+  python3 web/build_audio.py ~/Music/vayu-sangha ~/Music/zazen-sangha  # every source at once
+
+audio.json is written fresh from the sources given, so name all of them each time.
 
 Each album folder is matched to a disc by title; each file to a track by its
 leading number ("01 - Long Mountain.mp3"). Matched files are copied to
@@ -57,7 +60,7 @@ def numbered(folder):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("source", type=Path)
+    parser.add_argument("sources", type=Path, nargs="+")
     parser.add_argument("--add-discs", action="store_true")
     args = parser.parse_args()
 
@@ -69,7 +72,8 @@ def main():
 
     manifest = {}
     added = []
-    for folder in sorted(p for p in args.source.expanduser().iterdir() if p.is_dir()):
+    folders = [p for source in args.sources for p in source.expanduser().iterdir() if p.is_dir()]
+    for folder in sorted(folders, key=lambda p: p.name):
         tracks = numbered(folder)
         if not tracks:
             print(f"skip   {folder.name}: no playable mp3s (iCloud placeholders?)")

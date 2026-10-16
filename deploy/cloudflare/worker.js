@@ -62,7 +62,7 @@ async function route(request, env) {
     const zazen = level === "zazen";
 
     if (url.pathname === "/discs.json") return shelf(request, env, zazen);
-    if (url.pathname === "/web/tracks.json") return trackLinks(request, env, zazen);
+    if (url.pathname === "/web/tracks.json" || url.pathname === "/web/audio.json") return trackLinks(request, env, zazen);
     if (url.pathname.startsWith(PREFIX)) return recording(request, env, url, zazen);
     // The web loader fetches ../index.html. Assets would redirect that to "/", which
     // points back at the loader, so serve the page itself.
@@ -95,6 +95,7 @@ async function shelf(request, env, zazen) {
   return privateJson(data);
 }
 
+// Song links and the recordings list are both keyed by disc, so both lose the gated discs.
 async function trackLinks(request, env, zazen) {
   const response = await env.ASSETS.fetch(request);
   if (!response.ok || zazen) return response.ok ? privateJson(await response.json()) : response;

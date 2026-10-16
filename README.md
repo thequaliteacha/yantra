@@ -95,7 +95,7 @@ the shelf that the word doesn't open. The words and the cookie key are Worker
 secrets, never in this repo.
 
 ```sh
-python3 web/build_audio.py ~/Music/vayu-sangha   # stage recordings, write web/audio.json
+python3 web/build_audio.py ~/Music/vayu-sangha ~/Music/zazen-sangha   # stage recordings, write web/audio.json
 deploy/cloudflare/upload.sh                      # send new recordings to R2
 deploy/cloudflare/build.sh && wrangler deploy    # build and publish the site
 ```
