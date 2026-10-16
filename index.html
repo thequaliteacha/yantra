@@ -857,34 +857,13 @@ function dots(cx, cy, R, t) {
   ctx.restore();
 }
 
-/* Light from the bindu. A few motes leave the centre along the petal axes and drift
-   outward, and with each breath a faint ripple widens through the figure. With the
-   eyes resting open on the bindu these stay at the edge of vision, where the field
-   seems to expand on its own. All of it is faint and slow. */
-const sparks = [];
-let sparkAt = 0;
-function emanate(ctx, cx, cy, R, now, petals, strength) {
+/* With each breath of the bindu a faint ripple widens through the figure. With the
+   eyes resting open on the bindu it stays at the edge of vision, faint and slow. */
+function emanate(ctx, cx, cy, R, now, strength) {
   if (strength <= 0) return;
-  if (now - sparkAt > 650 && sparks.length < 14) {
-    sparkAt = now;
-    const axes = petals === 2 ? 8 : petals;
-    const a = -Math.PI / 2 + (Math.floor(Math.random() * axes) * Math.PI * 2) / axes + (Math.random() - 0.5) * 0.05;
-    sparks.push({ a, born: now, life: 8000 + Math.random() * 4000, size: 0.7 + Math.random() * 0.9 });
-  }
   const op = ctx.globalCompositeOperation;
   ctx.globalCompositeOperation = glowBlend();
-  for (let i = sparks.length - 1; i >= 0; i--) {
-    const s = sparks[i];
-    const t = (now - s.born) / s.life;
-    if (t >= 1) { sparks.splice(i, 1); continue; }
-    const r = R * (0.08 + 2.2 * Math.pow(t, 0.8));
-    const alpha = Math.sin(t * Math.PI) * 0.5 * strength;
-    ctx.fillStyle = rgba(isLight() ? inkOf(hue.glow) : hue.tint.map((c) => Math.round(Math.min(255, c + 30))), alpha);
-    ctx.beginPath();
-    ctx.arc(cx + Math.cos(s.a) * r, cy + Math.sin(s.a) * r, s.size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // One ripple per breath of the bindu (about ten seconds).
+  // One ripple per breath (about ten seconds).
   const phase = ((now * 0.00063) / (Math.PI * 2)) % 1;
   ctx.strokeStyle = rgba(inkOf(hue.tint), 0.07 * Math.pow(1 - phase, 1.5) * strength);
   ctx.lineWidth = 1;
@@ -1042,7 +1021,7 @@ function frame(now) {
     const rest = window.wholeAt ? 1 - 0.15 * ease((now - window.wholeAt) / 20000) : 1;
     gold(ctx, 0.92 * rest, 16, 0.55 * rest);
     drawSri(ctx, cx, cy, R, reveal, bloom, lotus || CHAKRA.heart);
-    emanate(ctx, cx, cy, R, now, (lotus || CHAKRA.heart).petals, Math.min(1, reveal / 0.12) * rest);
+    emanate(ctx, cx, cy, R, now, Math.min(1, reveal / 0.12) * rest);
   } else {
     gold(ctx, 0.9 * (1 - fade), 10 + shown * 16);
     ctx.globalAlpha = 1 - fade;
