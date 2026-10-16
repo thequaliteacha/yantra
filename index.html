@@ -134,8 +134,9 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     text-align: center; pointer-events: none;
     opacity: 0; transition: opacity 1.2s ease;
   }
-  body.sitting #caption.show { opacity: 1; }
-  body.sitting.quiet #caption.show { opacity: 0.38; }
+  /* The song's name rests out of sight like back, restart and next: it rises when the
+     sitter stirs, and for a few seconds as each new song begins. */
+  body.sitting.awake #caption.show, body.sitting #caption.show.fresh { opacity: 1; }
   #cap-title {
     font-family: Palatino, "Iowan Old Style", serif;
     font-size: 1.35rem; margin: 0; color: rgba(247, 237, 212, 0.88);
@@ -244,6 +245,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   }
   .room .tip[hidden] { display: none; }
   .room a { color: #e6c98a; }
+  #home-mark { height: clamp(7rem, 34vh, 21rem); margin: 0.6rem 0 0.4rem; flex: none; pointer-events: none; }
   #home-note { min-height: 1.3rem; color: rgba(232, 204, 146, 0.75); font-size: 0.92rem; text-align: center; }
 
   /* Phones and narrow windows: one column, room for thumbs, nothing under the notch. */
@@ -291,7 +293,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 <canvas id="c"></canvas>
 <div class="room" id="home" hidden>
   <div class="inner">
-    <h1 style="margin-bottom:1.8rem">Yantra Meditation</h1>
+    <h1>Yantra Meditation</h1>
+    <div id="home-mark" aria-hidden="true"></div>
     <button class="choice dawn" type="button" data-theme="morning">Morning Meditation</button>
     <button class="choice dusk" type="button" data-theme="evening">Evening Meditation</button>
     <p id="home-note"></p>
@@ -966,15 +969,33 @@ function stageReveal(portion) {
   return 0.78 + ((p - 2 / 3) * 3) * 0.22;
 }
 
+/* On the home page the figure sits in its own band between the title and the choices,
+   so nothing overlaps; anywhere else it glides back to the middle of the screen. */
+let spotNow = null;
+function homeSpot(w, h, sitting) {
+  let target = { cx: w / 2, cy: h / 2, R: Math.min(w, h) * 0.155 };
+  const mark = document.getElementById("home-mark");
+  if (!sitting && mark && document.body.classList.contains("at-home")) {
+    const box = mark.getBoundingClientRect();
+    // The Sri Yantra's frame reaches about 2.5 R and its ring of dots 2.72 R, so both fit the band.
+    if (box.height > 0) target = { cx: box.left + box.width / 2, cy: box.top + box.height / 2, R: Math.min(w * 0.9, box.height) / 6, home: true };
+  }
+  // The first look at home lands in place; later moves between rooms glide.
+  if (!spotNow || (target.home && !spotNow.homed)) spotNow = Object.assign({}, target, { homed: !!target.home });
+  for (const key of ["cx", "cy", "R"]) spotNow[key] += (target[key] - spotNow[key]) * 0.06;
+  return spotNow;
+}
+
 function frame(now) {
   const w = innerWidth;
   const h = innerHeight;
   shown += (level - shown) * 0.08;
   field(w, h, now);
-  const cx = w / 2;
-  const cy = h / 2;
-  const R = Math.min(w, h) * 0.155;
   const sitting = document.body.classList.contains("sitting");
+  const spot = homeSpot(w, h, sitting);
+  const cx = spot.cx;
+  const cy = spot.cy;
+  const R = spot.R;
   const breath = sitting ? 1 : 1 + Math.sin(now * 0.00035) * 0.012 + shown * 0.028;
   let reveal = 1;
   let fade = 0;
@@ -1128,6 +1149,7 @@ async function sitAlbum() {
 let snap = null;
 let snapAt = 0;
 let shownTrack = 0;
+let shownSong = "";
 let quietTimer = 0;
 
 function selected() {
@@ -1139,11 +1161,11 @@ function fold(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+// A new song shows its name, chakra and place in the sitting for a few seconds, then fades.
 function settle() {
   clearTimeout(quietTimer);
-  document.body.classList.remove("quiet");
-  if (!document.body.classList.contains("sitting")) return;
-  quietTimer = setTimeout(() => document.body.classList.add("quiet"), 8000);
+  caption.classList.add("fresh");
+  quietTimer = setTimeout(() => caption.classList.remove("fresh"), 6000);
 }
 
 function clock(seconds) {
@@ -1290,8 +1312,10 @@ function applyNow() {
     li.classList.toggle("on", on);
     if (on && current !== shownTrack) li.scrollIntoView({ block: "nearest" });
   });
-  if (current !== shownTrack) {
-    shownTrack = current;
+  if (current !== shownTrack) shownTrack = current;
+  const song = snap ? [snap.discId, snap.track, snap.title, snap.formIndex].join("|") : "";
+  if (song !== shownSong) {
+    shownSong = song;
     settle();
   }
   paintActions();
@@ -1326,13 +1350,15 @@ function applyNow() {
     const place = (Number(snap.formIndex) + 1) + "  /  " + (Number(snap.formTotal) || 0);
     const length = Number(snap.length) || 0;
     const mark = chakraLabel(snap.chakra);
-    capPlace.textContent = length ? place + "    " + clock(livePosition()) + (mark ? "    " + mark : "") : place;
+    capPlace.textContent = place + (length ? "    " + clock(livePosition()) : "") + (mark ? "    " + mark : "");
     capFill.style.width = length ? Math.min(100, (livePosition() / length) * 100) + "%" : "0%";
   } else {
     capTitle.textContent = onDisc && snap.title ? snap.title : disc.title;
     const place = onDisc && current ? current + "  /  " + disc.tracks.length : disc.artist;
     const length = onDisc && snap ? Number(snap.length) || 0 : 0;
-    capPlace.textContent = length ? place + "    " + clock(livePosition()) : place;
+    const heard = onDisc && current ? disc.tracks.find((track) => Number(track.n) === current) : null;
+    const mark = heard ? chakraLabel(heard.chakra) : "";
+    capPlace.textContent = place + (length ? "    " + clock(livePosition()) : "") + (mark ? "    " + mark : "");
     capFill.style.width = length ? Math.min(100, (livePosition() / length) * 100) + "%" : "0%";
   }
   noteSeries();
