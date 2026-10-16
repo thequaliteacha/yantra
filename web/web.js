@@ -769,6 +769,8 @@
   function liveStop(pause) {
     if (live.service && pause) services[live.service].pause();
     clearInterval(live.timer);
+    clearTimeout(live.endTimer);
+    live.endTimer = 0;
     live.service = null;
     live.items = [];
     live.keys = [];
@@ -797,6 +799,19 @@
     const track = disc.tracks.find((row) => row.n === item.n);
     const last = index === live.items.length - 1;
     if (last && state.playing) live.lastHeard = true;
+    // A hard stop: pause a breath before the last song runs out, so Spotify's autoplay
+    // never sounds the first notes of a song from outside the sit.
+    const remaining = (state.length || 0) - (state.position || 0);
+    if (last && state.playing && state.length > 0 && remaining < 3 && !live.endTimer) {
+      const service = live.service;
+      live.endTimer = setTimeout(() => {
+        if (live.service !== service) return;
+        services[service].pause();
+        NOW.status = "Stopped";
+        liveStop(false);
+        complete();
+      }, Math.max(0, (remaining - 0.3) * 1000));
+    }
     // The last song has run out and Spotify stopped on it: the sit is complete.
     if (last && live.lastHeard && !state.playing && (state.position < 1 || state.position >= state.length - 1.5)) {
       NOW.status = "Stopped";

@@ -819,6 +819,27 @@ def publish_spotify(meta, status, position):
     publish_player(SPOTIFY_BUS, "spotify", meta, status, position)
 
 
+# One pending stop for the last song of an album, keyed by album and track.
+END_STOP = {"key": "", "timer": None}
+
+
+def stop_at_album_end(bus, disc, number, length, position):
+    """Pause just before the album's last song runs out, so Spotify never
+    goes on to the first notes of a song from outside the sitting."""
+    last = max((row["n"] for row in disc["tracks"]), default=0)
+    remaining = length - position
+    if not number or number != last or length <= 0 or remaining > 3:
+        return
+    key = disc["id"] + ":" + str(number)
+    if END_STOP["key"] == key:
+        return
+    END_STOP["key"] = key
+    timer = threading.Timer(max(0.0, remaining - 0.3), lambda: bus_call(bus, "Pause"))
+    timer.daemon = True
+    END_STOP["timer"] = timer
+    timer.start()
+
+
 def publish_player(bus, source, meta, status, position):
     if MODE["value"] == "playlist":
         return
@@ -849,6 +870,12 @@ def publish_player(bus, source, meta, status, position):
         bus_call(bus, "Pause")
         blocked = True
     allowed = bool(disc) and playing and not blocked
+    if allowed and isinstance(position, (int, float)):
+        stop_at_album_end(
+            bus, disc, int(field("xesam:trackNumber", 0) or 0), int(length) / 1_000_000, int(position) / 1_000_000
+        )
+    elif not playing:
+        END_STOP["key"] = ""
     with LOCK:
         if MODE["value"] == "playlist":
             return
