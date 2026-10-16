@@ -65,6 +65,9 @@ INSTALL_ROOT = Path.home() / "Music" / "yantra"
 SOCK = Path("/tmp/yantra-local.sock")
 LOCAL = {"proc": None, "disc_id": "", "order": []}
 MODE = {"value": ""}
+# Back, restart and next during a sitting: the form runner reads JUMP between songs.
+JUMP = {"to": None}
+FORM_POS = {"index": 0, "total": 0}
 _scan = {"at": 0.0, "data": {}}
 AUDIO_EXT = {".mp3", ".flac", ".m4a", ".ogg", ".wav", ".aiff", ".aif", ".aac", ".opus"}
 
@@ -687,6 +690,21 @@ def mpv_get(prop):
     return None
 
 
+def mpv_command(command):
+    if not SOCK.exists():
+        return False
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.settimeout(0.3)
+    try:
+        sock.connect(str(SOCK))
+        sock.sendall(json.dumps({"command": command}).encode() + b"\n")
+        return True
+    except OSError:
+        return False
+    finally:
+        sock.close()
+
+
 def stop_local():
     proc = LOCAL.get("proc")
     LOCAL["proc"] = None
@@ -1107,8 +1125,13 @@ def publish_form(name, index, total, disc, track, status, position, length, sour
 
 def run_form(name, tracks):
     MODE["value"] = "playlist"
+    JUMP["to"] = None
+    index = 0
     try:
-        for index, item in enumerate(tracks):
+        while 0 <= index < len(tracks):
+            item = tracks[index]
+            FORM_POS["index"] = index
+            FORM_POS["total"] = len(tracks)
             if PLAY["stop"]:
                 break
             disc = DISCS[item["discId"]]
@@ -1124,7 +1147,7 @@ def run_form(name, tracks):
                 if not hold_spotify_track(disc, track["n"]):
                     publish_form(name, index, len(tracks), disc, track, "Stopped", 0, 0, "spotify")
                     break
-                while not PLAY["stop"]:
+                while not PLAY["stop"] and JUMP["to"] is None:
                     try:
                         snap = spotify_snapshot()
                     except (subprocess.SubprocessError, json.JSONDecodeError, OSError, TypeError):
@@ -1163,7 +1186,7 @@ def run_form(name, tracks):
                 if not hold_apple_track(disc, track["n"]):
                     publish_form(name, index, len(tracks), disc, track, "Stopped", 0, 0, "apple")
                     break
-                while not PLAY["stop"]:
+                while not PLAY["stop"] and JUMP["to"] is None:
                     bus = next(iter(apple_buses()), "")
                     snap = None
                     if bus:
@@ -1223,7 +1246,7 @@ def run_form(name, tracks):
                 LOCAL["proc"] = proc
                 LOCAL["disc_id"] = disc["id"]
                 LOCAL["order"] = [{"n": track["n"], "title": track["title"], "path": str(local)}]
-                while proc.poll() is None and not PLAY["stop"]:
+                while proc.poll() is None and not PLAY["stop"] and JUMP["to"] is None:
                     state = read_local()
                     position = 0 if not state or state.get("starting") else state["position"]
                     length = 0 if not state or state.get("starting") else state["length"]
@@ -1234,12 +1257,50 @@ def run_form(name, tracks):
             else:
                 publish_form(name, index, len(tracks), disc, track, "Stopped", 0, 0, "")
                 break
+            if JUMP["to"] is not None:
+                index, JUMP["to"] = JUMP["to"], None
+            else:
+                index += 1
     finally:
+        JUMP["to"] = None
         if MODE["value"] == "playlist":
             MODE["value"] = ""
         ALLOWED["on"] = False
         SIT["form"] = False
         refresh_seat()
+
+
+def move_within(kind):
+    """Back, restart or next, from the sitting controls."""
+    if kind not in ("back", "restart", "next"):
+        return False
+    source = ACTIVE.get("source") or ""
+    if MODE["value"] == "local":
+        if kind == "restart":
+            return mpv_command(["seek", 0, "absolute"])
+        return mpv_command(["playlist-next" if kind == "next" else "playlist-prev"])
+    proc = LOCAL.get("proc")
+    if kind == "restart" and proc is not None and proc.poll() is None:
+        # A form song playing from your own copy.
+        return mpv_command(["seek", 0, "absolute"])
+    bus = SPOTIFY_BUS if source == "spotify" else next(iter(apple_buses()), "")
+    if MODE["value"] == "playlist" and kind != "restart":
+        target = FORM_POS["index"] + (1 if kind == "next" else -1)
+        if target >= FORM_POS["total"]:
+            return False
+        JUMP["to"] = max(0, target)
+        return True
+    if not bus:
+        return False
+    if kind == "restart":
+        # Seeking far back lands at the start of the song.
+        return bus_call(bus, "Seek", "x", -10**12).returncode == 0
+    if kind == "back":
+        # Previous only restarts a song that is a few seconds in; go back to its start
+        # first so Previous then reaches the song before.
+        bus_call(bus, "Seek", "x", -10**12)
+        time.sleep(0.15)
+    return bus_call(bus, "Next" if kind == "next" else "Previous").returncode == 0
 
 
 def form_lengths(tracks):
@@ -1821,6 +1882,15 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self.json_response(result)
             return
+        if path == "/move":
+            try:
+                payload = json.loads(raw.decode() or "{}")
+            except json.JSONDecodeError:
+                self.send_error(400)
+                return
+            self.json_response({"ok": bool(move_within(str(payload.get("move", ""))))})
+            return
+
         if path == "/sit":
             try:
                 payload = json.loads(raw.decode() or "{}")

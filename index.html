@@ -1876,17 +1876,21 @@ document.getElementById("end").addEventListener("click", endSitting);
   });
 })();
 
-// The web edition can move within a sit; the desktop app plays the album straight through.
+// Back, restart, next. The web edition moves its own players; the desktop app asks
+// yantra.py, which moves Spotify, mpv or the form it is walking.
 const transport = document.getElementById("transport");
-if (window.yantraTransport) {
-  transport.hidden = false;
-  transport.querySelectorAll("[data-move]").forEach((button) => {
-    button.addEventListener("click", () => {
-      rouse();
-      window.yantraTransport[button.dataset.move]();
-    });
+const moves = window.yantraTransport || {
+  back: () => fetch("/move", { method: "POST", body: JSON.stringify({ move: "back" }) }),
+  restart: () => fetch("/move", { method: "POST", body: JSON.stringify({ move: "restart" }) }),
+  next: () => fetch("/move", { method: "POST", body: JSON.stringify({ move: "next" }) }),
+};
+transport.hidden = false;
+transport.querySelectorAll("[data-move]").forEach((button) => {
+  button.addEventListener("click", () => {
+    rouse();
+    moves[button.dataset.move]();
   });
-}
+});
 addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.body.classList.contains("sitting")) {
     event.preventDefault();
