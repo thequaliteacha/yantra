@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 *.p8
 playlists.json
+web/audio-stage/
+dist/
+.wrangler/

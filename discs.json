@@ -1,5 +1,5 @@
 {
-  "line": "For the students of Rama. These discs only.",
+  "line": "",
   "circles": [
     {
       "id": "zazen",
@@ -2517,6 +2517,95 @@
           "n": 10,
           "title": "Himalayan Sunset",
           "length": 409
+        }
+      ]
+    },
+    {
+      "id": "diving-into-enlightenment",
+      "circle": "vayu",
+      "title": "Diving Into Enlightenment",
+      "artist": "Vayu Meditation",
+      "aliases": [
+        "Diving Into Enlightenment"
+      ],
+      "artistKeys": [
+        "vayu"
+      ],
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Diving Darshan",
+          "length": 277
+        },
+        {
+          "n": 2,
+          "title": "Dolphin Dive",
+          "length": 232
+        },
+        {
+          "n": 3,
+          "title": "Pono's Papayas",
+          "length": 227
+        },
+        {
+          "n": 4,
+          "title": "Shark Cheif",
+          "length": 324
+        },
+        {
+          "n": 5,
+          "title": "Undersea Awareness",
+          "length": 294
+        },
+        {
+          "n": 6,
+          "title": "Vanessa's Cove",
+          "length": 182
+        },
+        {
+          "n": 7,
+          "title": "Atlantian",
+          "length": 270
+        },
+        {
+          "n": 8,
+          "title": "Every Fish is Precious",
+          "length": 239
+        },
+        {
+          "n": 9,
+          "title": "Underwater Samadhi",
+          "length": 269
+        },
+        {
+          "n": 10,
+          "title": "Whale God",
+          "length": 288
+        },
+        {
+          "n": 11,
+          "title": "Ray",
+          "length": 267
+        },
+        {
+          "n": 12,
+          "title": "Deep Dive",
+          "length": 294
+        },
+        {
+          "n": 13,
+          "title": "Ocean Goddess",
+          "length": 286
+        },
+        {
+          "n": 14,
+          "title": "Night Dive",
+          "length": 262
+        },
+        {
+          "n": 15,
+          "title": "Diving Into Enlightenment",
+          "length": 296
         }
       ]
     }

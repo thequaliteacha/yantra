@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../.local/share/wrangler-cli/node_modules/wrangler/config-schema.json",
+  "name": "yantra-sangha",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  // Every request goes through the Worker, so it can check the sangha-word cookie
+  // and trim Zazen from the shelf unless the Zazen word was entered.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "yantra-sangha-audio" }],
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "yantramedi.app", "custom_domain": true },
+    { "pattern": "www.yantramedi.app", "custom_domain": true }
+  ],
+  "preview_urls": false
+  // SANGHA_WORD, ZAZEN_WORD and COOKIE_KEY are secrets (wrangler secret put ...),
+  // kept out of this public repo.
+}

@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import yantra  # noqa: E402  (loads discs.json; the server does not start)
+import yantra  # (loads discs.json; the server does not start)
 
 links = {}
 missing = []

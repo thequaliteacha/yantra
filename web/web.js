@@ -16,15 +16,18 @@
   let collection = null;
   let links = {};
   let sets = null;
-  const config = { spotifyClientId: "", appleDeveloperToken: "" };
+  let recordings = {};
+  const config = { spotifyClientId: "", appleDeveloperToken: "", audioBase: "audio/" };
 
   const ready = Promise.all([
     realFetch("../discs.json").then((r) => r.json()),
     realFetch("tracks.json").then((r) => r.json()).catch(() => ({})),
     realFetch("config.json", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
     realFetch("sets.json").then((r) => r.json()).catch(() => null),
-  ]).then(([discs, songs, settings, sessionSets]) => {
+    realFetch("audio.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+  ]).then(([discs, songs, settings, sessionSets, files]) => {
     sets = sessionSets;
+    recordings = files || {};
     Object.assign(config, settings || {});
     collection = discs;
     links = songs || {};
@@ -51,9 +54,16 @@
     return "eye";
   }
 
-  /* On the web only catalog albums can play. Discs on neither Spotify nor
-     Apple Music stay hidden, as they do on the desktop until a track is installed. */
-  const playable = (disc) => !!disc.spotifyAlbum || !!appleId(disc);
+  /* The sangha's own recordings (web/audio.json) play right in the page, no account needed. */
+  function recordingOf(discId, number) {
+    const path = (recordings[discId] || {})[String(number)];
+    return path ? config.audioBase + path : "";
+  }
+  const onRecordings = (disc) => disc.tracks.length > 0 && disc.tracks.every((track) => recordingOf(disc.id, track.n));
+
+  /* On the web only recorded or catalog albums can play. Discs on none of them
+     stay hidden, as they do on the desktop until a track is installed. */
+  const playable = (disc) => onRecordings(disc) || !!disc.spotifyAlbum || !!appleId(disc);
 
   function trackRef(discId, number) {
     const disc = DISCS[discId];
@@ -73,6 +83,7 @@
       tracks: disc.tracks.map((track) => Object.assign({}, track, { chakra: chakraOf(disc, track.n), installed: false })),
       onSpotify: !!disc.spotifyAlbum,
       onApple: !!appleId(disc),
+      onRecordings: onRecordings(disc),
       installed: 0,
       installDir: "",
     }));
@@ -123,6 +134,11 @@
     return pool;
   }
 
+  /* Songs the sangha has recorded, so they play without Spotify. */
+  function recordedPool(chakra) {
+    return chakraPool(chakra).filter(([discId, n]) => recordingOf(discId, n));
+  }
+
   function sample(pool, count) {
     const copy = pool.slice();
     for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -137,7 +153,8 @@
     const per = size / 3;
     const chosen = [];
     for (const chakra of CHAKRAS) {
-      const pool = chakraPool(chakra);
+      const recorded = recordedPool(chakra);
+      const pool = recorded.length >= per ? recorded : chakraPool(chakra);
       if (pool.length < per) return null;
       chosen.push(...sample(pool, per));
     }
@@ -646,8 +663,49 @@
     pause() { if (this.music) this.music.pause(); },
   };
 
+  /* The sangha recordings: one <audio> element walks the list in order. */
+  const recorded = {
+    audio: null,
+    keys: [],
+    index: -1,
+    available() { return Object.keys(recordings).length > 0; },
+    connected() { return this.available(); },
+    element() {
+      if (!this.audio) {
+        this.audio = new Audio();
+        this.audio.preload = "auto";
+        this.audio.addEventListener("ended", () => {
+          if (this.index + 1 < this.keys.length) this.start(this.index + 1);
+        });
+      }
+      return this.audio;
+    },
+    start(index) {
+      const audio = this.element();
+      this.index = index;
+      audio.src = this.keys[index];
+      return audio.play().then(() => true, () => false);
+    },
+    play(keys) {
+      this.keys = keys.slice();
+      return this.start(0);
+    },
+    state() {
+      const audio = this.audio;
+      if (!audio || this.index < 0) return null;
+      return {
+        key: this.keys[this.index],
+        position: audio.currentTime || 0,
+        length: Number.isFinite(audio.duration) ? audio.duration : 0,
+        playing: !audio.paused && !audio.ended,
+      };
+    },
+    pause() { if (this.audio) this.audio.pause(); },
+  };
+
   /* Each song's key on each service, read from its direct link. */
   function songKey(item, service) {
+    if (service === "recordings") return recordingOf(item.discId, item.n);
     const url = ((links[item.discId] || {})[String(item.n)] || {})[service] || "";
     if (service === "spotify") {
       const match = url.match(/\/track\/([A-Za-z0-9]+)/);
@@ -657,7 +715,8 @@
     return match ? match[1] : "";
   }
 
-  const services = { spotify, apple };
+  const services = { recordings: recorded, spotify, apple };
+  const recordedAll = (items) => items.length > 0 && items.every((item) => recordingOf(item.discId, item.n));
   const live = { service: null, name: "", items: [], keys: [], seen: false, timer: 0, form: false, chakras: null, lastHeard: false };
 
   /* The morning and evening sets: 1 song is the heart song, 3 is one per chakra,
@@ -667,7 +726,7 @@
     if (!set) return null;
     if (count === 1) {
       const one = sets.oneSong && sets.oneSong[theme];
-      return one ? [{ discId: one.discId, n: one.n, chakra: "heart" }] : null;
+      return one ? recordedSit([{ discId: one.discId, n: one.n, chakra: "heart" }]) : null;
     }
     const per = { 3: 1, 6: 2, 12: 4 }[count];
     if (!per) return null;
@@ -675,7 +734,23 @@
     for (const chakra of ["naval", "heart", "eye"]) {
       for (const song of (set[chakra] || []).slice(0, per)) items.push({ discId: song.discId, n: song.n, chakra });
     }
-    return items.length === per * 3 ? items : null;
+    return items.length === per * 3 ? recordedSit(items) : null;
+  }
+
+  /* The curated sets draw on albums the sangha has no recordings of. Where a song
+     isn't recorded, a recorded song for the same chakra takes its place, so a sit
+     plays from the sangha's copies without needing Spotify. */
+  function recordedSit(items) {
+    if (recordedAll(items)) return items;
+    const used = new Set(items.map((item) => item.discId + "#" + item.n));
+    return items.map((item) => {
+      if (recordingOf(item.discId, item.n)) return item;
+      const options = recordedPool(item.chakra).filter(([discId, n]) => !used.has(discId + "#" + n));
+      if (!options.length) return item;
+      const [discId, n] = sample(options, 1)[0];
+      used.add(discId + "#" + n);
+      return { discId, n, chakra: item.chakra };
+    });
   }
 
   function complete() {
@@ -683,7 +758,8 @@
   }
 
   function serviceFor(items, prefer) {
-    const order = prefer === "apple" ? ["apple", "spotify"] : ["spotify", "apple"];
+    // The sangha's own copies come first: they need no account and no app.
+    const order = ["recordings"].concat(prefer === "apple" ? ["apple", "spotify"] : ["spotify", "apple"]);
     for (const name of order) {
       if (services[name].connected() && items.every((item) => songKey(item, name))) return name;
     }
@@ -826,7 +902,9 @@
     // Unlocks audio for the in-page player; it has to run inside the tap.
     if (service === "spotify" && spotify.player && spotify.player.activateElement) spotify.player.activateElement();
     let started;
-    if (service === "spotify" && albumOptions && albumOptions.spotify) {
+    if (service === "recordings") {
+      started = recorded.play(live.keys);
+    } else if (service === "spotify" && albumOptions && albumOptions.spotify) {
       started = spotify.play(albumOptions.spotify);
     } else if (service === "spotify") {
       // A saved form plays from its own private Spotify playlist, so the songs keep
@@ -951,7 +1029,7 @@
       if (!picked) return [{ ok: false, error: "That sit is not available." }, 404];
       const name = String(payload.name || theme);
       const items = picked.map((item) => ({ discId: item.discId, n: item.n }));
-      if (spotify.available() && !spotify.connected()) {
+      if (!recordedAll(items) && spotify.available() && !spotify.connected()) {
         return connectFirst({ kind: "session", theme, count, name });
       }
       if (liveStart(name, items, "spotify", true, null, "set-" + theme + "-" + count, picked.map((item) => item.chakra))) {
@@ -972,7 +1050,7 @@
       if (error) return [{ ok: false, error }, 400];
       const name = String(payload.name || "Form");
       const prefer = payload.prefer === "apple" ? "apple" : "spotify";
-      if (prefer === "spotify" && spotify.available() && !spotify.connected()) {
+      if (!recordedAll(orderedDraft(tracks)) && prefer === "spotify" && spotify.available() && !spotify.connected()) {
         return connectFirst({ kind: "form", name, id: payload.id || "", tracks });
       }
       if (liveStart(name, orderedDraft(tracks), prefer, true, null, payload.id || "")) return [{ ok: true, source: "playlist" }];
@@ -988,6 +1066,10 @@
     stopQueue();
     const disc = DISCS[payload.id];
     if (!disc) return [{ ok: false, error: "That disc is not on the shelf." }, 404];
+    const albumItems = disc.tracks.map((track) => ({ discId: disc.id, n: track.n }));
+    if (recordedAll(albumItems) && liveStart(disc.title, albumItems, payload.source, false, null)) {
+      return [{ ok: true, source: "recordings" }];
+    }
     if (payload.source === "spotify" && spotify.available() && !spotify.connected()) {
       return connectFirst({ kind: "album", name: disc.title, id: disc.id });
     }

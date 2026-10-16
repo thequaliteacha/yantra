@@ -83,9 +83,7 @@ def same_name(heard, known):
         return False
     if heard == known:
         return True
-    if len(known) >= 4 and (heard.startswith(known + " ") or heard.startswith(known)):
-        return True
-    return False
+    return len(known) >= 4 and heard.startswith(known)
 
 
 def album_names(disc):
@@ -1486,9 +1484,8 @@ def open_in_spotify(disc):
     ACTIVE["source"] = "spotify"
     uri = "spotify:album:" + album
     PENDING["until"] = time.monotonic() + 12
-    if not spotify_running():
-        if not launch_spotify(uri):
-            return subprocess.CompletedProcess([], 1, "", "Spotify did not start.")
+    if not spotify_running() and not launch_spotify(uri):
+        return subprocess.CompletedProcess([], 1, "", "Spotify did not start.")
     # Shuffle has to be off before the album opens, or Next walks a mixed queue.
     spotify_shuffle_off()
     result = subprocess.run(

@@ -292,7 +292,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <button class="back" type="button" data-room="back" aria-label="Back">&#8592;</button>
   <div class="inner">
     <h2>About the Music</h2>
-    <p>The music is by Vayu Meditation and plays from your own Spotify account (Premium). Nothing is copied or stored here.</p>
+    <p>The music is by Vayu Meditation. The sangha's recordings play right here; albums not yet recorded play from your own Spotify account (Premium).</p>
     <p>The morning and evening sets follow the Heart School meditation app, made for the lineage's students.</p>
     <p style="text-align:center"><a href="https://open.spotify.com/artist/3ScOP7YdhKlvEvlydSl2F1" target="_blank" rel="noopener">Vayu Meditation on Spotify</a></p>
   </div>
@@ -317,7 +317,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       </div>
     </div>
     <div class="index" id="album-index">
-      <p class="kicker">Students of Rama</p>
       <div id="circles"></div>
       <div id="discs"></div>
     </div>
@@ -537,67 +536,141 @@ function gold(ctx, alpha, blur, glow) {
   ctx.shadowBlur = blur;
 }
 
+/* The Sri Yantra blossoms out of the bindu over each song. Nothing is traced:
+   every part is whole from the moment it appears, growing outward from the
+   centre and brightening into place, so the eyes can rest on the bindu while
+   golden light spreads through the figure. */
+function ease(t) {
+  t = Math.min(1, Math.max(0, t));
+  return t * t * (3 - 2 * t);
+}
+function stage(reveal, from, to) {
+  return ease((reveal - from) / (to - from));
+}
+function layer(ctx, alpha, draw) {
+  if (alpha <= 0.002) return;
+  const base = ctx.globalAlpha;
+  ctx.globalAlpha = base * alpha;
+  ctx.beginPath();
+  draw();
+  ctx.stroke();
+  ctx.globalAlpha = base;
+}
+function scaled(pts, cx, cy, k) {
+  return pts.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]);
+}
+function bud(ctx, cx, cy, angle, rIn, rOut, half, grow) {
+  // A whole petal that swells out of its base point, longer first, then wider.
+  const bx = cx + Math.cos(angle) * rIn;
+  const by = cy + Math.sin(angle) * rIn;
+  const along = 0.2 + 0.8 * grow;
+  const across = 0.2 + 0.8 * Math.pow(grow, 1.6);
+  const ux = Math.cos(angle), uy = Math.sin(angle);
+  const pts = petalPoints(cx, cy, angle, rIn, rOut, half).map(([x, y]) => {
+    const dx = x - bx, dy = y - by;
+    const l = dx * ux + dy * uy, t = -dx * uy + dy * ux;
+    return [bx + ux * l * along - uy * t * across, by + uy * l * along + ux * t * across];
+  });
+  partial(ctx, pts, 1);
+}
+function ring(ctx, cx, cy, r, grow) {
+  // A circle opens out from just inside its place.
+  if (grow > 0) circle(ctx, cx, cy, r * (0.82 + 0.18 * grow));
+}
+
 function drawSri(ctx, cx, cy, R, reveal, bloom) {
   bloom = bloom || 0;
   const tris = RAW.map((raw) => triangle(raw, cx, cy, R));
   tris.sort((a, b) => span(a.map((p) => [p[0] - cx, p[1] - cy])) - span(b.map((p) => [p[0] - cx, p[1] - cy])));
+  const now = performance.now();
 
-  ctx.beginPath();
-  const binduEnd = 0.07;
-  if (reveal > 0.01) {
-    const br = R * 0.018 * Math.min(1, reveal / binduEnd);
-    circle(ctx, cx, cy, br);
+  // Golden light spreading from the bindu to the edge of what has grown.
+  if (reveal > 0.005) {
+    const reach = R * (0.2 + 2.2 * ease(reveal));
+    const light = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
+    light.addColorStop(0, `rgba(255, 214, 140, ${0.16 + 0.1 * reveal})`);
+    light.addColorStop(0.55, `rgba(214, 164, 72, ${0.05 + 0.05 * reveal})`);
+    light.addColorStop(1, "rgba(214, 164, 72, 0)");
+    const op = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = light;
+    ctx.beginPath();
+    ctx.arc(cx, cy, reach, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = op;
   }
 
-  const triStart = 0.07;
+  // The nine triangles unfold from the centre, innermost first, overlapping softly.
+  const triStart = 0.04;
   const triEnd = 0.6;
   const triSpan = (triEnd - triStart) / tris.length;
   tris.forEach((pts, i) => {
-    const local = (reveal - (triStart + i * triSpan)) / triSpan;
-    partial(ctx, pts, local);
+    const g = stage(reveal, triStart + i * triSpan, triStart + (i + 2.2) * triSpan);
+    if (g <= 0) return;
+    layer(ctx, g, () => partial(ctx, scaled(pts, cx, cy, 0.15 + 0.85 * g), 1));
   });
 
-  const eightStart = 0.6;
-  const eightEnd = 0.78;
-  const eightSpan = (eightEnd - eightStart) / 8;
-  arcPortion(ctx, cx, cy, R * 1.03, Math.min(1, Math.max(0, (reveal - eightStart) / 0.04)));
-  arcPortion(ctx, cx, cy, R * 1.08, Math.min(1, Math.max(0, (reveal - eightStart) / 0.04)));
-  for (let i = 0; i < 8; i++) {
-    const local = (reveal - (eightStart + i * eightSpan)) / eightSpan;
-    if (local <= 0) continue;
-    const a = -Math.PI / 2 + (i * Math.PI * 2) / 8;
-    partial(ctx, petalPoints(cx, cy, a, R * 1.12, R * 1.46, (Math.PI / 8) * 0.72), local);
-  }
-  arcPortion(ctx, cx, cy, R * 1.5, Math.min(1, Math.max(0, (reveal - 0.74) / 0.04)));
+  // Eight petals open from their base ring, like a lotus waking.
+  const inner = stage(reveal, 0.58, 0.64);
+  layer(ctx, inner, () => {
+    ring(ctx, cx, cy, R * 1.03, inner);
+    ring(ctx, cx, cy, R * 1.08, inner);
+  });
+  const eight = stage(reveal, 0.62, 0.78);
+  layer(ctx, eight, () => {
+    for (let i = 0; i < 8; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI * 2) / 8;
+      bud(ctx, cx, cy, a, R * 1.12, R * 1.46, (Math.PI / 8) * 0.72, eight);
+    }
+  });
+  const mid = stage(reveal, 0.74, 0.8);
+  layer(ctx, mid, () => ring(ctx, cx, cy, R * 1.5, mid));
 
-  const sixteenStart = 0.78;
-  const sixteenEnd = 0.9;
-  const sixteenSpan = (sixteenEnd - sixteenStart) / 16;
-  for (let i = 0; i < 16; i++) {
-    const local = (reveal - (sixteenStart + i * sixteenSpan)) / sixteenSpan;
-    if (local <= 0) continue;
-    const a = -Math.PI / 2 + (i * Math.PI * 2) / 16;
-    partial(ctx, petalPoints(cx, cy, a, R * 1.54, R * 1.9, (Math.PI / 16) * 0.7), local);
-  }
-  arcPortion(ctx, cx, cy, R * 1.94, Math.min(1, Math.max(0, (reveal - 0.88) / 0.03)));
-  arcPortion(ctx, cx, cy, R * 2.0, Math.min(1, Math.max(0, (reveal - 0.88) / 0.03)));
-  bhupura(ctx, cx, cy, R, Math.min(1, Math.max(0, (reveal - 0.9) / 0.1)));
-  ctx.stroke();
+  // Sixteen petals follow.
+  const sixteen = stage(reveal, 0.78, 0.9);
+  layer(ctx, sixteen, () => {
+    for (let i = 0; i < 16; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI * 2) / 16;
+      bud(ctx, cx, cy, a, R * 1.54, R * 1.9, (Math.PI / 16) * 0.7, sixteen);
+    }
+  });
+  const outer = stage(reveal, 0.88, 0.92);
+  layer(ctx, outer, () => {
+    ring(ctx, cx, cy, R * 1.94, outer);
+    ring(ctx, cx, cy, R * 2.0, outer);
+  });
 
-  if (reveal > 0.02) {
-    const pulse = 1;
-    const hot = 0.7 + bloom * 0.2;
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.16 * pulse);
-    g.addColorStop(0, "rgba(255, 248, 232, 0.95)");
-    g.addColorStop(0.18, `rgba(255, 206, 120, ${hot})`);
+  // The square enclosure settles in last, whole, from just inside its place.
+  const gate = stage(reveal, 0.9, 1);
+  layer(ctx, gate, () => {
+    const k = 0.9 + 0.1 * gate;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(k, k);
+    ctx.translate(-cx, -cy);
+    bhupura(ctx, cx, cy, R, 1);
+    ctx.restore();
+  });
+
+  // The bindu: always lit, warming as the figure grows, breathing slowly (about 10 s).
+  const glow = Math.min(1, reveal / 0.04);
+  if (glow > 0) {
+    const breath = 0.5 + 0.5 * Math.sin(now * 0.00063);
+    const warmth = 0.45 + 0.55 * ease(reveal);
+    const halo = R * (0.12 + 0.1 * warmth + 0.015 * breath + 0.03 * bloom);
+    const hot = Math.min(1, (0.55 + 0.35 * warmth + 0.1 * breath + bloom * 0.2) * glow);
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, halo);
+    g.addColorStop(0, `rgba(255, 250, 238, ${0.95 * glow})`);
+    g.addColorStop(0.16, `rgba(255, 214, 130, ${hot})`);
+    g.addColorStop(0.5, `rgba(240, 180, 70, ${0.25 * hot})`);
     g.addColorStop(1, "rgba(255, 170, 50, 0)");
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.arc(cx, cy, R * 0.16 * pulse, 0, Math.PI * 2);
+    ctx.arc(cx, cy, halo, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "rgba(255, 250, 240, 0.95)";
+    ctx.fillStyle = `rgba(255, 252, 244, ${0.97 * glow})`;
     ctx.beginPath();
-    ctx.arc(cx, cy, Math.max(1.5, R * 0.012), 0, Math.PI * 2);
+    ctx.arc(cx, cy, Math.max(1.6, R * (0.012 + 0.004 * warmth)), 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -862,6 +935,8 @@ function paintListen() {
 /* The chosen catalog when the disc is there, else the other one, else installed copies. */
 function sourceFor(disc) {
   if (!disc) return "";
+  // The sangha's own recordings (web edition) play in the page, ahead of any catalog.
+  if (disc.onRecordings) return "recordings";
   const order = listenOn === "apple" ? ["apple", "spotify"] : ["spotify", "apple"];
   for (const name of order) {
     if (name === "spotify" && disc.onSpotify) return "spotify";
@@ -878,8 +953,8 @@ async function sitAlbum() {
     begin();
     return;
   }
-  const where = { spotify: " in Spotify.", apple: " in Apple Music.", local: "." }[source];
-  playNote = (source === "local" ? "Playing the installed " : "Opening ") + disc.title + where;
+  const where = { spotify: " in Spotify.", apple: " in Apple Music.", local: ".", recordings: "." }[source];
+  playNote = (source === "local" ? "Playing the installed " : source === "recordings" ? "Playing " : "Opening ") + disc.title + where;
   // The request goes out inside the click, before anything waits, so a browser lets it open the player.
   const request = fetch("/play", {
     method: "POST",
@@ -1016,19 +1091,21 @@ function paintActions() {
   const install = document.getElementById("install");
   const onSpotify = !!(disc && disc.onSpotify);
   const onApple = !!(disc && disc.onApple);
+  const onRecordings = !!(disc && disc.onRecordings);
   const count = installedCount(disc);
-  play.hidden = !onSpotify && onApple;
-  play.disabled = !onSpotify;
-  play.textContent = onSpotify ? "Open in Spotify" : "Not on Spotify";
+  play.hidden = !onSpotify && !onRecordings && onApple;
+  play.disabled = !onSpotify && !onRecordings;
+  play.textContent = onRecordings ? "Play" : onSpotify ? "Open in Spotify" : "Not on Spotify";
   apple.hidden = !onApple;
   apple.disabled = false;
-  local.hidden = onSpotify || onApple || count < 1;
+  local.hidden = onSpotify || onApple || onRecordings || count < 1;
   local.textContent = "Play installed (" + count + ")";
-  install.hidden = onSpotify || onApple;
+  install.hidden = onSpotify || onApple || onRecordings;
 }
 
 function shelfHint(disc) {
   if (!disc) return "";
+  if (disc.onRecordings) return "";
   if (!disc.onSpotify && !disc.onApple && installedCount(disc) < 1) {
     return "Name each file with its track title, then install it in Music/yantra/" + disc.id + ".";
   }
@@ -1075,7 +1152,7 @@ function applyNow() {
   } else if (snap && snap.form && snap.title) {
     gateNow.textContent = (snap.status === "Playing" ? "Playing  " : snap.status + "  ") + snap.title;
     note.textContent = snap.form + "  ·  " + chakraLabel(snap.chakra);
-  } else if (!connected && !(snap && snap.source === "local")) {
+  } else if (!connected && !(snap && (snap.source === "local" || snap.source === "recordings"))) {
     gateNow.textContent = "";
     note.textContent = shelfHint(disc);
   } else if (!snap.discId) {
@@ -1087,7 +1164,8 @@ function applyNow() {
     note.textContent = heard ? "Hearing " + heard.title + "." : "";
   } else {
     gateNow.textContent = snap.status === "Playing" ? "Playing  " + snap.title : snap.status + "  " + snap.title;
-    note.textContent = snap.source === "local" ? "Playing the installed disc, in order." : "In album order.";
+    note.textContent = snap.source === "local" ? "Playing the installed disc, in order."
+      : snap.source === "recordings" ? "The sangha's recording, in album order." : "In album order.";
   }
   if (snap && snap.form && snap.title) {
     capTitle.textContent = snap.title;
@@ -1355,14 +1433,14 @@ async function editForm(body) {
 
 async function openDisc() {
   const disc = selected();
-  if (!disc || !disc.onSpotify) return;
-  playNote = "Opening " + disc.title + ".";
+  if (!disc || !(disc.onSpotify || disc.onRecordings)) return;
+  playNote = (disc.onRecordings ? "Playing " : "Opening ") + disc.title + ".";
   applyNow();
   try {
     const response = await fetch("/play", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: disc.id, source: "spotify" }),
+      body: JSON.stringify({ id: disc.id, source: disc.onRecordings ? "recordings" : "spotify" }),
     });
     const data = await response.json();
     playNote = data.ok ? "Opening " + disc.title + "." : (data.error || "This disc did not open.");

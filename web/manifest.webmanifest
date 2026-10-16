@@ -1,7 +1,7 @@
 {
   "name": "Yantra",
   "short_name": "Yantra",
-  "description": "Morning and evening Vayu meditation for students of Rama, with a yantra that draws itself through each song.",
+  "description": "Morning and evening meditation with a yantra that draws itself through each song.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

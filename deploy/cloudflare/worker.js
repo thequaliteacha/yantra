@@ -1,0 +1,190 @@
+/* Sangha edition of Yantra on Cloudflare.
+ *
+ * The page, discs.json and web/ are static assets. Requests under /web/audio/
+ * stream the sangha's mp3s from the private R2 bucket, with byte ranges so the
+ * player can seek.
+ *
+ * No accounts: a listener types the sangha word once, and the phone keeps a
+ * signed cookie for a year. SANGHA_WORD opens the Vayu recordings for everyone in
+ * the group. Zazen is shared only after Chitananda gives the student the Rama talk,
+ * so only ZAZEN_WORD opens the rest of the shelf (Zazen,
+ * Lumikara, Lineage); with the Sangha word those circles are left off. The Zazen data itself stays in the files. Both words and COOKIE_KEY
+ * are Worker secrets, kept out of this public repo.
+ */
+const PREFIX = "/web/audio/";
+// The Sangha word opens only Vayu; the Zazen word opens every circle.
+const OPEN_CIRCLE = "vayu";
+const COOKIE = "yantra";
+const YEAR = 365 * 24 * 3600;
+const PUBLIC = /^\/(web\/manifest\.webmanifest|web\/icons\/[\w.-]+|favicon\.ico)$/;
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    // One home address: www and the old workers.dev link both move to yantramedi.app.
+    if (url.hostname === "www.yantramedi.app" || url.hostname.endsWith(".workers.dev")) {
+      url.hostname = "yantramedi.app";
+      return Response.redirect(url.toString(), 301);
+    }
+    if (url.pathname === "/") return Response.redirect(new URL("/web/", url), 302);
+    if (url.pathname === "/enter" && request.method === "POST") return enter(request, env, url);
+
+    // The app's name and icons load without cookies (browsers fetch the manifest
+    // anonymously), and reveal nothing.
+    if (PUBLIC.test(url.pathname)) return env.ASSETS.fetch(request);
+
+    const level = await cookieLevel(request, env);
+    if (!level) {
+      const wantsPage = (request.headers.get("accept") || "").includes("text/html");
+      return wantsPage ? gatePage("") : new Response("Enter the sangha word first.", { status: 401 });
+    }
+    const zazen = level === "zazen";
+
+    if (url.pathname === "/discs.json") return shelf(request, env, zazen);
+    if (url.pathname === "/web/tracks.json") return trackLinks(request, env, zazen);
+    if (url.pathname.startsWith(PREFIX)) return recording(request, env, url, zazen);
+    // The web loader fetches ../index.html. Assets would redirect that to "/", which
+    // points back at the loader, so serve the page itself.
+    if (url.pathname === "/index.html") return env.ASSETS.fetch(new Request(new URL("/", url), request));
+    return env.ASSETS.fetch(request);
+  },
+};
+
+/* ---- What each listener sees ---- */
+
+async function gatedIds(request, env) {
+  const discs = await (await env.ASSETS.fetch(new Request(new URL("/discs.json", request.url)))).json();
+  return new Set(discs.discs.filter((d) => d.circle !== OPEN_CIRCLE).map((d) => d.id));
+}
+
+function privateJson(data) {
+  return new Response(JSON.stringify(data), {
+    headers: { "content-type": "application/json", "cache-control": "private, no-store", vary: "cookie" },
+  });
+}
+
+async function shelf(request, env, zazen) {
+  const response = await env.ASSETS.fetch(request);
+  if (!response.ok) return response;
+  const data = await response.json();
+  if (!zazen) {
+    data.circles = data.circles.filter((c) => c.id === OPEN_CIRCLE);
+    data.discs = data.discs.filter((d) => d.circle === OPEN_CIRCLE);
+  }
+  return privateJson(data);
+}
+
+async function trackLinks(request, env, zazen) {
+  const response = await env.ASSETS.fetch(request);
+  if (!response.ok || zazen) return response.ok ? privateJson(await response.json()) : response;
+  const data = await response.json();
+  for (const id of await gatedIds(request, env)) delete data[id];
+  return privateJson(data);
+}
+
+async function recording(request, env, url, zazen) {
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
+  const key = decodeURIComponent(url.pathname.slice(PREFIX.length));
+  if (!/^[a-z0-9-]+\/\d{2}\.mp3$/.test(key)) return new Response("Not found", { status: 404 });
+  if (!zazen && (await gatedIds(request, env)).has(key.split("/")[0])) return new Response("Not found", { status: 404 });
+
+  const object = await env.AUDIO.get(key, { range: request.headers, onlyIf: request.headers });
+  if (object === null) return new Response("Not found", { status: 404 });
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("etag", object.httpEtag);
+  headers.set("accept-ranges", "bytes");
+  headers.set("cache-control", "private, max-age=86400");
+  if (!headers.has("content-type")) headers.set("content-type", "audio/mpeg");
+
+  if (!("body" in object)) return new Response(null, { status: 304, headers });
+  if (object.range && request.headers.has("range")) {
+    const start = object.range.offset ?? 0;
+    const length = object.range.length ?? object.size - start;
+    headers.set("content-range", `bytes ${start}-${start + length - 1}/${object.size}`);
+    headers.set("content-length", String(length));
+    return new Response(request.method === "HEAD" ? null : object.body, { status: 206, headers });
+  }
+  headers.set("content-length", String(object.size));
+  return new Response(request.method === "HEAD" ? null : object.body, { headers });
+}
+
+/* ---- The sangha word ---- */
+
+async function hmac(env, text) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.COOKIE_KEY), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(text));
+  return btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function same(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function cookieLevel(request, env) {
+  if (!env.COOKIE_KEY) return "";
+  const match = (request.headers.get("cookie") || "").match(new RegExp("(?:^|;\\s*)" + COOKIE + "=([^;]+)"));
+  if (!match) return "";
+  const [level, exp, sig] = match[1].split(".");
+  if (!["sangha", "zazen"].includes(level) || !(Number(exp) * 1000 > Date.now())) return "";
+  return same(sig || "", await hmac(env, level + "." + exp)) ? level : "";
+}
+
+function norm(word) {
+  return String(word || "").trim().toLowerCase();
+}
+
+async function enter(request, env, url) {
+  const form = await request.formData().catch(() => null);
+  const word = norm(form && form.get("word"));
+  let level = "";
+  if (word && env.ZAZEN_WORD && same(word, norm(env.ZAZEN_WORD))) level = "zazen";
+  else if (word && env.SANGHA_WORD && same(word, norm(env.SANGHA_WORD))) level = "sangha";
+  if (!level || !env.COOKIE_KEY) {
+    await new Promise((r) => setTimeout(r, 800));
+    return gatePage("That word doesn't open it. Ask Chitananda for the sangha word.");
+  }
+  const exp = Math.floor(Date.now() / 1000) + YEAR;
+  const value = `${level}.${exp}.${await hmac(env, level + "." + exp)}`;
+  return new Response(null, {
+    status: 303,
+    headers: {
+      location: new URL("/web/", url).toString(),
+      "set-cookie": `${COOKIE}=${value}; Max-Age=${YEAR}; Path=/; Secure; HttpOnly; SameSite=Lax`,
+    },
+  });
+}
+
+function gatePage(note) {
+  const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05040a">
+<title>Yantra Meditation</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #05040a; color: #f3e6c8; }
+  body { display: flex; align-items: center; justify-content: center; padding: 1.5rem; box-sizing: border-box;
+         font-family: Palatino, "Iowan Old Style", "Times New Roman", serif;
+         background: radial-gradient(ellipse at center, #120e1c, #05040a 70%); }
+  form { width: min(22rem, 100%); display: flex; flex-direction: column; gap: 1rem; text-align: center; }
+  h1 { font-weight: 500; font-size: clamp(2rem, 8vw, 2.8rem); margin: 0 0 1.4rem; color: #f7edd4; }
+  input { font: inherit; font-size: 1.15rem; text-align: center; padding: 0.9rem; background: rgba(5, 4, 10, 0.6);
+          color: #f7edd4; border: 1px solid rgba(230, 201, 138, 0.45); border-radius: 0; }
+  input::placeholder { color: rgba(232, 204, 146, 0.45); }
+  button { font: inherit; font-size: 1.1rem; letter-spacing: 0.08em; padding: 0.95rem; cursor: pointer;
+           background: transparent; color: #f7edd4; border: 1px solid rgba(230, 201, 138, 0.8); }
+  p { min-height: 1.4rem; margin: 0; color: rgba(232, 204, 146, 0.8); font-size: 0.95rem; line-height: 1.5; }
+</style></head><body>
+<form method="post" action="/enter">
+  <h1>Yantra Meditation</h1>
+  <input name="word" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Sangha word" required autofocus>
+  <button type="submit">Enter</button>
+  <p>${note}</p>
+</form></body></html>`;
+  // 401 keeps the service worker from caching this page in place of the app.
+  return new Response(html, { status: 401, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+}
