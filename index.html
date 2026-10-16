@@ -516,14 +516,16 @@ function petalPoints(cx, cy, angle, rIn, rOut, half) {
   return pts;
 }
 
-/* Ajna's wing: a dome mirrored exactly about its axis. Its base follows the circle it
-   rests on, so no chord cuts across the figure the way a wide ordinary petal's would. */
+/* Ajna's wing, as the chakra is drawn: a round lobe wrapped around the circle that
+   rises to a small point on the level axis. It is mirrored exactly about that axis,
+   and its base follows the circle it rests on, so no chord cuts across the figure. */
 function wingPoints(cx, cy, angle, rIn, rOut, half) {
-  const steps = 72;
+  const steps = 96;
   const pts = [];
   for (let i = 0; i <= steps; i++) {
     const t = -1 + (2 * i) / steps;
-    const r = rIn + (rOut - rIn) * Math.sqrt(1 - t * t);
+    const tip = Math.pow(Math.max(0, 1 - Math.abs(t) / 0.3), 2);
+    const r = rIn + (rOut - rIn) * (0.8 * Math.sqrt(1 - t * t) + 0.2 * tip);
     const a = angle + t * half;
     pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
   }
@@ -758,7 +760,7 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
     for (let i = 0; i < count; i++) {
       if (count === 2) {
         // Ajna's two petals open sideways like wings and hold still, level and mirrored.
-        bud(ctx, cx, cy, i * Math.PI, R * 1.54 * swell, R * 1.9 * swell, Math.PI * 0.2, outerPetals, wingPoints);
+        bud(ctx, cx, cy, i * Math.PI, R * 1.53 * swell, R * 1.9 * swell, Math.PI * 0.23, outerPetals, wingPoints);
       } else {
         const a = -Math.PI / 2 + turn + (i * Math.PI * 2) / count;
         bud(ctx, cx, cy, a, R * 1.54 * swell, R * 1.9 * swell, (Math.PI / count) * 0.7, outerPetals);
