@@ -766,24 +766,31 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
   if (glow > 0) {
     const breath = 0.5 + 0.5 * Math.sin(now * 0.00063);
     const warmth = 0.45 + 0.55 * ease(reveal);
-    const halo = R * (0.12 + 0.1 * warmth + 0.015 * breath + 0.03 * bloom);
-    const hot = Math.min(1, (0.55 + 0.35 * warmth + 0.1 * breath + bloom * 0.2) * glow);
+    // A stark point: a tight, bright halo that falls off quickly, and a crisp core
+    // with its own small glow, so the eyes have one clear place to rest.
+    const halo = R * (0.09 + 0.07 * warmth + 0.012 * breath + 0.03 * bloom);
+    const hot = Math.min(1, (0.75 + 0.2 * warmth + 0.05 * breath + bloom * 0.2) * glow);
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, halo);
     // On paper the bindu is a warm ember; in the dark it is light itself.
-    const core = isLight() ? [196, 104, 28] : [255, 250, 238];
-    g.addColorStop(0, rgba(core, 0.95 * glow));
+    const core = isLight() ? [176, 84, 16] : [255, 253, 246];
+    g.addColorStop(0, rgba(core, glow));
     const mix = (a, k) => a.map((c, i) => Math.round(c * (1 - k) + hue.glow[i] * k));
-    g.addColorStop(0.16, rgba(isLight() ? [222, 140, 50] : mix([255, 214, 130], 0.3), hot));
-    g.addColorStop(0.5, rgba(isLight() ? [236, 170, 80] : mix([240, 180, 70], 0.55), 0.25 * hot));
+    g.addColorStop(0.1, rgba(isLight() ? [214, 124, 36] : [255, 238, 200], hot));
+    g.addColorStop(0.28, rgba(isLight() ? [226, 150, 60] : mix([255, 206, 120], 0.25), 0.6 * hot));
+    g.addColorStop(0.6, rgba(isLight() ? [236, 170, 80] : mix([240, 180, 70], 0.5), 0.14 * hot));
     g.addColorStop(1, "rgba(255, 170, 50, 0)");
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(cx, cy, halo, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgba(isLight() ? [150, 70, 12] : [255, 252, 244], 0.97 * glow);
+    ctx.save();
+    ctx.shadowColor = rgba(isLight() ? [200, 110, 30] : [255, 236, 190], glow);
+    ctx.shadowBlur = Math.max(6, R * 0.07);
+    ctx.fillStyle = rgba(isLight() ? [130, 56, 8] : [255, 255, 252], glow);
     ctx.beginPath();
-    ctx.arc(cx, cy, Math.max(1.6, R * (0.012 + 0.004 * warmth)), 0, Math.PI * 2);
+    ctx.arc(cx, cy, Math.max(2.2, R * (0.016 + 0.005 * warmth)), 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
   }
 }
 
