@@ -1233,6 +1233,52 @@
       ]
     },
     {
+      "id": "atlantis-rising",
+      "circle": "zazen",
+      "title": "Atlantis Rising",
+      "artist": "Zazen",
+      "aliases": [
+        "Atlantis Rising"
+      ],
+      "artistKeys": [
+        "zazen",
+        "rama",
+        "lenz"
+      ],
+      "tracks": [
+        {
+          "n": 1,
+          "title": "Crystal Dome",
+          "length": 538
+        },
+        {
+          "n": 2,
+          "title": "Wizard",
+          "length": 665
+        },
+        {
+          "n": 3,
+          "title": "Telepathy",
+          "length": 321
+        },
+        {
+          "n": 4,
+          "title": "Temple of Atlantis",
+          "length": 539
+        },
+        {
+          "n": 5,
+          "title": "Sundial",
+          "length": 376
+        },
+        {
+          "n": 6,
+          "title": "Atlantis Rising - The Fall/Regeneration",
+          "length": 895
+        }
+      ]
+    },
+    {
       "id": "oceans-of-light",
       "circle": "vayu",
       "title": "Oceans of Light",

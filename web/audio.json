@@ -1,4 +1,12 @@
 {
+ "atlantis-rising": {
+  "1": "atlantis-rising/01.mp3",
+  "2": "atlantis-rising/02.mp3",
+  "3": "atlantis-rising/03.mp3",
+  "4": "atlantis-rising/04.mp3",
+  "5": "atlantis-rising/05.mp3",
+  "6": "atlantis-rising/06.mp3"
+ },
  "big-island": {
   "1": "big-island/01.mp3",
   "11": "big-island/11.mp3",
@@ -32,6 +40,35 @@
   "8": "diving-into-enlightenment/08.mp3",
   "9": "diving-into-enlightenment/09.mp3"
  },
+ "ecstasy": {
+  "1": "ecstasy/01.mp3",
+  "10": "ecstasy/10.mp3",
+  "2": "ecstasy/02.mp3",
+  "3": "ecstasy/03.mp3",
+  "4": "ecstasy/04.mp3",
+  "5": "ecstasy/05.mp3",
+  "6": "ecstasy/06.mp3",
+  "7": "ecstasy/07.mp3",
+  "8": "ecstasy/08.mp3",
+  "9": "ecstasy/09.mp3"
+ },
+ "enlightenment": {
+  "1": "enlightenment/01.mp3",
+  "10": "enlightenment/10.mp3",
+  "11": "enlightenment/11.mp3",
+  "12": "enlightenment/12.mp3",
+  "13": "enlightenment/13.mp3",
+  "14": "enlightenment/14.mp3",
+  "15": "enlightenment/15.mp3",
+  "2": "enlightenment/02.mp3",
+  "3": "enlightenment/03.mp3",
+  "4": "enlightenment/04.mp3",
+  "5": "enlightenment/05.mp3",
+  "6": "enlightenment/06.mp3",
+  "7": "enlightenment/07.mp3",
+  "8": "enlightenment/08.mp3",
+  "9": "enlightenment/09.mp3"
+ },
  "great-teachers-of-enlightenment": {
   "1": "great-teachers-of-enlightenment/01.mp3",
   "10": "great-teachers-of-enlightenment/10.mp3",
@@ -48,6 +85,24 @@
   "7": "great-teachers-of-enlightenment/07.mp3",
   "8": "great-teachers-of-enlightenment/08.mp3",
   "9": "great-teachers-of-enlightenment/09.mp3"
+ },
+ "mandala-of-light": {
+  "1": "mandala-of-light/01.mp3",
+  "2": "mandala-of-light/02.mp3",
+  "3": "mandala-of-light/03.mp3",
+  "4": "mandala-of-light/04.mp3",
+  "5": "mandala-of-light/05.mp3",
+  "6": "mandala-of-light/06.mp3"
+ },
+ "mystery-school": {
+  "1": "mystery-school/01.mp3",
+  "2": "mystery-school/02.mp3",
+  "3": "mystery-school/03.mp3",
+  "4": "mystery-school/04.mp3",
+  "5": "mystery-school/05.mp3",
+  "6": "mystery-school/06.mp3",
+  "7": "mystery-school/07.mp3",
+  "8": "mystery-school/08.mp3"
  },
  "mystical-creatures": {
   "1": "mystical-creatures/01.mp3",
@@ -80,6 +135,56 @@
   "8": "napa/08.mp3",
   "9": "napa/09.mp3"
  },
+ "samadhi": {
+  "1": "samadhi/01.mp3",
+  "10": "samadhi/10.mp3",
+  "11": "samadhi/11.mp3",
+  "12": "samadhi/12.mp3",
+  "13": "samadhi/13.mp3",
+  "14": "samadhi/14.mp3",
+  "2": "samadhi/02.mp3",
+  "3": "samadhi/03.mp3",
+  "4": "samadhi/04.mp3",
+  "5": "samadhi/05.mp3",
+  "6": "samadhi/06.mp3",
+  "7": "samadhi/07.mp3",
+  "8": "samadhi/08.mp3",
+  "9": "samadhi/09.mp3"
+ },
+ "samurai": {
+  "1": "samurai/01.mp3",
+  "10": "samurai/10.mp3",
+  "11": "samurai/11.mp3",
+  "12": "samurai/12.mp3",
+  "13": "samurai/13.mp3",
+  "14": "samurai/14.mp3",
+  "2": "samurai/02.mp3",
+  "3": "samurai/03.mp3",
+  "4": "samurai/04.mp3",
+  "5": "samurai/05.mp3",
+  "6": "samurai/06.mp3",
+  "7": "samurai/07.mp3",
+  "8": "samurai/08.mp3",
+  "9": "samurai/09.mp3"
+ },
+ "tantra": {
+  "1": "tantra/01.mp3",
+  "10": "tantra/10.mp3",
+  "11": "tantra/11.mp3",
+  "12": "tantra/12.mp3",
+  "13": "tantra/13.mp3",
+  "14": "tantra/14.mp3",
+  "15": "tantra/15.mp3",
+  "16": "tantra/16.mp3",
+  "2": "tantra/02.mp3",
+  "3": "tantra/03.mp3",
+  "4": "tantra/04.mp3",
+  "5": "tantra/05.mp3",
+  "6": "tantra/06.mp3",
+  "7": "tantra/07.mp3",
+  "8": "tantra/08.mp3",
+  "9": "tantra/09.mp3"
+ },
  "twelve-houses": {
   "1": "twelve-houses/01.mp3",
   "10": "twelve-houses/10.mp3",
@@ -93,5 +198,14 @@
   "7": "twelve-houses/07.mp3",
   "8": "twelve-houses/08.mp3",
   "9": "twelve-houses/09.mp3"
+ },
+ "urban-destruction": {
+  "1": "urban-destruction/01.mp3",
+  "2": "urban-destruction/02.mp3",
+  "3": "urban-destruction/03.mp3",
+  "4": "urban-destruction/04.mp3",
+  "5": "urban-destruction/05.mp3",
+  "6": "urban-destruction/06.mp3",
+  "7": "urban-destruction/07.mp3"
  }
 }
