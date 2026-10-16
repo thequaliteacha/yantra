@@ -889,6 +889,46 @@
     resume.querySelector("button").textContent = "Begin " + (pending.name || "the sit");
   }
 
+  /* Back, restart and next during a sit, so a song never has to be waited out.
+     Back returns to the previous song; on the first song it starts it over. */
+  const transport = {
+    async step(delta) {
+      if (live.service === "recordings") {
+        const target = recorded.index + delta;
+        if (target >= recorded.keys.length) return false;
+        return recorded.start(Math.max(0, target));
+      }
+      if (live.service === "spotify") {
+        const device = spotify.deviceId ? "?device_id=" + spotify.deviceId : "";
+        return !!(await spotify.api("POST", "/me/player/" + (delta > 0 ? "next" : "previous") + device));
+      }
+      if (live.service === "apple" && apple.music) {
+        try { await (delta > 0 ? apple.music.skipToNextItem() : apple.music.skipToPreviousItem()); return true; } catch (e) { return false; }
+      }
+      if (queue.items.length) return playSong(Math.min(queue.items.length - 1, Math.max(0, queue.index + delta)));
+      return false;
+    },
+    next() { return this.step(1); },
+    back() { return this.step(-1); },
+    async restart() {
+      if (live.service === "recordings" && recorded.audio) {
+        recorded.audio.currentTime = 0;
+        if (recorded.audio.paused) recorded.audio.play().catch(() => {});
+        return true;
+      }
+      if (live.service === "spotify") {
+        const device = spotify.deviceId ? "&device_id=" + spotify.deviceId : "";
+        return !!(await spotify.api("PUT", "/me/player/seek?position_ms=0" + device));
+      }
+      if (live.service === "apple" && apple.music) {
+        try { await apple.music.seekToTime(0); return true; } catch (e) { return false; }
+      }
+      if (queue.index >= 0) return playSong(queue.index);
+      return false;
+    },
+  };
+  window.yantraTransport = transport;
+
   /* Starts the list in the page. Returns false when no connected service can play all of it. */
   function liveStart(name, items, prefer, form, albumOptions, formId, chakras) {
     const service = serviceFor(items, prefer);
