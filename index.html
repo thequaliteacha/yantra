@@ -516,6 +516,24 @@ function petalPoints(cx, cy, angle, rIn, rOut, half) {
   return pts;
 }
 
+/* Ajna's wing: a dome mirrored exactly about its axis. Its base follows the circle it
+   rests on, so no chord cuts across the figure the way a wide ordinary petal's would. */
+function wingPoints(cx, cy, angle, rIn, rOut, half) {
+  const steps = 72;
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = -1 + (2 * i) / steps;
+    const r = rIn + (rOut - rIn) * Math.sqrt(1 - t * t);
+    const a = angle + t * half;
+    pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+  }
+  for (let i = steps - 1; i > 0; i--) {
+    const a = angle - half + (2 * half * i) / steps;
+    pts.push([cx + Math.cos(a) * rIn, cy + Math.sin(a) * rIn]);
+  }
+  return pts;
+}
+
 function petal(ctx, cx, cy, angle, rIn, rOut, half) {
   const steps = 16;
   let started = false;
@@ -643,7 +661,7 @@ function layer(ctx, alpha, draw) {
 function scaled(pts, cx, cy, k) {
   return pts.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]);
 }
-function bud(ctx, cx, cy, angle, rIn, rOut, half, grow) {
+function bud(ctx, cx, cy, angle, rIn, rOut, half, grow, shape) {
   if (grow <= 0) return;
   // A whole petal that swells out of its base point, longer first, then wider.
   const bx = cx + Math.cos(angle) * rIn;
@@ -651,7 +669,7 @@ function bud(ctx, cx, cy, angle, rIn, rOut, half, grow) {
   const along = 0.2 + 0.8 * grow;
   const across = 0.2 + 0.8 * Math.pow(grow, 1.6);
   const ux = Math.cos(angle), uy = Math.sin(angle);
-  const pts = petalPoints(cx, cy, angle, rIn, rOut, half).map(([x, y]) => {
+  const pts = (shape || petalPoints)(cx, cy, angle, rIn, rOut, half).map(([x, y]) => {
     const dx = x - bx, dy = y - by;
     const l = dx * ux + dy * uy, t = -dx * uy + dy * ux;
     return [bx + ux * l * along - uy * t * across, by + uy * l * along + ux * t * across];
@@ -723,7 +741,8 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
   const eight = stage(reveal, 0.62, 0.78);
   layer(ctx, eight, () => {
     for (let i = 0; i < 8; i++) {
-      const a = -Math.PI / 2 - turn * 0.6 + (i * Math.PI * 2) / 8;
+      // Under Ajna's still wings the eight hold still too, so the figure stays mirrored.
+      const a = -Math.PI / 2 - (lotus && lotus.petals === 2 ? 0 : turn * 0.6) + (i * Math.PI * 2) / 8;
       bud(ctx, cx, cy, a, R * 1.12 * swell, R * 1.46 * swell, (Math.PI / 8) * 0.72, eight);
     }
   });
@@ -738,8 +757,8 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
   layer(ctx, outerPetals, () => {
     for (let i = 0; i < count; i++) {
       if (count === 2) {
-        // Ajna's two petals open sideways like wings.
-        bud(ctx, cx, cy, turn + i * Math.PI, R * 1.54 * swell, R * 1.9 * swell, Math.PI * 0.2, outerPetals);
+        // Ajna's two petals open sideways like wings and hold still, level and mirrored.
+        bud(ctx, cx, cy, i * Math.PI, R * 1.54 * swell, R * 1.9 * swell, Math.PI * 0.2, outerPetals, wingPoints);
       } else {
         const a = -Math.PI / 2 + turn + (i * Math.PI * 2) / count;
         bud(ctx, cx, cy, a, R * 1.54 * swell, R * 1.9 * swell, (Math.PI / count) * 0.7, outerPetals);
