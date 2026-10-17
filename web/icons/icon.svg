@@ -1,11 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#05040a"/>
-  <g fill="none" stroke="#e6c98a" stroke-width="7" stroke-linejoin="round">
-    <circle cx="256" cy="256" r="168" stroke-opacity="0.55"/>
-    <circle cx="256" cy="256" r="148"/>
-    <path d="M256 128 L367 320 L145 320 Z"/>
-    <path d="M256 384 L145 192 L367 192 Z"/>
-    <path d="M256 170 L320 280 L192 280 Z" stroke-opacity="0.7"/>
+  <g fill="none" stroke="#e6c98a" stroke-linejoin="round">
+    <circle cx="256" cy="256" r="180" stroke-width="7" stroke-opacity="0.55"/>
+    <circle cx="256" cy="256" r="158" stroke-width="6"/>
   </g>
-  <circle cx="256" cy="256" r="9" fill="#f7edd4"/>
+  <g fill="none" stroke="#e6c98a" stroke-width="4.5" stroke-linejoin="round">
+    <path d="M123.0 219.0 L389.0 219.0 L256.0 394.0 Z"/>
+    <path d="M122.1 289.5 L389.9 289.5 L256.0 118.0 Z"/>
+    <path d="M185.2 352.7 L326.8 352.7 L256.0 219.0 Z"/>
+    <path d="M157.0 322.1 L355.0 322.1 L256.0 156.8 Z"/>
+    <path d="M173.9 156.8 L338.1 156.8 L256.0 270.7 Z"/>
+    <path d="M160.8 191.3 L351.2 191.3 L256.0 352.7 Z"/>
+    <path d="M207.6 270.7 L304.4 270.7 L256.0 191.3 Z"/>
+    <path d="M209.6 234.3 L302.4 234.3 L256.0 322.1 Z"/>
+    <path d="M221.0 248.8 L291.0 248.8 L256.0 289.5 Z"/>
+  </g>
+  <circle cx="256" cy="256" r="6" fill="#f7edd4"/>
 </svg>
