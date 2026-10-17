@@ -36,12 +36,16 @@ phone then remembers it for a year. The sangha word opens Vayu Meditation, and
 the Zazen word, given after the Rama talk, opens every circle.
 
 It opens like the Heart School meditation app: **Morning
-Meditation** or **Evening Meditation**, then 1, 3, 6 or 12 songs. The sets
-follow the Heart School app's curation of Vayu Meditation songs (`web/sets.json`):
-one song is the heart song; three, six and twelve go navel, heart, third eye in
-equal parts. The sangha's own Vayu recordings play right in the page with no
-account needed; where a set calls for a song that isn't recorded, a recorded
-song for the same chakra takes its place. Albums without recordings play from
+Meditation** or **Evening Meditation**, then 1, 3, 6 or 12 songs. A sit keeps
+to one album, as the sangha listens. Each album runs from navel songs through
+heart songs to third eye songs, so the sit takes the same number from each
+third, in album order. One song is a heart song; three, six and twelve go
+navel, heart, third eye in equal parts. The listener can choose the album, or
+let each sit bring a new one. **Mix It Up** goes across albums instead,
+following the Heart School app's curation of Vayu Meditation songs
+(`web/sets.json`). The sangha's own recordings play right in the page with no
+account needed; where a mixed set calls for a song that isn't recorded, a
+recorded song for the same chakra takes its place. Albums without recordings play from
 the listener's own Spotify. The yantra draws
 itself once per song, and *Meditation Complete* closes the sit. *Albums and
 forms* opens the full shelf. *Getting Started* explains the practice and how to
@@ -124,5 +128,3 @@ your own files. There are no Python packages to install.
 | `playlists.json` | The desktop app's saved forms (kept on your computer, not in this repo) |
 | `web/` | The browser edition: loads `index.html` and answers in place of `yantra.py`; `tracks.json` holds each song's direct link (rebuild with `python3 web/build_tracks.py`), and `audio.json` lists the recordings |
 | `deploy/cloudflare/` | The Worker behind yantramedi.app, plus scripts to build, upload recordings and save the API token |
-
-Made by Stephen Fisher.

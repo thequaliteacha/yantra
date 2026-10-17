@@ -250,6 +250,16 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .room .tip[hidden] { display: none; }
   .room a { color: #e6c98a; }
   #home-mark { height: clamp(7rem, 34vh, 21rem); margin: 0.6rem 0 0.4rem; flex: none; pointer-events: none; }
+  #pick-album-row { display: flex; gap: 0.8rem; align-items: center; margin: -0.6rem 0 0.4rem; }
+  #pick-album {
+    flex: 1; min-width: 0; padding: 0.7rem 0.6rem; font: inherit; font-size: 1rem; cursor: pointer;
+    background: rgba(5, 4, 10, 0.6); color: #f7edd4; border: 1px solid rgba(230, 201, 138, 0.35);
+  }
+  #pick-album:disabled { opacity: 0.4; cursor: default; }
+  #pick-album option, #pick-album optgroup { background: #0b0912; color: #f7edd4; }
+  #pick-mix { white-space: nowrap; }
+  #pick-mix[aria-pressed="true"] { color: #f7edd4; text-decoration-color: rgba(230, 201, 138, 0.9); }
+  #pick .choice:disabled { opacity: 0.35; cursor: default; }
   #home-note { min-height: 1.3rem; color: rgba(232, 204, 146, 0.75); font-size: 0.92rem; text-align: center; }
 
   /* Phones and narrow windows: one column, room for thumbs, nothing under the notch. */
@@ -313,6 +323,10 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <button class="back" type="button" data-room="home" aria-label="Back">&#8592;</button>
   <div class="inner">
     <h2 id="pick-title">Begin your morning meditation</h2>
+    <div id="pick-album-row">
+      <select id="pick-album" aria-label="Album"><option value="">A new album each sit</option></select>
+      <button class="quiet" type="button" id="pick-mix" aria-pressed="false">Mix It Up</button>
+    </div>
     <button class="choice" type="button" data-count="1">1 Song</button>
     <button class="choice" type="button" data-count="3">3 Songs</button>
     <button class="choice" type="button" data-count="6">6 Songs</button>
@@ -328,10 +342,11 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <button class="back" type="button" data-room="back" aria-label="Back">&#8592;</button>
   <div class="inner">
     <h2>Getting Started</h2>
-    <p>Sit with three songs each morning and three each evening, about four minutes apiece. The first song is for the navel chakra, the second for the heart, the third for the third eye.</p>
+    <p>Sit with three songs each morning and three each evening, about four minutes apiece, all from one album. Each album moves from navel songs through heart songs to third eye songs, so the first song is for the navel chakra, the second for the heart, the third for the third eye.</p>
     <p>With time for only one song, meditate on the heart. If you need more grounding, take the navel instead.</p>
     <p><b>Six songs:</b> two for the navel, then two for the heart, then two for the third eye.</p>
     <p><b>Twelve songs:</b> four for each, in the same order.</p>
+    <p><b>Choose an album</b> above the song counts, or let each sit bring a new one. <b>Mix It Up</b> draws the songs from across the albums instead.</p>
     <p>The yantra draws itself once with each song. Tap the screen to show <b>End sitting</b>.</p>
     <p><b>Keep it on your phone:</b> on Android, open the menu and choose <b>Install app</b> or <b>Add to Home screen</b>. On iPhone, tap <b>Share</b>, then <b>Add to Home Screen</b>.</p>
   </div>
@@ -341,7 +356,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <div class="inner">
     <h2>About the Music</h2>
     <p>The music is by Vayu Meditation. The sangha's recordings play right here; albums not yet recorded play from your own Spotify account (Premium).</p>
-    <p>The morning and evening sets follow the Heart School meditation app, made for the lineage's students.</p>
+    <p>A sit keeps to one album. Mix It Up follows the morning and evening sets of the Heart School meditation app, made for the lineage's students.</p>
     <p style="text-align:center"><a href="https://open.spotify.com/artist/3ScOP7YdhKlvEvlydSl2F1" target="_blank" rel="noopener">Vayu Meditation on Spotify</a></p>
   </div>
 </div>
@@ -537,26 +552,6 @@ function petalPoints(cx, cy, angle, rIn, rOut, half) {
   return pts;
 }
 
-/* Ajna's wing, as the chakra is drawn: a round lobe wrapped around the circle that
-   rises to a small point on the level axis. It is mirrored exactly about that axis,
-   and its base follows the circle it rests on, so no chord cuts across the figure. */
-function wingPoints(cx, cy, angle, rIn, rOut, half) {
-  const steps = 96;
-  const pts = [];
-  for (let i = 0; i <= steps; i++) {
-    const t = -1 + (2 * i) / steps;
-    const tip = Math.pow(Math.max(0, 1 - Math.abs(t) / 0.3), 2);
-    const r = rIn + (rOut - rIn) * (0.8 * Math.sqrt(1 - t * t) + 0.2 * tip);
-    const a = angle + t * half;
-    pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
-  }
-  for (let i = steps - 1; i > 0; i--) {
-    const a = angle - half + (2 * half * i) / steps;
-    pts.push([cx + Math.cos(a) * rIn, cy + Math.sin(a) * rIn]);
-  }
-  return pts;
-}
-
 function petal(ctx, cx, cy, angle, rIn, rOut, half) {
   const steps = 16;
   let started = false;
@@ -623,7 +618,7 @@ function bhupura(ctx, cx, cy, R, grow) {
 
 /* Each chakra's lotus, after the tradition: Manipura's ten petals around a downward
    triangle of fire, Anahata's twelve around the interlaced triangles of air, Ajna's
-   two wide petals around the circle of the mind. The gold leans gently toward each
+   open circle of the mind, its wings left undrawn. The gold leans gently toward each
    chakra's light, never saturated, so the night stays dark. */
 const CHAKRA = {
   naval: { petals: 10, figure: "fire", tint: [242, 210, 124], glow: [228, 170, 50] },
@@ -778,14 +773,11 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
   const outerPetals = stage(reveal, 0.78, 0.9);
   const count = lotus ? lotus.petals : 16;
   layer(ctx, outerPetals, () => {
+    // Ajna's ring stays open: no wings, so nothing draws the eye away from the bindu.
+    if (count === 2) return;
     for (let i = 0; i < count; i++) {
-      if (count === 2) {
-        // Ajna's two petals open sideways like wings and hold still, level and mirrored.
-        bud(ctx, cx, cy, i * Math.PI, R * 1.53 * swell, R * 1.9 * swell, Math.PI * 0.23, outerPetals, wingPoints);
-      } else {
-        const a = -Math.PI / 2 + turn + (i * Math.PI * 2) / count;
-        bud(ctx, cx, cy, a, R * 1.54 * swell, R * 1.9 * swell, (Math.PI / count) * 0.7, outerPetals);
-      }
+      const a = -Math.PI / 2 + turn + (i * Math.PI * 2) / count;
+      bud(ctx, cx, cy, a, R * 1.54 * swell, R * 1.9 * swell, (Math.PI / count) * 0.7, outerPetals);
     }
   });
   const outer = stage(reveal, 0.88, 0.92);
@@ -1791,8 +1783,57 @@ function roomBack() {
   roomTrail.pop();
   showRoom(roomTrail.pop() || "home");
 }
-async function playSession(theme, count) {
+/* A sit keeps to one album: the chosen one, or a new one each time. Mix It Up goes
+   across albums. Both choices stay in this browser. */
+let pickAlbum = "";
+let sitMix = false;
+try {
+  pickAlbum = localStorage.getItem("yantra.sitAlbum") || "";
+  sitMix = localStorage.getItem("yantra.sitMix") === "1";
+} catch (e) {}
+function thirdsOf(disc) {
+  const sizes = { naval: 0, heart: 0, eye: 0 };
+  for (const track of disc.tracks) sizes[track.chakra] = (sizes[track.chakra] || 0) + 1;
+  return sizes;
+}
+function fitsCount(disc, count) {
+  const sizes = thirdsOf(disc);
+  return count === 1 ? sizes.heart > 0 : ["naval", "heart", "eye"].every((name) => sizes[name] >= count / 3);
+}
+function paintPick() {
+  const select = document.getElementById("pick-album");
+  const discs = (collection && collection.discs) || [];
+  if (select.options.length === 1 && discs.length) {
+    for (const circle of collection.circles || []) {
+      const group = document.createElement("optgroup");
+      group.label = circle.name;
+      for (const disc of discs.filter((item) => item.circle === circle.id)) {
+        group.appendChild(new Option(disc.title, disc.id));
+      }
+      if (group.children.length) select.appendChild(group);
+    }
+  }
+  if (pickAlbum && !discs.some((disc) => disc.id === pickAlbum)) pickAlbum = "";
+  select.value = pickAlbum;
+  select.disabled = sitMix;
+  document.getElementById("pick-mix").setAttribute("aria-pressed", String(sitMix));
+  const chosen = discs.find((disc) => disc.id === pickAlbum);
+  document.querySelectorAll("#pick [data-count]").forEach((button) => {
+    button.disabled = !sitMix && !!chosen && !fitsCount(chosen, Number(button.dataset.count));
+  });
+  document.getElementById("pick-note").textContent = sitMix ? "Songs from across the albums" : "";
+}
+function keepPick() {
+  try {
+    localStorage.setItem("yantra.sitAlbum", pickAlbum);
+    localStorage.setItem("yantra.sitMix", sitMix ? "1" : "0");
+  } catch (e) {}
+  paintPick();
+}
+async function playSession(theme, count, choice) {
   sessionTheme = theme;
+  const mix = choice ? !!choice.mix : sitMix;
+  const album = choice ? choice.album || "" : pickAlbum;
   const label = (theme === "morning" ? "Morning" : "Evening") + " · " + count + (count === 1 ? " song" : " songs");
   const note = document.getElementById("pick-note");
   note.textContent = "";
@@ -1800,7 +1841,7 @@ async function playSession(theme, count) {
   const request = fetch("/play", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ source: "session", theme, count, name: label, prefer: listenOn }),
+    body: JSON.stringify({ source: "session", theme, count, name: label, prefer: listenOn, mix, album }),
   });
   sessionLive = true;
   begin();
@@ -1834,10 +1875,19 @@ if (window.YANTRA_WEB) {
         sessionTheme === "morning" ? "Begin your morning meditation" : "Begin your evening meditation";
       document.getElementById("pick").dataset.theme = sessionTheme;
       showRoom("pick");
+      paintPick();
     });
   });
   document.querySelectorAll("#pick [data-count]").forEach((button) => {
     button.addEventListener("click", () => playSession(sessionTheme, Number(button.dataset.count)));
+  });
+  document.getElementById("pick-album").addEventListener("change", (event) => {
+    pickAlbum = event.target.value;
+    keepPick();
+  });
+  document.getElementById("pick-mix").addEventListener("click", () => {
+    sitMix = !sitMix;
+    keepPick();
   });
   document.getElementById("pick-help").addEventListener("click", () => {
     const tip = document.getElementById("pick-tip");
