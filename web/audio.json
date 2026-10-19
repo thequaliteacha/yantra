@@ -23,6 +23,23 @@
   "8": "big-island/08.mp3",
   "9": "big-island/09.mp3"
  },
+ "canyons-of-light": {
+  "1": "canyons-of-light/01.mp3",
+  "10": "canyons-of-light/10.mp3",
+  "11": "canyons-of-light/11.mp3",
+  "12": "canyons-of-light/12.mp3",
+  "13": "canyons-of-light/13.mp3",
+  "14": "canyons-of-light/14.mp3",
+  "15": "canyons-of-light/15.mp3",
+  "2": "canyons-of-light/02.mp3",
+  "3": "canyons-of-light/03.mp3",
+  "4": "canyons-of-light/04.mp3",
+  "5": "canyons-of-light/05.mp3",
+  "6": "canyons-of-light/06.mp3",
+  "7": "canyons-of-light/07.mp3",
+  "8": "canyons-of-light/08.mp3",
+  "9": "canyons-of-light/09.mp3"
+ },
  "diving-into-enlightenment": {
   "1": "diving-into-enlightenment/01.mp3",
   "10": "diving-into-enlightenment/10.mp3",
@@ -39,6 +56,18 @@
   "7": "diving-into-enlightenment/07.mp3",
   "8": "diving-into-enlightenment/08.mp3",
   "9": "diving-into-enlightenment/09.mp3"
+ },
+ "ecologie": {
+  "1": "ecologie/01.mp3",
+  "10": "ecologie/10.mp3",
+  "2": "ecologie/02.mp3",
+  "3": "ecologie/03.mp3",
+  "4": "ecologie/04.mp3",
+  "5": "ecologie/05.mp3",
+  "6": "ecologie/06.mp3",
+  "7": "ecologie/07.mp3",
+  "8": "ecologie/08.mp3",
+  "9": "ecologie/09.mp3"
  },
  "ecstasy": {
   "1": "ecstasy/01.mp3",
@@ -85,6 +114,17 @@
   "7": "great-teachers-of-enlightenment/07.mp3",
   "8": "great-teachers-of-enlightenment/08.mp3",
   "9": "great-teachers-of-enlightenment/09.mp3"
+ },
+ "light-saber": {
+  "1": "light-saber/01.mp3",
+  "2": "light-saber/02.mp3",
+  "3": "light-saber/03.mp3",
+  "4": "light-saber/04.mp3",
+  "5": "light-saber/05.mp3",
+  "6": "light-saber/06.mp3",
+  "7": "light-saber/07.mp3",
+  "8": "light-saber/08.mp3",
+  "9": "light-saber/09.mp3"
  },
  "mandala-of-light": {
   "1": "mandala-of-light/01.mp3",
@@ -135,6 +175,27 @@
   "8": "napa/08.mp3",
   "9": "napa/09.mp3"
  },
+ "occult-dancer": {
+  "1": "occult-dancer/01.mp3",
+  "2": "occult-dancer/02.mp3",
+  "3": "occult-dancer/03.mp3",
+  "4": "occult-dancer/04.mp3",
+  "5": "occult-dancer/05.mp3",
+  "6": "occult-dancer/06.mp3"
+ },
+ "retrograde-planet": {
+  "1": "retrograde-planet/01.mp3",
+  "10": "retrograde-planet/10.mp3",
+  "11": "retrograde-planet/11.mp3",
+  "2": "retrograde-planet/02.mp3",
+  "3": "retrograde-planet/03.mp3",
+  "4": "retrograde-planet/04.mp3",
+  "5": "retrograde-planet/05.mp3",
+  "6": "retrograde-planet/06.mp3",
+  "7": "retrograde-planet/07.mp3",
+  "8": "retrograde-planet/08.mp3",
+  "9": "retrograde-planet/09.mp3"
+ },
  "samadhi": {
   "1": "samadhi/01.mp3",
   "10": "samadhi/10.mp3",
@@ -166,6 +227,18 @@
   "7": "samurai/07.mp3",
   "8": "samurai/08.mp3",
   "9": "samurai/09.mp3"
+ },
+ "surfing-the-himalayas": {
+  "1": "surfing-the-himalayas/01.mp3",
+  "10": "surfing-the-himalayas/10.mp3",
+  "2": "surfing-the-himalayas/02.mp3",
+  "3": "surfing-the-himalayas/03.mp3",
+  "4": "surfing-the-himalayas/04.mp3",
+  "5": "surfing-the-himalayas/05.mp3",
+  "6": "surfing-the-himalayas/06.mp3",
+  "7": "surfing-the-himalayas/07.mp3",
+  "8": "surfing-the-himalayas/08.mp3",
+  "9": "surfing-the-himalayas/09.mp3"
  },
  "tantra": {
   "1": "tantra/01.mp3",

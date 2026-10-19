@@ -505,33 +505,78 @@
       "tracks": [
         {
           "n": 1,
-          "title": "Utah",
-          "length": 0
+          "title": "Bryce Canyon",
+          "length": 276
         },
         {
           "n": 2,
-          "title": "New Mexico",
-          "length": 0
+          "title": "Zion",
+          "length": 268
         },
         {
           "n": 3,
-          "title": "Arizona, Part One",
-          "length": 0
+          "title": "Arches",
+          "length": 282
         },
         {
           "n": 4,
-          "title": "Arizona, Part Two",
-          "length": 0
+          "title": "Bandelier",
+          "length": 216
         },
         {
           "n": 5,
-          "title": "California",
-          "length": 0
+          "title": "Taos",
+          "length": 278
         },
         {
           "n": 6,
-          "title": "Nevada",
-          "length": 0
+          "title": "Zuni",
+          "length": 234
+        },
+        {
+          "n": 7,
+          "title": "Grand Canyon",
+          "length": 255
+        },
+        {
+          "n": 8,
+          "title": "Canyon de Chelly",
+          "length": 271
+        },
+        {
+          "n": 9,
+          "title": "Monument Valley",
+          "length": 263
+        },
+        {
+          "n": 10,
+          "title": "Mt. Shasta",
+          "length": 260
+        },
+        {
+          "n": 11,
+          "title": "Joshua Tree",
+          "length": 259
+        },
+        {
+          "n": 12,
+          "title": "Anza-Borrego Desert",
+          "length": 207
+        },
+        {
+          "n": 13,
+          "title": "Lake Tahoe",
+          "length": 247
+        },
+        {
+          "n": 14,
+          "title": "Mojave Desert",
+          "length": 262
+        },
+        {
+          "n": 15,
+          "title": "Canyons of Light",
+          "length": 295
         }
       ]
     },
@@ -717,57 +762,57 @@
         {
           "n": 1,
           "title": "Voice Over",
-          "length": 0
+          "length": 63
         },
         {
           "n": 2,
           "title": "The Sun",
-          "length": 0
+          "length": 238
         },
         {
           "n": 3,
           "title": "Mercury",
-          "length": 0
+          "length": 243
         },
         {
           "n": 4,
           "title": "Venus",
-          "length": 0
+          "length": 253
         },
         {
           "n": 5,
           "title": "Earth",
-          "length": 0
+          "length": 248
         },
         {
           "n": 6,
           "title": "Mars",
-          "length": 0
+          "length": 264
         },
         {
           "n": 7,
           "title": "Jupiter",
-          "length": 0
+          "length": 240
         },
         {
           "n": 8,
           "title": "Saturn",
-          "length": 0
+          "length": 268
         },
         {
           "n": 9,
           "title": "Uranus",
-          "length": 0
+          "length": 275
         },
         {
           "n": 10,
           "title": "Neptune",
-          "length": 0
+          "length": 257
         },
         {
           "n": 11,
           "title": "Pluto",
-          "length": 0
+          "length": 299
         }
       ]
     },
@@ -969,52 +1014,52 @@
         {
           "n": 1,
           "title": "Rain (from Enlightenment)",
-          "length": 0
+          "length": 292
         },
         {
           "n": 2,
           "title": "Bandelier (from Canyons of Light)",
-          "length": 0
+          "length": 216
         },
         {
           "n": 3,
           "title": "Night Shadows",
-          "length": 0
+          "length": 251
         },
         {
           "n": 4,
           "title": "Joshua Tree (from Canyons of Light)",
-          "length": 0
+          "length": 260
         },
         {
           "n": 5,
           "title": "Desert Wind (from Enlightenment)",
-          "length": 0
+          "length": 304
         },
         {
           "n": 6,
           "title": "Ecologie",
-          "length": 0
+          "length": 304
         },
         {
           "n": 7,
           "title": "Canyons of Light",
-          "length": 0
+          "length": 296
         },
         {
           "n": 8,
           "title": "In the Upper Atmosphere (from Enlightenment)",
-          "length": 0
+          "length": 244
         },
         {
           "n": 9,
           "title": "Waves of Light",
-          "length": 0
+          "length": 236
         },
         {
           "n": 10,
           "title": "Himalayan",
-          "length": 0
+          "length": 395
         }
       ]
     },
@@ -2360,7 +2405,8 @@
       "artist": "Lumikara",
       "year": 2026,
       "aliases": [
-        "Mandala of Light"
+        "Mandala of Light",
+        "Mandala of Light Lumikara"
       ],
       "artistKeys": [
         "lumikara"
