@@ -19,14 +19,13 @@ const YEAR = 365 * 24 * 3600;
 const PUBLIC = /^\/(web\/manifest\.webmanifest|web\/icons\/[\w.-]+|favicon\.ico)$/;
 
 /* Privacy and safety headers on every response: no referrer sent to other sites,
-   no framing, no MIME sniffing, HTTPS pinned, and only the microphone allowed
-   (the yantra can follow the room when no music service is connected). */
+   no framing, no MIME sniffing, HTTPS pinned. The microphone is never allowed. */
 const SAFETY = {
   "referrer-policy": "no-referrer",
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY",
   "strict-transport-security": "max-age=31536000; includeSubDomains",
-  "permissions-policy": "camera=(), geolocation=(), payment=(), usb=(), microphone=(self), autoplay=(self)",
+  "permissions-policy": "camera=(), geolocation=(), payment=(), usb=(), microphone=(), autoplay=(self)",
   "cross-origin-opener-policy": "same-origin",
 };
 

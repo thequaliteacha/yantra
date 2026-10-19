@@ -261,6 +261,26 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #pick-mix[aria-pressed="true"] { color: #f7edd4; text-decoration-color: rgba(230, 201, 138, 0.9); }
   #pick .choice:disabled { opacity: 0.35; cursor: default; }
   #home-note { min-height: 1.3rem; color: rgba(232, 204, 146, 0.75); font-size: 0.92rem; text-align: center; }
+  #practice { justify-content: flex-start; overflow: auto; -webkit-overflow-scrolling: touch; }
+  #practice .inner { margin-top: auto; margin-bottom: auto; }
+  .practice-time {
+    font-family: Palatino, "Iowan Old Style", "Times New Roman", serif;
+    font-size: clamp(1.8rem, 6vw, 2.5rem); color: #f7edd4; text-align: center; margin: 0.35rem 0 0.1rem;
+  }
+  #practice-sits { text-align: center; margin: 0 0 1rem; }
+  #practice-rows[hidden] { display: none; }
+  .practice-row {
+    display: grid; grid-template-columns: 1.3fr 0.9fr 1fr; gap: 0.6rem; align-items: baseline;
+    padding: 0.55rem 0 0.55rem 0.75rem; border-top: 1px solid rgba(230, 201, 138, 0.16);
+    text-align: left; color: rgba(243, 230, 200, 0.86);
+  }
+  .practice-row span:nth-child(2) { text-align: right; color: #f7edd4; }
+  .practice-row span:nth-child(3) { text-align: right; color: rgba(232, 204, 146, 0.55); font-size: 0.88rem; }
+  .practice-row.dawn { box-shadow: inset 2px 0 0 rgba(233, 162, 90, 0.8); }
+  .practice-row.dusk { box-shadow: inset 2px 0 0 rgba(120, 170, 165, 0.8); }
+  #practice-note { font-size: 0.92rem; color: rgba(243, 230, 200, 0.62); }
+  #practice-confirm[hidden] { display: none; }
+  #done-practice { text-align: center; color: rgba(232, 204, 146, 0.8); min-height: 1.3rem; }
 
   /* Phones and narrow windows: one column, room for thumbs, nothing under the notch. */
   @media (max-width: 760px) {
@@ -314,6 +334,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <p id="home-note"></p>
     <div class="links">
       <button class="quiet" type="button" data-room="guide">Getting Started</button>
+      <button class="quiet" type="button" data-room="practice">Your practice</button>
       <button class="quiet" type="button" id="open-shelf">Albums and forms</button>
       <button class="quiet" type="button" id="install-app" hidden>Install Yantra</button>
     </div>
@@ -349,6 +370,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <p><b>Choose an album</b> above the song counts, or let each sit bring a new one. <b>Mix It Up</b> draws the songs from across the albums instead.</p>
     <p>The yantra draws itself once with each song. Tap the screen to show <b>End sitting</b>.</p>
     <p><b>Keep it on your phone:</b> on Android, open the menu and choose <b>Install app</b> or <b>Add to Home screen</b>. On iPhone, tap <b>Share</b>, then <b>Add to Home Screen</b>.</p>
+    <p>Your sits are remembered on this device, under <b>Your practice</b>. They are not sent anywhere.</p>
   </div>
 </div>
 <div class="room" id="about" hidden>
@@ -364,11 +386,34 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <div class="inner">
     <h2>Meditation Complete</h2>
     <p id="done-line" style="text-align:center">Well done. Your morning meditation is complete.</p>
+    <p id="done-practice"></p>
     <blockquote id="done-words" hidden>
       <p id="done-quote"></p>
       <cite>&mdash; Rama, <a id="done-talk" target="_blank" rel="noopener"></a></cite>
     </blockquote>
     <button class="choice" type="button" data-room="home" style="margin-top:1.4rem">Back to Home</button>
+  </div>
+</div>
+<div class="room" id="practice" hidden>
+  <button class="back" type="button" id="practice-back" aria-label="Back">&#8592;</button>
+  <div class="inner">
+    <h2>Your practice</h2>
+    <p id="practice-lead"></p>
+    <p id="practice-time" class="practice-time"></p>
+    <p id="practice-sits" class="kicker"></p>
+    <div id="practice-rows" hidden></div>
+    <p id="practice-note"></p>
+    <div class="links" id="practice-actions">
+      <button class="quiet" type="button" id="practice-export">Export</button>
+      <button class="quiet" type="button" id="practice-erase">Erase my data</button>
+    </div>
+    <div id="practice-confirm" hidden>
+      <p>Erase the practice record on this device? Time, sits, and days in a row will be removed. Saved forms and Spotify stay. This cannot be undone.</p>
+      <div class="links">
+        <button class="quiet" type="button" id="practice-keep">Keep</button>
+        <button class="quiet" type="button" id="practice-erase-yes">Erase</button>
+      </div>
+    </div>
   </div>
 </div>
 <div id="gate">
@@ -377,6 +422,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <button id="menu-home" type="button" hidden>&#8592; Home</button>
       <button id="menu-albums" type="button" class="on">Albums</button>
       <button id="menu-forms" type="button">Playlists</button>
+      <button id="menu-practice" type="button" hidden>Practice</button>
       <div class="listen" id="listen">
         <span>Listen on</span>
         <button type="button" data-source="spotify">Spotify</button>
@@ -408,7 +454,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <div id="saved"></div>
     </div>
     <div class="face" id="form-face" hidden>
-      <p class="kicker">Naval, heart, third eye</p>
+      <p class="kicker">Navel, heart, third eye</p>
       <h1 id="form-title" hidden></h1>
       <div class="actions" id="sizes"></div>
       <p id="form-hint" class="line"></p>
@@ -482,6 +528,8 @@ function resize() {
 addEventListener("resize", resize);
 resize();
 
+/* /audio is the yantra's breath. The desktop app sends the speakers. The web
+   edition sends a hosted recording, or a slow breath when the music cannot be read. */
 async function poll() {
   try {
     const data = await (await fetch("/audio", { cache: "no-store" })).json();
@@ -755,7 +803,8 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
   // once in half an hour: too slow to follow, so the eyes stay on the bindu while
   // the edges of vision feel the figure alive. Both breathe with the bindu.
   const turn = lotus ? now * 0.0000035 : 0;
-  const swell = lotus ? 1 + 0.008 * Math.sin(now * 0.00063) : 1;
+  // shown is the breath from /audio: the recording's own shape, or a slow wave.
+  const swell = lotus ? 1 + 0.01 * Math.sin(now * 0.00063) + Math.min(1, shown) * 0.045 : 1;
   const eight = stage(reveal, 0.62, 0.78);
   layer(ctx, eight, () => {
     for (let i = 0; i < 8; i++) {
@@ -801,7 +850,8 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
   // The bindu: always lit, warming as the figure grows, breathing slowly (about 10 s).
   const glow = Math.min(1, reveal / 0.04);
   if (glow > 0) {
-    const breath = 0.5 + 0.5 * Math.sin(now * 0.00063);
+    const wave = 0.5 + 0.5 * Math.sin(now * 0.00063);
+    const breath = lotus ? Math.min(1, wave * 0.65 + Math.min(1, shown) * 0.55) : wave;
     const warmth = 0.45 + 0.55 * ease(reveal);
     // A stark point: a tight, bright halo that falls off quickly, and a crisp core
     // with its own small glow, so the eyes have one clear place to rest.
@@ -1030,7 +1080,7 @@ function frame(now) {
   const cx = spot.cx;
   const cy = spot.cy;
   const R = spot.R;
-  const breath = sitting ? 1 : 1 + Math.sin(now * 0.00035) * 0.012 + shown * 0.028;
+  const breath = sitting ? 1 + Math.min(1, shown) * 0.03 : 1 + Math.sin(now * 0.00035) * 0.012 + shown * 0.028;
   let reveal = 1;
   let fade = 0;
   let name = "sri";
@@ -1081,7 +1131,7 @@ function frame(now) {
     if (reveal < 0.99) window.wholeAt = 0;
     else if (!window.wholeAt) window.wholeAt = now;
     const rest = window.wholeAt ? 1 - 0.15 * ease((now - window.wholeAt) / 20000) : 1;
-    gold(ctx, 0.92 * rest, 16, 0.55 * rest);
+    gold(ctx, 0.92 * rest, 14 + shown * 10, (0.48 + 0.22 * Math.min(1, shown)) * rest);
     drawSri(ctx, cx, cy, R, reveal, bloom, lotus || CHAKRA.heart);
     emanate(ctx, cx, cy, R, now, Math.min(1, reveal / 0.12) * rest);
   } else {
@@ -1282,7 +1332,7 @@ function renderShelf() {
 function chakraLabel(id) {
   const found = collection && collection.chakras && collection.chakras.find((item) => item.id === id);
   if (found) return found.name;
-  if (id === "naval") return "Naval chakra";
+  if (id === "naval") return "Navel";
   if (id === "heart") return "Heart chakra";
   if (id === "eye") return "Third eye chakra";
   return "";
@@ -1553,7 +1603,7 @@ function renderForm() {
   if (!draft.length) {
     hint.textContent = "Choose songs from the albums, or a number above.";
   } else if (!formShape(draft)) {
-    hint.textContent = "Naval " + counts.naval + "  ·  Heart " + counts.heart + "  ·  Third eye " + counts.eye + ". The three stay equal.";
+    hint.textContent = "Navel " + counts.naval + "  ·  Heart " + counts.heart + "  ·  Third eye " + counts.eye + ". The three stay equal.";
   } else {
     hint.textContent = "";
   }
@@ -1768,16 +1818,62 @@ document.getElementById("form-play").addEventListener("click", () => {
 });
 
 /* ---- Morning and evening sits (web edition) ---- */
-const rooms = ["home", "pick", "guide", "about", "done"];
+const rooms = ["home", "pick", "guide", "about", "done", "practice"];
 let roomTrail = [];
 let sessionTheme = "morning";
 let sessionLive = false;
+function paintPractice() {
+  const practice = window.YantraPractice;
+  if (!practice) return;
+  const summary = practice.summary();
+  const has = summary.totals.sits > 0;
+  document.getElementById("practice-lead").textContent = practice.lead(summary);
+  document.getElementById("practice-time").textContent = has ? practice.formatSpan(summary.totals.ms) : "";
+  document.getElementById("practice-sits").textContent = has
+    ? (summary.totals.sits === 1 ? "1 sit" : summary.totals.sits + " sits")
+    : "";
+  const rows = document.getElementById("practice-rows");
+  rows.replaceChildren();
+  rows.hidden = !has;
+  const add = (label, streak, kind) => {
+    const row = document.createElement("div");
+    row.className = "practice-row" + (kind ? " " + kind : "");
+    const name = document.createElement("span");
+    name.textContent = label;
+    const current = document.createElement("span");
+    current.textContent = streak && streak.current > 0
+      ? (streak.current === 1 ? "1 day" : streak.current + " days")
+      : "\u2014";
+    const best = document.createElement("span");
+    best.textContent = streak && streak.best > 0 ? "longest " + streak.best : "";
+    row.append(name, current, best);
+    rows.append(row);
+  };
+  if (has) {
+    add("Morning", summary.streaks.morning, "dawn");
+    add("Evening", summary.streaks.evening, "dusk");
+    add("Every day", summary.streaks.daily, "");
+    const today = document.createElement("div");
+    today.className = "practice-row";
+    const name = document.createElement("span");
+    name.textContent = "Today";
+    const current = document.createElement("span");
+    current.textContent = practice.formatMinutes(summary.today.ms);
+    today.append(name, current, document.createElement("span"));
+    rows.append(today);
+  }
+  document.getElementById("practice-note").textContent = practice.RULE;
+  document.getElementById("practice-erase").hidden = !has;
+  document.getElementById("practice-confirm").hidden = true;
+  document.getElementById("practice-actions").hidden = false;
+}
 function showRoom(name) {
   document.body.classList.toggle("at-home", name === "home");
   for (const id of rooms) document.getElementById(id).hidden = id !== name;
   document.getElementById("gate").style.visibility = name ? "hidden" : "";
   if (name) roomTrail.push(name);
   if (name !== "pick") document.getElementById("pick-tip").hidden = true;
+  if (name === "practice") paintPractice();
 }
 function roomBack() {
   roomTrail.pop();
@@ -1865,7 +1961,11 @@ if (window.YANTRA_WEB) {
     button.addEventListener("click", () => {
       const to = button.dataset.room;
       if (to === "back") roomBack();
-      else { if (to === "home") roomTrail = []; showRoom(to); }
+      else {
+        if (to === "home") roomTrail = [];
+        if (to === "practice") document.getElementById("practice").dataset.from = "home";
+        showRoom(to);
+      }
     });
   });
   document.querySelectorAll("#home [data-theme]").forEach((button) => {
@@ -1903,12 +2003,53 @@ if (window.YANTRA_WEB) {
     roomTrail = [];
     showRoom("home");
   });
+  const menuPractice = document.getElementById("menu-practice");
+  menuPractice.hidden = false;
+  menuPractice.addEventListener("click", () => {
+    document.getElementById("practice").dataset.from = "shelf";
+    roomTrail = [];
+    showRoom("practice");
+  });
+  document.getElementById("practice-back").addEventListener("click", () => {
+    const from = document.getElementById("practice").dataset.from;
+    roomTrail = [];
+    showRoom(from === "shelf" ? "" : "home");
+  });
+  document.getElementById("practice-export").addEventListener("click", () => {
+    if (!window.YantraPractice) return;
+    const blob = new Blob([JSON.stringify(window.YantraPractice.exportData(), null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "yantra-practice.json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  });
+  document.getElementById("practice-erase").addEventListener("click", () => {
+    document.getElementById("practice-confirm").hidden = false;
+    document.getElementById("practice-actions").hidden = true;
+  });
+  document.getElementById("practice-keep").addEventListener("click", () => {
+    document.getElementById("practice-confirm").hidden = true;
+    document.getElementById("practice-actions").hidden = false;
+  });
+  document.getElementById("practice-erase-yes").addEventListener("click", () => {
+    if (window.YantraPractice) window.YantraPractice.erase();
+    document.getElementById("practice-actions").hidden = false;
+    paintPractice();
+  });
   addEventListener("yantra:complete", () => {
     if (!sessionLive) return;
     sessionLive = false;
     endSitting();
     document.getElementById("done-line").textContent =
       "Well done. Your " + sessionTheme + " meditation is complete.";
+    const practiceLine = document.getElementById("done-practice");
+    if (practiceLine && window.YantraPractice) {
+      practiceLine.textContent = window.YantraPractice.completeLine(window.YantraPractice.summary(), sessionTheme);
+    }
     const [words, talk, page] = RAMA_WORDS[Math.floor(Math.random() * RAMA_WORDS.length)];
     document.getElementById("done-quote").textContent = "\u201c" + words + "\u201d";
     const link = document.getElementById("done-talk");

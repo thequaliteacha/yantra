@@ -5,8 +5,9 @@
 A sitting companion for the sangha. It draws a slow, sacred-geometry
 yantra that breathes with the music, and the music is limited to the
 meditation discs of the lineage: Zazen, Vayu Meditation, Lumikara, and the
-lineage recordings. The shelf shows the 24 albums on Spotify; the rest stay
-hidden until they reach Spotify or you install your own copies. (Apple Music
+lineage recordings. `discs.json` lists 36 albums. The shelf shows the 24 of
+them on Spotify; the rest stay hidden until they reach Spotify or you install
+your own copies. (Apple Music
 support is switched off for now: set `APPLE_MUSIC` in `yantra.py`, `index.html`
 and `web/web.js` to bring it back.)
 
@@ -44,9 +45,12 @@ navel, heart, third eye in equal parts. The listener can choose the album, or
 let each sit bring a new one. **Mix It Up** goes across albums instead,
 following the Heart School app's curation of Vayu Meditation songs
 (`web/sets.json`). The sangha's own recordings play right in the page with no
-account needed; where a mixed set calls for a song that isn't recorded, a
+account needed. Twenty albums are hosted in full (of the 36) and play that way.
+Big Island is hosted except for one track, so that album still plays from Spotify,
+along with the albums that are not recorded yet. Where a mixed set calls for a song that isn't recorded, a
 recorded song for the same chakra takes its place. Albums without recordings play from
-the listener's own Spotify. The yantra draws
+the listener's own Spotify. A hosted recording moves the yantra; a Spotify sit
+uses a slow breath instead. The page never asks for the microphone. The yantra draws
 itself once per song, and *Meditation Complete* closes the sit. *Albums and
 forms* opens the full shelf. *Getting Started* explains the practice and how to
 install the app on a phone.
@@ -69,8 +73,12 @@ first and brings you straight back with the sit ready to begin.
 
 Without Spotify set up at all the web edition still works: the album or song opens in a
 second tab, and a form waits on *Next* at the bottom of the yantra. The yantra
-moves with the room through the microphone, or breathes slowly on its own.
-Forms you save stay in that browser.
+breathes slowly on its own. Forms you save stay in that browser.
+
+Practice time and days in a row stay in the browser too, under *Your practice*.
+Nothing is uploaded. A sit counts after one minute of listening; paused time
+does not. Morning and evening each keep their own run of days, and either one
+keeps the daily run. The day is the device's own date.
 
 ### Setting up the connections (once, by the site owner)
 
@@ -124,7 +132,7 @@ your own files. There are no Python packages to install.
 | --- | --- |
 | `yantra.py` | The local server: the shelf, the players, and the sitting |
 | `index.html` | The yantra itself and the shelf screen |
-| `discs.json` | All 34 albums, their track lists, and where to find each one |
+| `discs.json` | All 36 albums, their track lists, and where to find each one |
 | `playlists.json` | The desktop app's saved forms (kept on your computer, not in this repo) |
 | `web/` | The browser edition: loads `index.html` and answers in place of `yantra.py`; `tracks.json` holds each song's direct link (rebuild with `python3 web/build_tracks.py`), and `audio.json` lists the recordings |
 | `deploy/cloudflare/` | The Worker behind yantramedi.app, plus scripts to build, upload recordings and save the API token |
