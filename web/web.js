@@ -479,6 +479,21 @@
     return btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   }
   const returnTo = () => location.origin + location.pathname;
+  const Offer = window.YantraOffer || {
+    classify() { return "failed"; },
+    line() { return "Spotify didn't start. Choose a hosted album to begin."; },
+    hostedAlbums(discs) { return (discs || []).map((disc) => ({ id: disc.id, title: disc.title, circle: disc.circle || "" })); },
+  };
+
+  function failureKind(status, reason, message) {
+    return Offer.classify(status, reason, message);
+  }
+  async function failureKindFrom(response) {
+    let body = {};
+    try { body = await response.json(); } catch (e) {}
+    const error = body.error || {};
+    return failureKind(response.status, error.reason || "", error.message || "");
+  }
 
   const spotify = {
     token: null,
@@ -487,6 +502,9 @@
     sdk: false,
     sdkFailed: false,
     elsewhere: "",
+    blocked: "",
+    checked: false,
+    lastFailure: "",
     load() {
       try { this.token = JSON.parse(localStorage.getItem("yantra.spotify") || "null"); } catch (e) {}
     },
@@ -527,26 +545,6 @@
       };
       this.save();
       return true;
-    },
-    /* Who is listening. A Spotify account missing from the app's User Management
-       list is refused here, so the page can say so plainly. */
-    async identify() {
-      const response = await this.api("GET", "/me");
-      if (!response) return "";
-      if (!response.ok) {
-        if (response.status === 403) {
-          this.token = null;
-          this.save();
-          return "unlisted";
-        }
-        return "";
-      }
-      const me = await response.json().catch(() => ({}));
-      if (me.id) {
-        this.token.user = me.id;
-        this.save();
-      }
-      return "";
     },
     async finish(code, state) {
       if (state !== sessionStorage.getItem("yantra.state")) return;
@@ -595,6 +593,10 @@
           this.player.addListener(name, ({ message }) => {
             this.sdkFailed = true;
             this.deviceId = "";
+            const why = failureKind(0, "", message || "");
+            if (why === "premium") this.blocked = "premium";
+            else if (why === "unlisted") this.noteUnlisted();
+            else this.lastFailure = "sdk";
             console.warn("Yantra: Spotify player " + name + ": " + message);
           });
         }
@@ -605,11 +607,65 @@
       script.async = true;
       document.head.appendChild(script);
     },
+    noteUnlisted() {
+      this.blocked = "unlisted";
+      this.lastFailure = "unlisted";
+      this.token = null;
+      this.save();
+      try { localStorage.setItem("yantra.spotifyNote", "unlisted"); } catch (e) {}
+    },
+    clearNote() {
+      if (this.blocked === "unlisted") this.blocked = "";
+      try { localStorage.removeItem("yantra.spotifyNote"); } catch (e) {}
+    },
+    /* One check per page. A 403 means this account is not allowed to use the app
+       (Development Mode's listener list). A free account is told apart from that. */
+    async ensureListener() {
+      if (this.checked) return this.blocked || "";
+      this.checked = true;
+      if (!this.connected()) return "offline";
+      const response = await this.api("GET", "/me");
+      if (!response) return "";
+      if (response.status === 403) {
+        const why = await failureKindFrom(response);
+        if (why === "premium") {
+          this.blocked = "premium";
+          this.lastFailure = "premium";
+          return "premium";
+        }
+        this.noteUnlisted();
+        return "unlisted";
+      }
+      if (!response.ok) return "";
+      const me = await response.json().catch(() => ({}));
+      if (me.id) {
+        this.token.user = me.id;
+        this.token.product = me.product || "";
+        this.save();
+      }
+      this.clearNote();
+      if (me.product && me.product !== "premium") {
+        this.blocked = "premium";
+        this.lastFailure = "premium";
+        return "premium";
+      }
+      this.blocked = "";
+      return "";
+    },
     async play(body) {
       this.elsewhere = "";
+      this.lastFailure = "";
+      if (this.blocked === "unlisted" || this.blocked === "premium") {
+        this.lastFailure = this.blocked;
+        return false;
+      }
       // A tap soon after the page opens can come before the in-page player is ready.
       for (let waited = 0; this.sdk && !this.deviceId && !this.sdkFailed && waited < 5000; waited += 250) {
         await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      if (this.blocked === "unlisted" || this.blocked === "premium") {
+        this.lastFailure = this.blocked;
+        return false;
       }
       let target = this.deviceId ? "?device_id=" + this.deviceId : "";
       let response = await this.api("PUT", "/me/player/play" + target, body);
@@ -632,7 +688,20 @@
           this.elsewhere = pick.name;
         }
       }
-      if (!response || !(response.ok || response.status === 204)) return false;
+      if (response && response.status === 403) {
+        const why = await failureKindFrom(response);
+        if (why === "premium") {
+          this.blocked = "premium";
+          this.lastFailure = "premium";
+        } else {
+          this.noteUnlisted();
+        }
+        return false;
+      }
+      if (!response || !(response.ok || response.status === 204)) {
+        this.lastFailure = this.sdkFailed ? (this.lastFailure || "sdk") : "failed";
+        return false;
+      }
       const device = target ? "&" + target.slice(1) : "";
       this.api("PUT", "/me/player/shuffle?state=false" + device);
       this.api("PUT", "/me/player/repeat?state=off" + device);
@@ -954,13 +1023,6 @@
     return id;
   }
 
-  /* Not connected yet: remember the sit, connect once, then offer it on return. */
-  function connectFirst(pending) {
-    try { sessionStorage.setItem("yantra.pending", JSON.stringify(pending)); } catch (e) {}
-    spotify.connect();
-    return [{ ok: false, error: "Connecting to Spotify. You will come right back here." }, 409];
-  }
-
   let resume = null;
   function showResume(text, action) {
     if (!resume) return;
@@ -1031,8 +1093,9 @@
   };
   window.yantraTransport = transport;
 
-  /* Starts the list in the page. Returns false when no connected service can play all of it. */
-  function liveStart(name, items, prefer, form, albumOptions, formId, chakras) {
+  /* Starts the list in the page. Resolves true only once sound is actually going,
+     so a sit is never opened on a player that stayed silent. */
+  async function liveStart(name, items, prefer, form, albumOptions, formId, chakras) {
     const service = serviceFor(items, prefer);
     if (!service) return false;
     liveStop(true);
@@ -1058,37 +1121,21 @@
     } else {
       started = apple.play(albumOptions && albumOptions.apple ? albumOptions.apple : { songs: live.keys });
     }
-    started.then((ok) => {
-      if (ok && service === "spotify" && spotify.elsewhere && nextButton) {
-        // Say where the music went, so a quiet page never leaves the listener guessing.
-        nextButton.hidden = false;
-        nextButton.classList.remove("due");
-        nextButton.textContent = "Playing on " + spotify.elsewhere;
-        nextButton.onclick = () => { nextButton.hidden = true; nextButton.onclick = null; };
-        setTimeout(() => { if (nextButton.textContent.startsWith("Playing on ")) nextButton.click(); }, 8000);
-      }
-      if (ok || live.service !== service) return;
-      liveStop(false);
-      offerTab(items, prefer, name, form);
-    });
+    const ok = await started;
+    if (!ok || live.service !== service) {
+      if (live.service === service) liveStop(false);
+      return false;
+    }
+    if (service === "spotify" && spotify.elsewhere && nextButton) {
+      // Say where the music went, so a quiet page never leaves the listener guessing.
+      nextButton.hidden = false;
+      nextButton.classList.remove("due");
+      nextButton.textContent = "Playing on " + spotify.elsewhere;
+      nextButton.onclick = () => { nextButton.hidden = true; nextButton.onclick = null; };
+      setTimeout(() => { if (nextButton.textContent.startsWith("Playing on ")) nextButton.click(); }, 8000);
+    }
     live.timer = setInterval(livePoll, 1000);
     return true;
-  }
-
-  /* When in-page play fails after the tap, a tap is needed again to open the service. */
-  function offerTab(items, prefer, name, form) {
-    queue.name = name;
-    queue.items = items;
-    queue.prefer = prefer;
-    queue.index = -1;
-    if (!nextButton) return;
-    nextButton.hidden = false;
-    nextButton.classList.add("due");
-    nextButton.textContent = "The music did not start here  ·  Tap to open it";
-    nextButton.onclick = () => {
-      nextButton.onclick = null;
-      playSong(0);
-    };
   }
 
   /* The Connect control beside Listen on. */
@@ -1107,6 +1154,9 @@
   let notice = "";
   const session = ready.then(async () => {
     spotify.load();
+    try {
+      if (localStorage.getItem("yantra.spotifyNote") === "unlisted") spotify.blocked = "unlisted";
+    } catch (e) {}
     const query = new URLSearchParams(location.search);
     if (query.get("code") && spotify.available()) {
       await spotify.finish(query.get("code"), query.get("state"));
@@ -1114,9 +1164,12 @@
     } else if (query.get("error")) {
       history.replaceState(null, "", returnTo());
     }
-    if (spotify.connected() && !spotify.token.user) {
-      if ((await spotify.identify()) === "unlisted") {
-        notice = "This Spotify account is not on Yantra's listener list yet. Ask whoever shared Yantra with you to add it.";
+    if (spotify.connected()) {
+      const who = await spotify.ensureListener();
+      if (who === "unlisted") {
+        notice = "This Spotify account isn't on Yantra's listener list, so Spotify can't play here. Hosted albums still play.";
+      } else if (who === "premium") {
+        notice = "Spotify Premium is needed to play in Yantra. Hosted albums still play.";
       }
     }
     // Forms saved before accounts existed move to the first account that connects here.
@@ -1169,90 +1222,329 @@
       if (!nextButton.onclick) playSong(queue.index + 1);
     });
     document.body.appendChild(nextButton);
+    const offerPanel = document.createElement("div");
+    offerPanel.id = "music-offer";
+    offerPanel.hidden = true;
+    offerPanel.setAttribute("role", "dialog");
+    offerPanel.setAttribute("aria-label", "Choose a different album");
+    offerPanel.innerHTML = [
+      '<p data-line></p>',
+      '<button type="button" data-connect>Connect Spotify</button>',
+      '<button type="button" data-keep>Keep this album</button>',
+      '<p data-kicker>Choose a different album</p>',
+      '<div data-albums></div>',
+    ].join("");
+    document.body.appendChild(offerPanel);
+    window.yantraMusicOffer = (offer) => paintMusicOffer(offerPanel, offer);
   });
 
-  function play(payload) {
-    sitTheme = payload.source === "session" ? (payload.theme === "evening" ? "evening" : "morning") : "";
-    if (payload.source === "session") {
-      const theme = payload.theme === "evening" ? "evening" : "morning";
-      const count = Number(payload.count) || 3;
-      // Mix It Up draws on the curated sets, across albums; otherwise the sit keeps to one album.
-      const mix = !!payload.mix;
-      const picked = mix ? sessionItems(theme, count) : albumSit(count, String(payload.album || ""));
-      if (!picked) {
-        const disc = DISCS[payload.album];
-        return [{ ok: false, error: disc && !mix ? disc.title + " is too short for " + count + " songs." : "That sit is not available." }, 404];
+  function paintMusicOffer(panel, offer) {
+    if (!panel || !offer) return;
+    panel.hidden = false;
+    panel.querySelector("[data-line]").textContent = offer.text || Offer.line(offer);
+    const connect = panel.querySelector("[data-connect]");
+    connect.hidden = !offer.connect;
+    connect.onclick = () => {
+      const pending = offer.mode === "album"
+        ? { kind: "album", name: offer.asked || offer.playing || "the album", id: offer.askedId || offer.playingId || "" }
+        : {
+          kind: "session",
+          theme: offer.theme || "morning",
+          count: offer.count || 3,
+          name: offer.asked || offer.playing || "the sit",
+          mix: false,
+          album: offer.askedId || "",
+        };
+      try { sessionStorage.setItem("yantra.pending", JSON.stringify(pending)); } catch (e) {}
+      spotify.connect();
+    };
+    const keep = panel.querySelector("[data-keep]");
+    keep.hidden = !offer.playing;
+    keep.onclick = () => { panel.hidden = true; };
+    const kicker = panel.querySelector("[data-kicker]");
+    const albums = offer.albums || [];
+    kicker.hidden = !albums.length;
+    const list = panel.querySelector("[data-albums]");
+    list.replaceChildren();
+    const circles = (collection && collection.circles) || [];
+    const groups = {};
+    albums.forEach((album) => {
+      const key = album.circle || "";
+      (groups[key] || (groups[key] = [])).push(album);
+    });
+    const order = circles.map((circle) => circle.id).filter((id) => groups[id]);
+    Object.keys(groups).forEach((id) => { if (order.indexOf(id) < 0) order.push(id); });
+    order.forEach((id) => {
+      const circle = circles.find((item) => item.id === id);
+      if (circle) {
+        const label = document.createElement("p");
+        label.className = "music-offer-circle";
+        label.textContent = circle.name;
+        list.append(label);
       }
-      const name = String(payload.name || theme);
+      groups[id].forEach((album) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = album.id === offer.playingId ? album.title + "  ·  playing" : album.title;
+        button.disabled = album.id === offer.playingId;
+        button.addEventListener("click", () => {
+          panel.hidden = true;
+          if (offer.mode === "album" && typeof window.yantraPlayHosted === "function") window.yantraPlayHosted(album.id);
+          else if (typeof window.playSession === "function") {
+            window.playSession(offer.theme || "morning", offer.count || 3, { mix: false, album: album.id });
+          }
+        });
+        list.append(button);
+      });
+    });
+  }
+
+  /* Already known, without waiting on the network. Unlisted sticks: connecting again
+     cannot add an account to Spotify's listener list. Premium is rechecked once a page. */
+  function spotifyKnownUnavailable() {
+    if (spotify.blocked === "unlisted") return "unlisted";
+    try {
+      if (localStorage.getItem("yantra.spotifyNote") === "unlisted") return "unlisted";
+    } catch (e) {}
+    if (spotify.checked && spotify.blocked === "premium") return "premium";
+    if (!spotify.available() || !spotify.connected()) return "offline";
+    return "";
+  }
+
+  function hostedList(count) {
+    return Offer.hostedAlbums(collection.discs, count, onRecordings, (disc) => albumFits(disc, count));
+  }
+
+  function makeOffer(fields) {
+    const listCount = fields.mode === "session" ? (Number(fields.count) || 3) : 0;
+    const offer = {
+      reason: fields.reason || "offline",
+      connect: !!spotify.available(),
+      asked: fields.asked || "",
+      askedId: fields.askedId || "",
+      playing: fields.playing || "",
+      playingId: fields.playingId || "",
+      mix: !!fields.mix,
+      albums: hostedList(listCount),
+      theme: fields.theme || "morning",
+      count: Number(fields.count) || 3,
+      mode: fields.mode || "session",
+    };
+    offer.text = Offer.line(offer);
+    return offer;
+  }
+
+  function describeItems(items) {
+    if (!items.length) return { playing: "", playingId: "", mix: false };
+    const ids = new Set(items.map((item) => item.discId));
+    if (ids.size > 1) return { playing: "Hosted songs", playingId: "", mix: true };
+    const disc = DISCS[items[0].discId];
+    return { playing: disc ? disc.title : "", playingId: disc ? disc.id : "", mix: false };
+  }
+
+  function pickHostedDisc(count, avoid) {
+    let pool = collection.discs.filter((disc) => onRecordings(disc) && albumFits(disc, count));
+    if (avoid && pool.length > 1) pool = pool.filter((disc) => disc.id !== avoid);
+    let last = "";
+    try { last = localStorage.getItem("yantra.lastAlbum") || ""; } catch (e) {}
+    if (last && pool.length > 1) {
+      const narrower = pool.filter((disc) => disc.id !== last);
+      if (narrower.length) pool = narrower;
+    }
+    return pool.length ? sample(pool, 1)[0] : null;
+  }
+
+  /* The sit the listener asked for, played from the sangha's copies when Spotify
+     cannot. The page hears about the swap and offers Connect plus every hosted album. */
+  async function startSession(payload) {
+    spotify.load();
+    const theme = payload.theme === "evening" ? "evening" : "morning";
+    const count = Number(payload.count) || 3;
+    const mix = !!payload.mix;
+    const albumId = String(payload.album || "");
+    const name = String(payload.name || theme);
+    const askedDisc = !mix && albumId ? DISCS[albumId] : null;
+    if (askedDisc && onRecordings(askedDisc)) {
+      const picked = albumSit(count, askedDisc.id);
+      if (!picked) return [{ ok: false, error: askedDisc.title + " is too short for " + count + " songs." }, 404];
       const items = picked.map((item) => ({ discId: item.discId, n: item.n }));
-      if (!recordedAll(items) && spotify.available() && !spotify.connected()) {
-        return connectFirst({ kind: "session", theme, count, name, mix, album: mix ? "" : items[0].discId });
-      }
-      const listId = mix ? "set-" + theme + "-" + count : "";
-      if (liveStart(name, items, "spotify", true, null, listId, picked.map((item) => item.chakra))) {
-        return [{ ok: true, source: "session" }];
-      }
-      queue.name = name;
-      queue.items = items;
-      queue.prefer = "spotify";
-      if (!playSong(0)) {
-        stopQueue();
-        return [{ ok: false, error: "The first song did not open." }, 404];
-      }
-      return [{ ok: true, source: "session" }];
+      const ok = await liveStart(name, items, "recordings", true, null, "", picked.map((item) => item.chakra));
+      return ok ? [{ ok: true, source: "session" }] : [{ ok: false, error: "The music did not start." }, 404];
     }
-    if (payload.source === "playlist") {
-      const tracks = payload.tracks || [];
-      const error = playlistError(tracks);
-      if (error) return [{ ok: false, error }, 400];
-      const name = String(payload.name || "Form");
-      const prefer = payload.prefer === "apple" ? "apple" : "spotify";
-      if (!recordedAll(orderedDraft(tracks)) && prefer === "spotify" && spotify.available() && !spotify.connected()) {
-        return connectFirst({ kind: "form", name, id: payload.id || "", tracks });
-      }
-      if (liveStart(name, orderedDraft(tracks), prefer, true, null, payload.id || "")) return [{ ok: true, source: "playlist" }];
-      queue.name = name;
-      queue.items = orderedDraft(tracks);
-      queue.prefer = prefer;
-      if (!playSong(0)) {
-        stopQueue();
-        return [{ ok: false, error: "The first song did not open." }, 404];
-      }
-      return [{ ok: true, source: "playlist" }];
+
+    let unavailable = spotifyKnownUnavailable();
+    let picked = mix ? sessionItems(theme, count) : albumSit(count, albumId);
+    if (!picked) {
+      return [{ ok: false, error: askedDisc ? askedDisc.title + " is too short for " + count + " songs." : "That sit is not available." }, 404];
     }
+    let items = picked.map((item) => ({ discId: item.discId, n: item.n }));
+    let chakras = picked.map((item) => item.chakra);
+
+    if (!unavailable && !recordedAll(items)) {
+      if (spotify.connected()) {
+        const who = await spotify.ensureListener();
+        if (who === "unlisted" || who === "premium") unavailable = who;
+        else if (!spotify.connected()) unavailable = spotify.blocked === "unlisted" ? "unlisted" : "offline";
+      }
+      if (!unavailable) {
+        const listId = mix ? "set-" + theme + "-" + count : "";
+        const ok = await liveStart(name, items, "spotify", true, null, listId, chakras);
+        if (ok) return [{ ok: true, source: "session" }];
+        unavailable = spotify.lastFailure || spotify.blocked || "failed";
+      }
+    }
+
+    if (!unavailable && recordedAll(items)) {
+      const ok = await liveStart(name, items, "recordings", true, null, "", chakras);
+      return ok ? [{ ok: true, source: "session" }] : [{ ok: false, error: "The music did not start." }, 404];
+    }
+
+    if (!recordedAll(items)) {
+      const disc = pickHostedDisc(count, albumId);
+      picked = disc ? albumSit(count, disc.id) : null;
+      if (!picked) {
+        const offer = makeOffer({
+          reason: unavailable || "offline",
+          asked: askedDisc ? askedDisc.title : "",
+          askedId: askedDisc ? askedDisc.id : "",
+          theme, count, mode: "session",
+        });
+        return [{ ok: false, error: offer.text, offer }, 409];
+      }
+      items = picked.map((item) => ({ discId: item.discId, n: item.n }));
+      chakras = picked.map((item) => item.chakra);
+    }
+
+    const ok = await liveStart(name, items, "recordings", true, null, "", chakras);
+    const heard = describeItems(ok ? items : []);
+    const offer = makeOffer({
+      reason: unavailable || "offline",
+      asked: askedDisc && !onRecordings(askedDisc) ? askedDisc.title : "",
+      askedId: askedDisc && !onRecordings(askedDisc) ? askedDisc.id : "",
+      playing: heard.playing,
+      playingId: heard.playingId,
+      mix: heard.mix,
+      theme, count, mode: "session",
+    });
+    if (!ok) return [{ ok: false, error: offer.text, offer }, 409];
+    return [{ ok: true, source: "session", offer }];
+  }
+
+  async function startForm(payload) {
+    spotify.load();
+    const tracks = payload.tracks || [];
+    const error = playlistError(tracks);
+    if (error) return [{ ok: false, error }, 400];
+    const name = String(payload.name || "Form");
+    const prefer = payload.prefer === "apple" ? "apple" : "spotify";
+    const items = orderedDraft(tracks);
+    if (recordedAll(items) || prefer === "apple") {
+      const ok = await liveStart(name, items, prefer, true, null, payload.id || "");
+      return ok ? [{ ok: true, source: "playlist" }] : [{ ok: false, error: "The music did not start." }, 404];
+    }
+    let unavailable = spotifyKnownUnavailable();
+    if (!unavailable && spotify.connected()) {
+      const who = await spotify.ensureListener();
+      if (who === "unlisted" || who === "premium") unavailable = who;
+      else if (!spotify.connected()) unavailable = spotify.blocked === "unlisted" ? "unlisted" : "offline";
+    }
+    if (!unavailable) {
+      const ok = await liveStart(name, items, prefer, true, null, payload.id || "");
+      if (ok) return [{ ok: true, source: "playlist" }];
+      unavailable = spotify.lastFailure || "failed";
+    }
+    const count = 3;
+    const disc = pickHostedDisc(count, "");
+    const picked = disc ? albumSit(count, disc.id) : null;
+    if (!picked) {
+      const offer = makeOffer({ reason: unavailable || "offline", asked: name, count, mode: "session" });
+      return [{ ok: false, error: offer.text, offer }, 409];
+    }
+    const hosted = picked.map((item) => ({ discId: item.discId, n: item.n }));
+    const ok = await liveStart(name, hosted, "recordings", true, null, "", picked.map((item) => item.chakra));
+    const heard = describeItems(ok ? hosted : []);
+    const offer = makeOffer({
+      reason: unavailable || "offline",
+      asked: name,
+      playing: heard.playing,
+      playingId: heard.playingId,
+      count, mode: "session",
+    });
+    if (!ok) return [{ ok: false, error: offer.text, offer }, 409];
+    return [{ ok: true, source: "playlist", offer }];
+  }
+
+  async function startDisc(payload) {
+    spotify.load();
     stopQueue();
     const disc = DISCS[payload.id];
     if (!disc) return [{ ok: false, error: "That disc is not on the shelf." }, 404];
     const albumItems = disc.tracks.map((track) => ({ discId: disc.id, n: track.n }));
-    if (recordedAll(albumItems) && liveStart(disc.title, albumItems, payload.source, false, null)) {
-      return [{ ok: true, source: "recordings" }];
+    if (onRecordings(disc)) {
+      const ok = await liveStart(disc.title, albumItems, "recordings", false, null);
+      return ok ? [{ ok: true, source: "recordings" }] : [{ ok: false, error: "This album did not start." }, 404];
     }
-    if (payload.source === "spotify" && spotify.available() && !spotify.connected()) {
-      return connectFirst({ kind: "album", name: disc.title, id: disc.id });
-    }
-    if (payload.source === "spotify" || payload.source === "apple") {
-      const items = disc.tracks.map((track) => ({ discId: disc.id, n: track.n }));
-      const options = {
-        spotify: disc.spotifyAlbum ? { context_uri: "spotify:album:" + disc.spotifyAlbum } : null,
-        apple: appleId(disc) ? { album: appleId(disc) } : null,
-      };
-      if (options[payload.source] && liveStart(disc.title, items, payload.source, false, options)) {
-        return [{ ok: true, source: payload.source }];
-      }
-    }
-    liveStop(true);
     if (payload.source === "apple") {
+      const options = { apple: appleId(disc) ? { album: appleId(disc) } : null };
+      if (options.apple && await liveStart(disc.title, albumItems, "apple", false, options)) {
+        return [{ ok: true, source: "apple" }];
+      }
       const id = appleId(disc);
       if (!id) return [{ ok: false, error: "This disc is not on Apple Music." }, 403];
       openPlayer("https://music.apple.com/us/album/" + id);
       return [{ ok: true, source: "apple" }];
     }
-    if (payload.source === "spotify" || !payload.source) {
-      if (!disc.spotifyAlbum) return [{ ok: false, error: "Not on Spotify." }, 403];
-      openPlayer("https://open.spotify.com/album/" + encodeURIComponent(disc.spotifyAlbum));
-      return [{ ok: true, source: "spotify" }];
+    if (payload.source && payload.source !== "spotify") {
+      return [{ ok: false, error: "Your own copies play in the desktop app." }, 403];
     }
-    return [{ ok: false, error: "Your own copies play in the desktop app." }, 403];
+    if (!disc.spotifyAlbum) return [{ ok: false, error: "Not on Spotify." }, 403];
+
+    let unavailable = spotifyKnownUnavailable();
+    if (!unavailable && spotify.connected()) {
+      const who = await spotify.ensureListener();
+      if (who === "unlisted" || who === "premium") unavailable = who;
+      else if (!spotify.connected()) unavailable = spotify.blocked === "unlisted" ? "unlisted" : "offline";
+    }
+    if (!unavailable) {
+      const options = { spotify: { context_uri: "spotify:album:" + disc.spotifyAlbum } };
+      if (await liveStart(disc.title, albumItems, "spotify", false, options)) {
+        return [{ ok: true, source: "spotify" }];
+      }
+      unavailable = spotify.lastFailure || "failed";
+    }
+    const hosted = collection.discs.filter(onRecordings);
+    const pick = hosted.find((item) => item.id !== disc.id) || hosted[0];
+    if (!payload.sit || !pick) {
+      const offer = makeOffer({
+        reason: unavailable || "offline",
+        asked: disc.title,
+        askedId: disc.id,
+        playing: "",
+        count: 0,
+        mode: "album",
+      });
+      return [{ ok: false, error: offer.text, offer }, 409];
+    }
+    const items = pick.tracks.map((track) => ({ discId: pick.id, n: track.n }));
+    const ok = await liveStart(pick.title, items, "recordings", false, null);
+    const offer = makeOffer({
+      reason: unavailable || "offline",
+      asked: disc.title,
+      askedId: disc.id,
+      playing: ok ? pick.title : "",
+      playingId: ok ? pick.id : "",
+      count: 0,
+      mode: "album",
+    });
+    if (!ok) return [{ ok: false, error: offer.text, offer }, 409];
+    return [{ ok: true, source: "recordings", offer }];
+  }
+
+  function play(payload) {
+    sitTheme = payload.source === "session" ? (payload.theme === "evening" ? "evening" : "morning") : "";
+    if (payload.source === "session") return startSession(payload);
+    if (payload.source === "playlist") return startForm(payload);
+    return startDisc(payload);
   }
 
   /* Listening time for the on-device practice record. Theme is the morning or
@@ -1287,6 +1579,11 @@
       lock.addEventListener("release", () => { if (screenLock === lock) screenLock = null; });
     }).catch(() => {});
   }
+  window.yantraHold = function () {
+    const root = document.documentElement;
+    if (!document.fullscreenElement && root.requestFullscreen) root.requestFullscreen().catch(() => {});
+    holdScreen(true);
+  };
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") rememberSit();
     if (document.visibilityState === "visible" && document.body && document.body.classList.contains("sitting")) holdScreen(true);
@@ -1334,14 +1631,13 @@
       const method = String((init && init.method) || "GET").toUpperCase();
       // Opening a window must happen inside the click, so those requests are
       // answered right away. The rest wait for the shelf.
+      const deliver = (answer) => Promise.resolve(answer).then((pair) => (
+        pair ? reply(pair[0], pair[1]) : reply({ ok: false }, 404)
+      ));
       if (method === "POST" && (path === "/sit" || (path === "/play" && collection))) {
-        const answer = route(path, method, init);
-        return Promise.resolve(reply(answer[0], answer[1]));
+        return deliver(route(path, method, init));
       }
-      return session.then(() => {
-        const answer = route(path, method, init);
-        return answer ? reply(answer[0], answer[1]) : reply({ ok: false }, 404);
-      });
+      return session.then(() => deliver(route(path, method, init)));
     }
     return realFetch(input, init);
   };
@@ -1361,6 +1657,29 @@
     "#web-resume button { background: transparent; color: #f7edd4; font: inherit; cursor: pointer; letter-spacing: 0.12em;",
     "  text-transform: uppercase; font-size: 0.8rem; border: 1px solid rgba(230, 201, 138, 0.7); padding: 0.55rem 0.9rem; }",
     "body.sitting #web-resume { display: none; }",
+    "#music-offer { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 6;",
+    "  width: min(26rem, calc(100vw - 2rem)); max-height: min(72vh, 36rem); overflow: auto;",
+    "  padding: 1.15rem 1.2rem 1rem; background: rgba(5, 4, 10, 0.94);",
+    "  border: 1px solid rgba(230, 201, 138, 0.4); color: rgba(243, 230, 200, 0.9);",
+    "  font-family: Palatino, 'Iowan Old Style', 'Times New Roman', serif; text-align: left; }",
+    "#music-offer[hidden] { display: none; }",
+    "#music-offer p { margin: 0 0 0.85rem; line-height: 1.5; font-size: 1.02rem; }",
+    "#music-offer [data-connect], #music-offer [data-keep] { font: inherit; cursor: pointer;",
+    "  background: transparent; color: #f7edd4; border: 1px solid rgba(230, 201, 138, 0.55); }",
+    "#music-offer [data-connect] { display: block; width: 100%; padding: 0.75rem 0.6rem;",
+    "  letter-spacing: 0.08em; margin-bottom: 0.95rem; }",
+    "#music-offer [data-connect][hidden] { display: none; }",
+    "#music-offer [data-kicker] { letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.72rem;",
+    "  color: rgba(230, 201, 138, 0.75); margin: 0.15rem 0 0.35rem; }",
+    "#music-offer .music-offer-circle { margin: 0.75rem 0 0.15rem; font-size: 0.75rem;",
+    "  letter-spacing: 0.12em; text-transform: uppercase; color: rgba(232, 204, 146, 0.5); }",
+    "#music-offer [data-albums] button { display: block; width: 100%; text-align: left; font: inherit;",
+    "  cursor: pointer; padding: 0.48rem 0.15rem; background: transparent; border: 0;",
+    "  border-bottom: 1px solid rgba(230, 201, 138, 0.12); color: rgba(247, 237, 212, 0.92); }",
+    "#music-offer [data-albums] button:disabled { color: rgba(232, 204, 146, 0.45); cursor: default; }",
+    "#music-offer [data-keep] { display: block; margin: 0 auto 0.95rem; padding: 0.55rem 0.95rem;",
+    "  letter-spacing: 0.1em; }",
+    "#music-offer [data-keep][hidden] { display: none; }",
   ].join("\n");
   document.head.appendChild(style);
 })();
