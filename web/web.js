@@ -2,15 +2,16 @@
  *
  * The desktop page talks to yantra.py. Here the same requests are answered in
  * the browser: the shelf comes from ../discs.json, saved forms live in this
- * browser, albums open in Spotify or Apple Music, and the yantra moves with the
- * room through the microphone (or breathes slowly if the microphone is off).
+ * browser, albums open in Spotify or Apple Music, and the yantra follows a
+ * hosted recording (or breathes slowly when the music cannot be read).
+ * The page never asks for the microphone.
  */
 (() => {
   // Tells the page it runs as the web edition, so it opens on the morning/evening home.
   window.YANTRA_WEB = true;
   const realFetch = window.fetch.bind(window);
   const CHAKRAS = ["naval", "heart", "eye"];
-  const CHAKRA_NAME = { naval: "Naval chakra", heart: "Heart chakra", eye: "Third eye chakra" };
+  const CHAKRA_NAME = { naval: "Navel", heart: "Heart chakra", eye: "Third eye chakra" };
   const FORM_SIZES = [3, 6, 9, 12];
   const DISCS = {};
   let collection = null;
@@ -89,7 +90,7 @@
     }));
     payload.installRoot = "";
     payload.chakras = [
-      { id: "naval", name: "Naval chakra", third: "first" },
+      { id: "naval", name: "Navel", third: "first" },
       { id: "heart", name: "Heart chakra", third: "middle" },
       { id: "eye", name: "Third eye chakra", third: "last" },
     ];
@@ -219,7 +220,7 @@
     }
     const values = CHAKRAS.map((name) => counts[name]);
     if (values.some((value) => value > 4)) return "Each chakra holds at most four songs.";
-    if (new Set(values).size !== 1) return "Naval, heart, and third eye keep the same number of songs.";
+    if (new Set(values).size !== 1) return "Navel, heart, and third eye keep the same number of songs.";
     const total = values.reduce((a, b) => a + b, 0);
     if (!FORM_SIZES.includes(total)) return "A form is 3, 6, 9, or 12 songs.";
     const per = total / 3;
@@ -299,42 +300,66 @@
     return [{ ok: false, error: "Unknown request." }, 404];
   }
 
-  /* ---- sound: the microphone hears the room; without it the yantra breathes ---- */
+  /* ---- sound: a hosted recording, or a slow breath. Never the microphone. ----
+     The <audio> element stays on the system output. Wiring that element into
+     a live audio graph is what would let the page read samples as they play,
+     and on iOS that also drops the lock-screen session the element already
+     has. An offline decode of a second copy reads the shape without touching
+     playback. Spotify cannot be read, so those sits use the breath. */
 
   let level = 0;
-  let analyser = null;
-  let micAsked = false;
-  const buffer = new Float32Array(2048);
+  let studied = null;
+  let studyToken = 0;
 
-  function startMic() {
-    if (micAsked || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
-    micAsked = true;
-    const Context = window.AudioContext || window.webkitAudioContext;
-    const context = new Context();
-    navigator.mediaDevices
-      .getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
-      .then((stream) => {
-        analyser = context.createAnalyser();
-        analyser.fftSize = 2048;
-        context.createMediaStreamSource(stream).connect(analyser);
-        if (context.state === "suspended") context.resume();
-      })
-      .catch(() => {});
+  function breathTarget() {
+    // About eight seconds in, eight seconds out.
+    return 0.22 + 0.14 * Math.sin((performance.now() / 8000) * Math.PI * 2);
+  }
+
+  function musicNow() {
+    const audio = recorded.audio;
+    if (!audio || !studied || audio.paused || audio.ended) return null;
+    const key = audio.currentSrc || audio.src;
+    if (!key || key !== studied.key) return null;
+    const x = (audio.currentTime || 0) * studied.rate;
+    const i = Math.floor(x);
+    if (i < 0 || i >= studied.values.length) return null;
+    const a = studied.values[i];
+    const b = studied.values[Math.min(i + 1, studied.values.length - 1)];
+    return a + (b - a) * (x - i);
   }
 
   function sampleLevel() {
-    let target;
-    if (analyser) {
-      analyser.getFloatTimeDomainData(buffer);
-      let sum = 0;
-      for (const value of buffer) sum += value * value;
-      target = Math.max(0, Math.min(1, Math.sqrt(sum / buffer.length) * 14));
-    } else {
-      // About eight seconds in, eight seconds out.
-      target = 0.22 + 0.14 * Math.sin((performance.now() / 8000) * Math.PI * 2);
-    }
+    const heard = musicNow();
+    const target = heard == null ? breathTarget() : heard;
     level = level * 0.9 + target * 0.1;
     return level;
+  }
+
+  function studyRecording(url) {
+    const Practice = window.YantraPractice;
+    const Context = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!url || !Practice || !Context) return;
+    const key = new URL(url, location.href).href;
+    if (studied && studied.key === key) return;
+    const token = ++studyToken;
+    studied = null;
+    const run = () => {
+      realFetch(url)
+        .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error("unreadable"))))
+        .then((bytes) => new Context(1, 1, 44100).decodeAudioData(bytes))
+        .then((audioBuffer) => {
+          if (token !== studyToken) return;
+          const channels = [];
+          for (let c = 0; c < audioBuffer.numberOfChannels; c += 1) channels.push(audioBuffer.getChannelData(c));
+          const env = Practice.envelopeFromChannel(channels, audioBuffer.sampleRate, 8);
+          if (token !== studyToken || !env.values.length) return;
+          studied = { key, rate: env.rate, values: env.values };
+        })
+        .catch(() => {});
+    };
+    // Let the tap's play() take the media session before any decode starts.
+    setTimeout(run, 400);
   }
 
   /* ---- answering the page ---- */
@@ -429,10 +454,12 @@
     nextButton.classList.toggle("due", done);
     nextButton.textContent = (done ? "Next  ·  " : "Next song  ·  ") + track.title;
   }
+  let noteListening = function () {};
   setInterval(() => {
     if (queue.index >= 0) {
       NOW.position = Math.min(Number(NOW.length) || 0, (performance.now() - queue.startedAt) / 1000);
       paintNext();
+      if (!live.service) noteListening(NOW.status === "Playing", queue.items[queue.index], NOW.position);
     }
   }, 1000);
 
@@ -707,6 +734,7 @@
       const audio = this.element();
       this.index = index;
       audio.src = this.keys[index];
+      studyRecording(this.keys[index]);
       return audio.play().then(() => true, () => false);
     },
     play(keys) {
@@ -839,6 +867,7 @@
     if (!live.service) return;
     const state = await services[live.service].state();
     if (!live.service || !state) return;
+    noteListening(!!state.playing, { discId: state.key, n: "" }, state.position, state.key);
     const index = live.keys.indexOf(state.key);
     if (index < 0) {
       // The list has finished and the service went on to something else.
@@ -1143,6 +1172,7 @@
   });
 
   function play(payload) {
+    sitTheme = payload.source === "session" ? (payload.theme === "evening" ? "evening" : "morning") : "";
     if (payload.source === "session") {
       const theme = payload.theme === "evening" ? "evening" : "morning";
       const count = Number(payload.count) || 3;
@@ -1225,6 +1255,24 @@
     return [{ ok: false, error: "Your own copies play in the desktop app." }, 403];
   }
 
+  /* Listening time for the on-device practice record. Theme is the morning or
+     evening the listener chose; a shelf sit leaves it blank. */
+  const Practice = window.YantraPractice || null;
+  if (Practice) Practice.recover();
+  const listening = Practice
+    ? Practice.createListeningClock()
+    : { begin() {}, active() { return false; }, observe() {}, snapshot() { return null; }, end() { return { ms: 0, theme: "", date: "" }; } };
+  let sitTheme = "";
+
+  noteListening = function (playing, item, position, key) {
+    const id = key || (item ? item.discId + "#" + item.n : "");
+    listening.observe({ key: id, position: Number(position) || 0, playing: !!playing, at: Date.now() });
+  };
+
+  function rememberSit() {
+    if (Practice && listening.active()) Practice.checkpoint(listening.snapshot());
+  }
+
   /* Keeps a phone's screen from sleeping while a sitting runs. */
   let screenLock = null;
   function holdScreen(on) {
@@ -1240,8 +1288,11 @@
     }).catch(() => {});
   }
   document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") rememberSit();
     if (document.visibilityState === "visible" && document.body && document.body.classList.contains("sitting")) holdScreen(true);
   });
+  window.addEventListener("pagehide", rememberSit);
+  setInterval(rememberSit, 15000);
 
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
@@ -1249,9 +1300,11 @@
     const root = document.documentElement;
     holdScreen(on);
     if (on) {
-      startMic();
+      listening.begin(sitTheme);
       if (!document.fullscreenElement && root.requestFullscreen) root.requestFullscreen().catch(() => {});
     } else {
+      if (Practice) Practice.commit(listening.end());
+      sitTheme = "";
       liveStop(true);
       stopQueue();
       if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
@@ -1279,8 +1332,8 @@
     if (typeof url === "string" && url.startsWith("/")) {
       const path = url.split("?")[0];
       const method = String((init && init.method) || "GET").toUpperCase();
-      // Opening a window and asking for the microphone must happen inside the click,
-      // so those requests are answered right away. The rest wait for the shelf.
+      // Opening a window must happen inside the click, so those requests are
+      // answered right away. The rest wait for the shelf.
       if (method === "POST" && (path === "/sit" || (path === "/play" && collection))) {
         const answer = route(path, method, init);
         return Promise.resolve(reply(answer[0], answer[1]));

@@ -251,7 +251,7 @@ def installed_counts():
 
 CHAKRAS = ("naval", "heart", "eye")
 CHAKRA_NAME = {
-    "naval": "Naval chakra",
+    "naval": "Navel",
     "heart": "Heart chakra",
     "eye": "Third eye chakra",
 }
@@ -346,7 +346,7 @@ def shelf_song(item):
 
 
 def ordered_draft(tracks):
-    """Naval, then heart, then third eye. A song is kept once."""
+    """Navel, then heart, then third eye. A song is kept once."""
     buckets = {name: [] for name in CHAKRAS}
     seen = set()
     for item in tracks or []:
@@ -387,7 +387,7 @@ def playlist_error(tracks):
     if any(counts[name] > 4 for name in CHAKRAS):
         return "Each chakra holds at most four songs."
     if len(set(counts.values())) != 1:
-        return "Naval, heart, and third eye keep the same number of songs."
+        return "Navel, heart, and third eye keep the same number of songs."
     if sum(counts.values()) not in FORM_SIZES:
         return "A form is 3, 6, 9, or 12 songs."
     per = sum(counts.values()) // 3
@@ -500,7 +500,7 @@ def collection_payload():
     payload["discs"] = discs
     payload["installRoot"] = str(INSTALL_ROOT)
     payload["chakras"] = [
-        {"id": "naval", "name": "Naval chakra", "third": "first"},
+        {"id": "naval", "name": "Navel", "third": "first"},
         {"id": "heart", "name": "Heart chakra", "third": "middle"},
         {"id": "eye", "name": "Third eye chakra", "third": "last"},
     ]
