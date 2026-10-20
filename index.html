@@ -2017,13 +2017,28 @@ function roomBack() {
   showRoom(roomTrail.pop() || "home");
 }
 /* A sit keeps to one album: the chosen one, or a new one each time. Mix It Up goes
-   across albums. Both choices stay in this browser. */
+   across albums. Both choices stay in this browser. One tap on the same control
+   turns the mix on; the next tap is the way back to that album. */
 let pickAlbum = "";
 let sitMix = false;
+let albumHeld = "";
 try {
   pickAlbum = localStorage.getItem("yantra.sitAlbum") || "";
   sitMix = localStorage.getItem("yantra.sitMix") === "1";
+  if (sitMix) albumHeld = pickAlbum;
 } catch (e) {}
+function mixFace(on) {
+  return {
+    label: on ? "Back to albums" : "Mix It Up",
+    pressed: on ? "true" : "false",
+  };
+}
+function mixStep(state) {
+  const album = state && state.album ? String(state.album) : "";
+  const held = state && state.held ? String(state.held) : "";
+  if (!(state && state.mix)) return { mix: true, album: album, held: album };
+  return { mix: false, album: held || album, held: "" };
+}
 function thirdsOf(disc) {
   const sizes = { naval: 0, heart: 0, eye: 0 };
   for (const track of disc.tracks) sizes[track.chakra] = (sizes[track.chakra] || 0) + 1;
@@ -2050,10 +2065,13 @@ function paintPick(rebuild) {
       if (group.children.length) select.appendChild(group);
     }
   }
-  if (pickAlbum && !discs.some((disc) => disc.id === pickAlbum)) pickAlbum = "";
+  if (pickAlbum && discs.length && !discs.some((disc) => disc.id === pickAlbum)) pickAlbum = "";
   select.value = pickAlbum;
   select.disabled = sitMix;
-  document.getElementById("pick-mix").setAttribute("aria-pressed", String(sitMix));
+  const mixButton = document.getElementById("pick-mix");
+  const face = mixFace(sitMix);
+  mixButton.textContent = face.label;
+  mixButton.setAttribute("aria-pressed", face.pressed);
   const chosen = discs.find((disc) => disc.id === pickAlbum);
   document.querySelectorAll("#pick [data-count]").forEach((button) => {
     button.disabled = !sitMix && !!chosen && !fitsCount(chosen, Number(button.dataset.count));
@@ -2135,7 +2153,10 @@ if (window.YANTRA_WEB) {
     keepPick();
   });
   document.getElementById("pick-mix").addEventListener("click", () => {
-    sitMix = !sitMix;
+    const next = mixStep({ mix: sitMix, album: pickAlbum, held: albumHeld });
+    sitMix = next.mix;
+    pickAlbum = next.album;
+    albumHeld = next.held;
     keepPick();
   });
   document.getElementById("pick-help").addEventListener("click", () => {
