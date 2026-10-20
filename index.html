@@ -308,7 +308,18 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   }
   #account-resources a { color: #e6c98a; text-underline-offset: 3px; line-height: 1.35; }
   #account-resources span { display: block; margin: 0; color: rgba(243, 230, 200, 0.62); font-size: 0.92rem; line-height: 1.45; }
-  #account-signout-confirm[hidden], #account-wipe-confirm[hidden] { display: none; }
+  #account-sync { min-height: 7.5rem; }
+  #account-sync[hidden] { display: none; }
+  #account-talks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+  #account-talks li { display: block; padding: 0; color: #f7edd4; font-size: 1rem; }
+  #account-talks[hidden], #account-talks-empty[hidden] { display: none; }
+  #account-signout-block[hidden], #account-leave-confirm[hidden], #account-zazen-ask[hidden], #account-zazen-drop[hidden], #account-wipe-confirm[hidden] { display: none; }
+  #account-corner {
+    position: fixed; z-index: 6; top: max(0.7rem, env(safe-area-inset-top)); right: max(0.7rem, env(safe-area-inset-right));
+    width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 1px solid rgba(230, 201, 138, 0.5);
+    background: rgba(5, 4, 10, 0.72); color: #f7edd4; font: inherit; font-size: 0.78rem; cursor: pointer;
+  }
+  #account-corner[hidden], body.sitting #account-corner { display: none; }
   #reminders[hidden] { display: none; }
   #reminders { margin-top: 0.4rem; padding-top: 1.2rem; border-top: 1px solid rgba(230, 201, 138, 0.16); text-align: left; }
   #reminders h3 { font-weight: 500; font-size: 1.35rem; color: #f7edd4; text-align: center; margin: 0.2rem 0 0.2rem; }
@@ -376,6 +387,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 </head>
 <body>
 <canvas id="c"></canvas>
+<button id="account-corner" type="button" hidden aria-label="Settings">You</button>
 <div class="room" id="home" hidden>
   <div class="inner">
     <h1>Yantra Meditation</h1>
@@ -423,7 +435,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <p><b>Choose an album</b> above the song counts, or let each sit bring a new one. <b>Mix It Up</b> draws the songs from across the albums instead.</p>
     <p>The yantra draws itself once with each song. Tap the screen to show <b>End sitting</b>.</p>
     <p><b>Keep it on your phone:</b> on Android, open the menu and choose <b>Install app</b> or <b>Add to Home screen</b>. On iPhone, tap <b>Share</b>, then <b>Add to Home Screen</b>.</p>
-    <p>Your sits are remembered on this device, under <b>Your practice</b>. They are not sent anywhere. Morning and evening reminders, if you want them, are set on that same page. <b>Settings</b> holds a name for this device, Spotify, and sign-out.</p>
+    <p>Your sits are remembered on this device, under <b>Your practice</b>. They are not sent anywhere. Morning and evening reminders, if you want them, are set on that same page. <b>Settings</b> holds a name for this device, Spotify, and Leave Yantra.</p>
   </div>
 </div>
 <div class="room" id="about" hidden>
@@ -462,7 +474,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <button class="quiet" type="button" id="practice-erase">Erase my data</button>
     </div>
     <div id="practice-confirm" hidden>
-      <p>Erase the practice record on this device? Time, sits, and days in a row will be removed. Saved forms and Spotify stay. This cannot be undone.</p>
+      <p>Erase the practice record and the settings on this device? Time, sits, saved talks, the name, reminders, and the glow will be removed. Spotify stays. This cannot be undone.</p>
       <div class="links">
         <button class="quiet" type="button" id="practice-keep">Keep</button>
         <button class="quiet" type="button" id="practice-erase-yes">Erase</button>
@@ -527,6 +539,11 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <button class="back" type="button" data-room="home" aria-label="Back">&#8592;</button>
   <div class="inner">
     <h2>Your account</h2>
+    <section id="account-sync" class="account-sync" hidden>
+      <h3>Sign in</h3>
+      <p>A later sign-in can keep these choices with you. Nothing leaves this device yet.</p>
+      <p id="account-sync-method"></p>
+    </section>
     <p>There is no account on a server. This page is this device: a name if you want one, the word that opened the shelf, and the choices already kept here.</p>
     <section class="account-block">
       <h3>Name</h3>
@@ -547,13 +564,37 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <section class="account-block">
       <h3>Access</h3>
       <p id="account-access">Checking the word gate…</p>
-      <div class="links"><button class="quiet" type="button" id="account-signout">Sign out</button></div>
-      <div id="account-signout-confirm" hidden>
-        <p>Sign out on this device? The sangha word will be asked for again. Practice, reminders, and Spotify stay here.</p>
+      <div class="links"><button class="quiet" type="button" id="account-zazen" hidden aria-pressed="false">Zazen access</button></div>
+      <div id="account-zazen-ask" hidden>
+        <p>Enter the Zazen word. It is checked by the site and not saved here.</p>
+        <form method="post" action="/enter">
+          <label class="account-field">Zazen word
+            <input name="word" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Zazen word" required>
+          </label>
+          <div class="links">
+            <button class="quiet" type="button" id="account-zazen-cancel">Cancel</button>
+            <button class="quiet" type="submit">Open Zazen</button>
+          </div>
+        </form>
+      </div>
+      <div id="account-zazen-drop" hidden>
+        <p>Return to the sangha shelf? The Zazen word will be needed again to open the rest.</p>
         <div class="links">
-          <button class="quiet" type="button" id="account-signout-keep">Stay</button>
-          <button class="quiet" type="button" id="account-signout-yes">Sign out</button>
+          <button class="quiet" type="button" id="account-zazen-drop-keep">Keep Zazen</button>
+          <button class="quiet" type="button" id="account-zazen-drop-yes">Sangha access</button>
         </div>
+      </div>
+      <div class="links"><button class="quiet" type="button" id="account-leave">Leave Yantra on this device</button></div>
+      <div id="account-leave-confirm" hidden>
+        <p>Leave Yantra on this device? The word will be asked for again. Your practice and settings stay here.</p>
+        <div class="links">
+          <button class="quiet" type="button" id="account-leave-keep">Stay</button>
+          <form method="post" action="/logout"><button class="quiet" type="submit">Leave Yantra on this device</button></form>
+        </div>
+      </div>
+      <div id="account-signout-block" hidden>
+        <div class="links"><button class="quiet" type="button" id="account-signout">Sign out</button></div>
+        <p>Sign out is reserved for a later account. It does not clear the word gate.</p>
       </div>
     </section>
     <section class="account-block">
@@ -573,12 +614,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <button class="quiet" type="button" id="account-export">Export</button>
         <button class="quiet" type="button" id="account-erase">Erase</button>
       </div>
-      <p>Export and erase are the same ones under Your practice.</p>
-    </section>
-    <section class="account-block">
-      <h3>Resources</h3>
-      <p>Dharma talks, guided meditations, and the lines that can close a sit. All of them are published on the Rama Meditation Society site. Each one opens in a new tab.</p>
-      <div id="account-resources"></div>
+      <p>Export and erase cover practice, every setting, and saved talks. Spotify stays until you disconnect, or until Erase everything.</p>
     </section>
     <section class="account-block">
       <h3>Reminders</h3>
@@ -586,11 +622,21 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <div class="links"><button class="quiet" type="button" id="account-reminders">Reminder settings</button></div>
     </section>
     <section class="account-block">
+      <h3>Saved talks</h3>
+      <ul id="account-talks" hidden></ul>
+      <p id="account-talks-empty">Talks you save will be listed here, on this device.</p>
+    </section>
+    <section class="account-block">
+      <h3>Resources</h3>
+      <p>Dharma talks, guided meditations, and the lines that can close a sit. All of them are published on the Rama Meditation Society site. Each one opens in a new tab.</p>
+      <div id="account-resources"></div>
+    </section>
+    <section class="account-block">
       <h3>Privacy</h3>
-      <p>Your name, practice, glow, and reminder choices stay in this browser. Spotify's sign-in stays here until you disconnect. The sangha site keeps only the word-gate cookie, and, if reminders are on, an anonymous id with a push subscription and either a clock time or a place rounded to about a tenth of a degree. There is no account and no tracking.</p>
+      <p>Your name, practice, glow, saved talks, and reminder choices stay in this browser. Spotify's sign-in stays here until you disconnect. The sangha site keeps only the word-gate cookie, and, if reminders are on, an anonymous id with a push subscription and either a clock time or a place rounded to about a tenth of a degree. There is no account and no tracking.</p>
       <div class="links"><button class="quiet" type="button" id="account-wipe">Erase everything on this device</button></div>
       <div id="account-wipe-confirm" hidden>
-        <p>Erase everything on this device? The name, practice, reminders, Spotify sign-in, and the sangha word will be removed. This cannot be undone.</p>
+        <p>Erase everything on this device? The name, practice, settings, saved talks, reminders, Spotify sign-in, and the sangha word will be removed. This cannot be undone.</p>
         <div class="links">
           <button class="quiet" type="button" id="account-wipe-keep">Keep</button>
           <button class="quiet" type="button" id="account-wipe-yes">Erase everything</button>
@@ -2278,12 +2324,13 @@ if (window.YANTRA_WEB) {
     showRoom("account");
   });
   document.getElementById("practice-export").addEventListener("click", () => {
-    if (!window.YantraPractice) return;
-    const blob = new Blob([JSON.stringify(window.YantraPractice.exportData(), null, 2)], { type: "application/json" });
+    if (!window.YantraPractice && !window.yantraExportBundle) return;
+    const payload = window.yantraExportBundle ? window.yantraExportBundle() : window.YantraPractice.exportData();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "yantra-practice.json";
+    link.download = "yantra-export.json";
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -2298,9 +2345,15 @@ if (window.YANTRA_WEB) {
     document.getElementById("practice-actions").hidden = false;
   });
   document.getElementById("practice-erase-yes").addEventListener("click", () => {
-    if (window.YantraPractice) window.YantraPractice.erase();
-    document.getElementById("practice-actions").hidden = false;
-    paintPractice();
+    const finish = () => {
+      if (window.YantraSettings) window.YantraSettings.erase();
+      if (window.YantraPractice) window.YantraPractice.erase();
+      document.getElementById("practice-actions").hidden = false;
+      paintPractice();
+      if (window.paintAccount) window.paintAccount();
+    };
+    if (window.yantraForgetPush) window.yantraForgetPush().then(finish, finish);
+    else finish();
   });
   addEventListener("yantra:complete", () => {
     if (!sessionLive) return;
@@ -2378,19 +2431,30 @@ document.getElementById("end").addEventListener("click", endSitting);
 // yantra glows a little lower in the early morning and late evening.
 (function () {
   const slider = document.getElementById("glow");
+  const settings = window.YantraSettings;
   let saved = {};
-  try { saved = JSON.parse(localStorage.getItem("yantra.glow") || "{}"); } catch (e) {}
+  if (settings) saved = { level: settings.get("glow.level"), light: settings.get("theme.light") };
+  else {
+    try { saved = JSON.parse(localStorage.getItem("yantra.glow") || "{}"); } catch (e) {}
+  }
   const hour = new Date().getHours();
   const night = hour < 6 || hour >= 20;
   const apply = () => {
     document.documentElement.style.setProperty("--glow", (Number(slider.value) / 100).toFixed(2));
   };
   const keep = () => {
+    const level = Number(slider.value);
+    const light = document.body.classList.contains("light");
+    if (settings) {
+      settings.set("glow.level", level);
+      settings.set("theme.light", light);
+      return;
+    }
     try {
-      localStorage.setItem("yantra.glow", JSON.stringify({ level: Number(slider.value), light: document.body.classList.contains("light") }));
+      localStorage.setItem("yantra.glow", JSON.stringify({ level: level, light: light }));
     } catch (e) {}
   };
-  slider.value = saved.level || (night ? 80 : 100);
+  slider.value = saved.level != null && saved.level !== "" ? saved.level : (night ? 80 : 100);
   if (saved.light) document.body.classList.add("light");
   apply();
   slider.addEventListener("input", () => { apply(); keep(); rouse(); });

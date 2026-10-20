@@ -89,10 +89,17 @@ either a clock time or coordinates rounded to a tenth of a degree. Delete my
 reminder data removes that record. On iPhone and iPad the note arrives only
 from the Home Screen app.
 
-*Settings*, beside *Your practice*, is this device only. An optional name can
-greet you on the home screen and when a sit ends. It is not uploaded. Sign out
-clears the word-gate cookie. Erase everything on this device also clears
-practice, reminders, Spotify, and that name. Resources links to Rama's published
+*Settings*, beside *Your practice* and from the small mark at the top right, is
+this device only. Name, reminder choices, theme, glow, and saved talks live in
+one store, `yantra.settings.v1`. The practice record stays separate. An optional
+name can greet you on the home screen and when a sit ends. It is not uploaded.
+**Leave Yantra on this device** clears the word-gate cookie through `/logout`
+and returns to the word prompt, including from an iPhone or iPad home-screen
+app. **Sign out** is reserved for a later account and stays hidden. A Zazen
+access switch asks for the Zazen word through the existing gate, and can return
+to the sangha shelf without keeping that word. Export and erase cover the
+practice record, every setting, and saved talks. Erase everything on this
+device also clears Spotify and the cookie. Resources links to Rama's published
 talks, guided meditations, the lines that can close a sit, and the music, video,
 and books on the Rama Meditation Society site.
 
