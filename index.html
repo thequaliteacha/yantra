@@ -310,9 +310,19 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     color-scheme: dark;
   }
   #account-saved:empty { display: none; }
-  #account-resources { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.85rem; }
-  #account-resources a { color: #e6c98a; text-underline-offset: 3px; }
-  #account-resources span { display: block; margin-top: 0.15rem; color: rgba(243, 230, 200, 0.62); font-size: 0.92rem; line-height: 1.45; }
+  #account-resources { display: flex; flex-direction: column; gap: 0.35rem; }
+  #account-resources h4 {
+    margin: 0.85rem 0 0.1rem; font-weight: 500; font-size: 0.82rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: rgba(230, 201, 138, 0.78);
+  }
+  #account-resources h4:first-child { margin-top: 0.15rem; }
+  #account-resources ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+  #account-resources li {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem;
+    padding: 0; font-size: 1rem; color: inherit;
+  }
+  #account-resources a { color: #e6c98a; text-underline-offset: 3px; line-height: 1.35; }
+  #account-resources span { display: block; margin: 0; color: rgba(243, 230, 200, 0.62); font-size: 0.92rem; line-height: 1.45; }
   #account-signout-confirm[hidden], #account-wipe-confirm[hidden] { display: none; }
   #reminders[hidden] { display: none; }
   #reminders { margin-top: 0.4rem; padding-top: 1.2rem; border-top: 1px solid rgba(230, 201, 138, 0.16); text-align: left; }
@@ -589,8 +599,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     </section>
     <section class="account-block">
       <h3>Resources</h3>
-      <p>Dharma talks of Rama, Dr. Frederick Lenz, published on the Rama Meditation Society site, with the music, video, and books beside them. Each one opens in a new tab.</p>
-      <ul id="account-resources"></ul>
+      <p>Dharma talks, guided meditations, and the lines that can close a sit. All of them are published on the Rama Meditation Society site. Each one opens in a new tab.</p>
+      <div id="account-resources"></div>
     </section>
     <section class="account-block">
       <h3>Reminders</h3>

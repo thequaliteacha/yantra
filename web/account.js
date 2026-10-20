@@ -95,20 +95,26 @@
   }
 
   function paintResources() {
-    const list = document.getElementById("account-resources");
-    const items = window.YantraResources && window.YantraResources.list;
-    if (!list || !items || list.childElementCount) return;
-    items.forEach((item) => {
-      const row = document.createElement("li");
-      const link = document.createElement("a");
-      link.href = item.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = item.label;
-      const note = document.createElement("span");
-      note.textContent = item.note;
-      row.append(link, note);
-      list.append(row);
+    const root = document.getElementById("account-resources");
+    const groups = window.YantraResources && window.YantraResources.groups;
+    if (!root || !groups || root.childElementCount) return;
+    groups.forEach((group) => {
+      const heading = document.createElement("h4");
+      heading.textContent = group.heading;
+      const list = document.createElement("ul");
+      group.items.forEach((item) => {
+        const row = document.createElement("li");
+        const link = document.createElement("a");
+        link.href = item.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = item.label;
+        const note = document.createElement("span");
+        note.textContent = item.note;
+        row.append(link, note);
+        list.append(row);
+      });
+      root.append(heading, list);
     });
   }
 
