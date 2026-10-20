@@ -34,6 +34,9 @@ const env = {
       if (url.pathname === "/discs.json") {
         return new Response(discsText, { status: 200, headers: { "content-type": "application/json" } });
       }
+      if (url.pathname === "/web/talks.json") {
+        return new Response(JSON.stringify({ sets: [{ id: "rama-live-la", talks: [] }] }), { status: 200, headers: { "content-type": "application/json" } });
+      }
       if (url.pathname === "/web/quotes.json") {
         return new Response(quotesText, { status: 200, headers: { "content-type": "application/json" } });
       }
@@ -46,7 +49,7 @@ const env = {
   AUDIO: {
     async get(key, options) {
       gets.push(key);
-      if (key === "talks/balance.mp3" || key === "samurai/01.mp3" || key === "india-dream/03.mp3") {
+      if (["talks/balance.mp3", "talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3", "samurai/01.mp3", "india-dream/03.mp3", "awake-in-anza-borrego/02.mp3"].includes(key)) {
         return audioObject(options.range ? { headers: options.range } : { headers: new Headers() });
       }
       return null;
@@ -103,13 +106,20 @@ const zazenShelf = await (await route(withCookie("https://yantramedi.app/discs.j
 assert.ok(zazenShelf.discs.some((disc) => disc.circle === "zazen"));
 assert.ok(zazenShelf.discs.some((disc) => disc.circle === "vayu"));
 assert.ok(zazenShelf.discs.some((disc) => disc.circle === "lineage"));
-assert.ok(!zazenShelf.discs.some((disc) => disc.circle === "lumikara"));
-assert.ok(zazenShelf.circles.every((circle) => circle.id !== "lumikara"));
-assert.ok(!zazenShelf.discs.some((disc) => disc.id === "awake-in-anza-borrego"));
+assert.ok(zazenShelf.discs.some((disc) => disc.circle === "lumikara"), "Lumikara is on the Zazen shelf");
+assert.ok(zazenShelf.circles.some((circle) => circle.id === "lumikara"));
+for (const id of ["awake-in-anza-borrego", "mandala-of-light-lumikara", "night-vortex-in-shasta"]) {
+  assert.ok(zazenShelf.discs.some((disc) => disc.id === id), id + " for the Zazen word");
+}
+assert.ok(JSON.stringify(zazenShelf).includes("Stream of Gems"));
+assert.ok(sanghaShelf.circles.every((circle) => circle.id === "vayu"), "the Sangha word sees only the Vayu circle");
 
 const shown = visibleShelf(discs, "zazen");
 assert.ok(shown.discs.some((disc) => disc.id === "samurai"));
-assert.strictEqual(shown.discs.some((disc) => disc.circle === "lumikara"), false);
+assert.strictEqual(shown.discs.length, discs.discs.length, "the Zazen word opens every circle");
+const sanghaShown = visibleShelf(discs, "sangha");
+assert.ok(sanghaShown.discs.length > 0 && sanghaShown.discs.every((disc) => disc.circle === "vayu"));
+assert.ok(visibleShelf(discs, "").discs.every((disc) => disc.circle === "vayu"), "no level falls back to Vayu only");
 
 const sanghaLinks = await (await route(withCookie("https://yantramedi.app/web/tracks.json", sangha), env)).json();
 assert.strictEqual(sanghaLinks["awake-in-anza-borrego"], undefined);
@@ -117,18 +127,36 @@ assert.strictEqual(sanghaLinks.samurai, undefined);
 assert.ok(sanghaLinks["india-dream"]);
 
 const zazenLinks = await (await route(withCookie("https://yantramedi.app/web/tracks.json", zazen), env)).json();
-assert.strictEqual(zazenLinks["awake-in-anza-borrego"], undefined);
+assert.ok(zazenLinks["awake-in-anza-borrego"], "Lumikara links for the Zazen word");
 assert.ok(zazenLinks.samurai);
 assert.ok(zazenLinks["india-dream"]);
 
 gets.length = 0;
-const hiddenAlbum = await route(withCookie("https://yantramedi.app/web/audio/awake-in-anza-borrego/02.mp3", zazen), env);
-assert.strictEqual(hiddenAlbum.status, 404);
+const sanghaLumikara = await route(withCookie("https://yantramedi.app/web/audio/awake-in-anza-borrego/02.mp3", sangha), env);
+assert.strictEqual(sanghaLumikara.status, 403, "Lumikara audio is refused to the Sangha word");
 assert.ok(!gets.includes("awake-in-anza-borrego/02.mp3"));
 
+const zazenLumikara = await route(withCookie("https://yantramedi.app/web/audio/awake-in-anza-borrego/02.mp3", zazen, { range: "bytes=0-3" }), env);
+assert.strictEqual(zazenLumikara.status, 206, "Lumikara audio plays for the Zazen word");
+assert.ok(gets.includes("awake-in-anza-borrego/02.mp3"));
+
+gets.length = 0;
 const sanghaZazenAudio = await route(withCookie("https://yantramedi.app/web/audio/samurai/01.mp3", sangha), env);
-assert.strictEqual(sanghaZazenAudio.status, 404);
+assert.strictEqual(sanghaZazenAudio.status, 403);
 assert.ok(!gets.includes("samurai/01.mp3"));
+const sanghaVayuAudio = await route(withCookie("https://yantramedi.app/web/audio/india-dream/03.mp3", sangha), env);
+assert.strictEqual(sanghaVayuAudio.status, 200, "Vayu audio plays for the Sangha word");
+
+gets.length = 0;
+const sanghaTalkList = await route(withCookie("https://yantramedi.app/web/talks.json", sangha), env);
+assert.strictEqual(sanghaTalkList.status, 403, "the talk list is refused to the Sangha word");
+const sanghaLiveLa = await route(withCookie("https://yantramedi.app/talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3", sangha), env);
+assert.strictEqual(sanghaLiveLa.status, 403);
+assert.deepStrictEqual(gets, []);
+const zazenTalkList = await route(withCookie("https://yantramedi.app/web/talks.json", zazen), env);
+assert.strictEqual(zazenTalkList.status, 200);
+const zazenLiveLa = await route(withCookie("https://yantramedi.app/talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3", zazen), env);
+assert.strictEqual(zazenLiveLa.status, 200);
 
 const hosted = await route(withCookie("https://yantramedi.app/web/audio/samurai/01.mp3", zazen, { range: "bytes=0-3" }), env);
 assert.strictEqual(hosted.status, 206);

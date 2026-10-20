@@ -35,8 +35,9 @@
       discs.circles = (discs.circles || []).filter((circle) => circle.id === "vayu");
       discs.discs = discs.discs.filter((disc) => disc.circle === "vayu");
     }
-    discs.circles = (discs.circles || []).filter((circle) => circle.id !== "lumikara");
-    discs.discs = discs.discs.filter((disc) => disc.circle !== "lumikara");
+    // Lumikara is for the Zazen word only.
+    discs.circles = (discs.circles || []).filter((circle) => Playback.circleOpen(circle.id, level));
+    discs.discs = discs.discs.filter((disc) => Playback.circleOpen(disc.circle, level));
     sets = sessionSets;
     recordings = files || {};
     Object.assign(config, settings || {});
@@ -49,7 +50,11 @@
         const rows = await response.json().catch(() => []);
         window.yantraQuotes = Array.isArray(rows) ? rows : [];
       }
+      // Rama talks, for the Zazen word only (the Worker refuses talks.json to the Sangha word).
+      const talks = await realFetch("talks.json", { cache: "no-store" }).catch(() => null);
+      if (talks && talks.ok) window.yantraTalks = await talks.json().catch(() => null);
     }
+    if (typeof window.paintTalks === "function") window.paintTalks();
   });
 
   /* ---- the shelf ---- */
@@ -88,9 +93,10 @@
   }
 
   /* A disc is on the shelf when at least one of its songs can play here.
-     Lumikara is never part of the meditation. */
+     Lumikara is for the Zazen word only. */
+  const closedDisc = (disc) => !disc || !Playback.circleOpen(disc.circle, window.YANTRA_LEVEL);
   function playable(disc) {
-    if (!disc || disc.circle === "lumikara") return false;
+    if (closedDisc(disc)) return false;
     return disc.tracks.some((track) => itemPlayable({ discId: disc.id, n: track.n }));
   }
 
@@ -108,7 +114,7 @@
 
   function collectionPayload() {
     const payload = Object.assign({}, collection);
-    payload.circles = (collection.circles || []).filter((circle) => circle.id !== "lumikara");
+    payload.circles = (collection.circles || []).filter((circle) => Playback.circleOpen(circle.id, window.YANTRA_LEVEL));
     payload.discs = collection.discs.filter(playable).map((disc) => Object.assign({}, disc, {
       tracks: disc.tracks.filter((track) => itemPlayable({ discId: disc.id, n: track.n })).map((track) => Object.assign({}, track, { chakra: chakraOf(disc, track.n), installed: false })),
       onSpotify: !!disc.spotifyAlbum,
@@ -157,7 +163,7 @@
   function chakraPool(chakra) {
     const pool = [];
     for (const disc of collection.discs) {
-      if (!disc || disc.circle === "lumikara") continue;
+      if (closedDisc(disc)) continue;
       for (const track of disc.tracks) {
         if (chakraOf(disc, track.n) !== chakra) continue;
         if (!itemPlayable({ discId: disc.id, n: track.n })) continue;
@@ -922,12 +928,13 @@
       blocked: spotify.blocked === "unlisted" || spotify.blocked === "premium",
       failed: !!spotify.sessionFailed,
       failedKeys: failedKeys,
+      level: window.YANTRA_LEVEL || "",
     };
   }
 
   function itemPlayable(item) {
     const disc = item && DISCS[item.discId];
-    if (!disc || disc.circle === "lumikara") return false;
+    if (closedDisc(disc)) return false;
     return Playback.trackOffered({
       key: item.discId + "#" + item.n,
       circle: disc.circle,
@@ -976,7 +983,7 @@
      album chosen, each sit brings a different one, recorded ones first until
      Spotify is connected. */
   function albumFits(disc, count) {
-    if (!disc || disc.circle === "lumikara") return false;
+    if (closedDisc(disc)) return false;
     const offered = (track, chakra) => chakraOf(disc, track.n) === chakra && itemPlayable({ discId: disc.id, n: track.n });
     const sizes = CHAKRAS.map((chakra) => disc.tracks.filter((track) => offered(track, chakra)).length);
     if (!sizes.some((size) => size > 0)) return false;
@@ -1599,14 +1606,14 @@
     const albumId = String(payload.album || "");
     const name = String(payload.name || theme);
     const askedDisc = !mix && albumId ? DISCS[albumId] : null;
-    if (askedDisc && askedDisc.circle === "lumikara") {
+    if (askedDisc && closedDisc(askedDisc)) {
       const offer = makeOffer({
         reason: "offline",
         asked: askedDisc.title,
         askedId: askedDisc.id,
         theme, count, mode: "session",
       });
-      offer.text = "Lumikara isn't part of this meditation.";
+      offer.text = "Lumikara is for the Zazen word.";
       return [{ ok: false, error: offer.text, offer }, 409];
     }
     if (askedDisc && !askedDisc.tracks.some((track) => itemPlayable({ discId: askedDisc.id, n: track.n }))) {
@@ -1732,7 +1739,7 @@
     spotify.load();
     stopQueue();
     const disc = DISCS[payload.id];
-    if (!disc || disc.circle === "lumikara") return [{ ok: false, error: "That disc is not on the shelf." }, 404];
+    if (closedDisc(disc)) return [{ ok: false, error: "That disc is not on the shelf." }, 404];
     const albumItems = disc.tracks.filter((track) => itemPlayable({ discId: disc.id, n: track.n })).map((track) => ({ discId: disc.id, n: track.n }));
     if (!albumItems.length) {
       const offer = makeOffer({

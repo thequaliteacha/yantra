@@ -55,8 +55,18 @@ assert.strictEqual(P.spotifySdkSupported({ userAgent: "Mozilla/5.0 (Macintosh; I
 
 assert.strictEqual(P.trackOffered(maha, phone), false, "India Dream is Spotify-only and silent without a handset");
 assert.strictEqual(P.trackOffered(gems, phone), false);
-assert.strictEqual(P.trackOffered(gems, desktop), false, "Lumikara stays out even when Spotify works");
+assert.strictEqual(P.trackOffered(gems, desktop), false, "Lumikara stays out without the Zazen word, even when Spotify works");
 assert.strictEqual(P.trackOffered(gems, handset), false);
+const zazenDesktop = Object.assign({}, desktop, { level: "zazen" });
+const sanghaDesktop = Object.assign({}, desktop, { level: "sangha" });
+const zazenPhone = Object.assign({}, phone, { level: "zazen" });
+assert.strictEqual(P.trackOffered(gems, zazenDesktop), true, "Lumikara plays for the Zazen word where Spotify works");
+assert.strictEqual(P.trackOffered(gems, sanghaDesktop), false, "Lumikara is never offered to the Sangha word");
+assert.strictEqual(P.trackOffered(gems, zazenPhone), false, "a Spotify-only Lumikara song is still hidden on a phone");
+assert.strictEqual(P.circleOpen("lumikara", "zazen"), true);
+assert.strictEqual(P.circleOpen("lumikara", "sangha"), false);
+assert.strictEqual(P.circleOpen("lumikara", ""), false);
+assert.strictEqual(P.circleOpen("vayu", "sangha"), true);
 assert.strictEqual(P.trackOffered(maha, desktop), true);
 assert.strictEqual(P.trackOffered(maha, handset), true);
 assert.strictEqual(P.trackOffered(samurai, phone), true, "a hosted file still plays on a phone");
@@ -72,7 +82,6 @@ assert.strictEqual(P.trackOffered(maha, blocked), false);
 const lumikara = discs.discs.filter((disc) => disc.circle === "lumikara");
 assert.ok(lumikara.length >= 3);
 for (const disc of lumikara) {
-  assert.strictEqual(audio[disc.id], undefined, disc.id + " is not in the R2 manifest");
   for (const track of disc.tracks) {
     assert.strictEqual(P.trackOffered(asTrack(disc, track.n), desktop), false, disc.id + " #" + track.n);
   }
@@ -92,6 +101,19 @@ const desktopList = P.filterDiscs(discs.discs.map((disc) => Object.assign({}, di
 assert.ok(desktopList.some((disc) => disc.id === "india-dream"));
 assert.ok(desktopList.find((disc) => disc.id === "india-dream").tracks.some((track) => track.title === "Maha Ananda Siddha"));
 assert.ok(!desktopList.some((disc) => disc.circle === "lumikara"));
+
+const zazenList = P.filterDiscs(discs.discs.map((disc) => Object.assign({}, disc, {
+  tracks: disc.tracks.map((track) => asTrack(disc, track.n)),
+})), zazenDesktop);
+assert.ok(zazenList.some((disc) => disc.id === "awake-in-anza-borrego"), "Lumikara is in Zazen meditation lists");
+assert.ok(zazenList.find((disc) => disc.id === "awake-in-anza-borrego").tracks.some((track) => track.title.startsWith("Stream of Gems")));
+const sanghaList = P.filterDiscs(discs.discs.filter((disc) => disc.circle === "vayu").map((disc) => Object.assign({}, disc, {
+  tracks: disc.tracks.map((track) => asTrack(disc, track.n)),
+})), sanghaDesktop);
+assert.ok(sanghaList.length > 0 && sanghaList.every((disc) => disc.circle === "vayu"));
+const web = fs.readFileSync(path.join(__dirname, "web.js"), "utf8");
+assert.ok(!web.includes('disc.circle === "lumikara"'), "web.js gates Lumikara through circleOpen");
+assert.ok(web.includes("Playback.circleOpen(disc.circle, level)"));
 
 const watch = P.createProgressWatch(5000);
 assert.deepStrictEqual(watch.sample("spotify:track:maha", 0, true, 1000), { stalled: false, moved: false });
