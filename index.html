@@ -325,9 +325,15 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #account-resources span { display: block; margin: 0; color: rgba(243, 230, 200, 0.62); font-size: 0.92rem; line-height: 1.45; }
   #account-sync { min-height: 7.5rem; }
   #account-sync[hidden] { display: none; }
-  #account-talks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
-  #account-talks li { display: block; padding: 0; color: #f7edd4; font-size: 1rem; }
-  #account-talks[hidden], #account-talks-empty[hidden] { display: none; }
+  #account-talks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.7rem; }
+  #account-talks li {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem;
+    padding: 0; color: #f7edd4; font-size: 1rem;
+  }
+  #account-talks .links { margin-top: 0.15rem; justify-content: flex-start; }
+  #account-talks button:disabled { opacity: 0.45; cursor: default; text-decoration: none; }
+  #account-talks-audio { width: 100%; margin-top: 0.6rem; }
+  #account-talks[hidden], #account-talks-empty[hidden], #account-talks-note[hidden], #account-talks-audio[hidden] { display: none; }
   #account-signout-block[hidden], #account-leave-confirm[hidden], #account-zazen-ask[hidden], #account-zazen-drop[hidden], #account-wipe-confirm[hidden], #account-practice-rows[hidden] { display: none; }
   #account-practice-time, #account-practice-sits { text-align: center; }
   #account-corner {
@@ -451,7 +457,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <p><b>Choose an album</b> above the song counts, or let each sit bring a new one. <b>Mix It Up</b> draws the songs from across the albums instead.</p>
     <p>The yantra draws itself once with each song. Tap the screen to show <b>End sitting</b>.</p>
     <p><b>Keep it on your phone:</b> on Android, open the menu and choose <b>Install app</b> or <b>Add to Home screen</b>. On iPhone, tap <b>Share</b>, then <b>Add to Home Screen</b>.</p>
-    <p>Your sits are remembered on this device, on the account page under <b>Practice</b>. They are not sent anywhere. The mark at the top right opens that page: name, access level, Log out, Spotify, reminders, and the practice record.</p>
+    <p>Your sits are remembered on this device, on the account page under <b>Practice</b>. They are not sent anywhere. The mark at the top right opens that page: name, access level, Log out, practice, reminders, saved talks, and the other settings.</p>
   </div>
 </div>
 <div class="room" id="about" hidden>
@@ -621,16 +627,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <p>Sign out is reserved for a later account. It does not clear the word gate.</p>
       </div>
     </section>
-    <section class="account-block">
-      <h3>Spotify</h3>
-      <p id="account-spotify"></p>
-      <p id="account-spotify-note" hidden></p>
-      <div class="links">
-        <button class="quiet" type="button" id="account-spotify-connect" hidden>Connect</button>
-        <button class="quiet" type="button" id="account-spotify-disconnect" hidden>Disconnect</button>
-        <button class="quiet" type="button" id="account-spotify-clear" hidden>Forget the listener note</button>
-      </div>
-    </section>
     <section class="account-block" id="account-practice-block">
       <h3>Practice</h3>
       <p id="account-practice"></p>
@@ -644,20 +640,34 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       </div>
       <p>Export and erase cover practice, every setting, and saved talks. Spotify stays until you disconnect, or until Erase everything.</p>
     </section>
-    <section class="account-block">
+    <section class="account-block" id="account-reminders-block">
       <h3>Reminders</h3>
-      <p id="account-reminders-status"></p>
-      <div class="links"><button class="quiet" type="button" id="account-reminders">Reminder settings</button></div>
+      <p id="account-reminders-morning">Morning off</p>
+      <p id="account-reminders-evening">Evening off</p>
+      <p id="account-reminders-push">Notifications: checking…</p>
+      <div class="links"><button class="quiet" type="button" id="account-reminders">Edit reminders</button></div>
     </section>
-    <section class="account-block">
+    <section class="account-block" id="account-talks-block">
       <h3>Saved talks</h3>
+      <p id="account-talks-note">Each saved talk plays in the app. The list stays on this device.</p>
       <ul id="account-talks" hidden></ul>
-      <p id="account-talks-empty">Talks you save will be listed here, on this device.</p>
+      <p id="account-talks-empty">Save a talk in Dharma Talks and it is listed here, on this device.</p>
+      <audio id="account-talks-audio" playsinline preload="none" controls hidden></audio>
     </section>
     <section class="account-block">
       <h3>Resources</h3>
       <p>The Dharma Talks section on the Rama Meditation Society site. It holds the talks, the meditations, and the quotes from the end of the sits. Each link opens in a new tab.</p>
       <div id="account-resources"></div>
+    </section>
+    <section class="account-block">
+      <h3>Spotify</h3>
+      <p id="account-spotify"></p>
+      <p id="account-spotify-note" hidden></p>
+      <div class="links">
+        <button class="quiet" type="button" id="account-spotify-connect" hidden>Connect</button>
+        <button class="quiet" type="button" id="account-spotify-disconnect" hidden>Disconnect</button>
+        <button class="quiet" type="button" id="account-spotify-clear" hidden>Forget the listener note</button>
+      </div>
     </section>
     <section class="account-block">
       <h3>Privacy</h3>

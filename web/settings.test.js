@@ -84,6 +84,29 @@ assert.ok(page.includes('id="account-corner"'));
 assert.ok(page.includes('aria-label="Account"'));
 assert.ok(page.includes('id="account-zazen"'));
 assert.ok(page.includes('id="account-talks"'));
+assert.ok(page.includes('id="account-talks-audio"'));
+assert.ok(page.includes(">Edit reminders<"));
+const order = [
+  "<h3>Name</h3>",
+  "<h3>Access</h3>",
+  'id="account-practice-block"',
+  'id="account-reminders-block"',
+  'id="account-talks-block"',
+  "<h3>Resources</h3>",
+  "<h3>Spotify</h3>",
+  "<h3>Privacy</h3>",
+];
+let cursor = -1;
+order.forEach((mark) => {
+  const at = page.indexOf(mark);
+  assert.ok(at > cursor, mark);
+  cursor = at;
+});
+assert.ok(account.includes("summaryLines"));
+assert.ok(account.includes("YantraSavedTalks"));
+assert.ok(account.includes("entries()"));
+assert.ok(page.includes("YantraSettings.erase"));
+assert.ok(fs.readFileSync(path.join(__dirname, "index.html"), "utf8").includes("saved-talks.js"));
 assert.strictEqual(page.includes("SANGHA_WORD"), false);
 assert.strictEqual(page.includes("ZAZEN_WORD"), false);
 assert.ok(account.includes("flags.accountSync"));

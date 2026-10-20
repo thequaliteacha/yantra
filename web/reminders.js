@@ -14,6 +14,31 @@ const OFFSETS = [
   [60, "60 minutes after"],
 ];
 
+function lineFor(label, pref, solar) {
+  if (!pref || !pref.on) return label + " off";
+  if (pref.mode === "clock") {
+    const time = /^([01]\d|2[0-3]):[0-5]\d$/.test(pref.time || "") ? pref.time : (label === "Evening" ? "19:00" : "06:30");
+    return label + " on · " + time;
+  }
+  const sun = pref.mode === "sunset" || pref.mode === "sunrise" ? pref.mode : solar;
+  let phrase = label + " on · " + sun;
+  const offset = Number(pref.offset);
+  if (Number.isFinite(offset) && offset !== 0) {
+    const minutes = Math.abs(Math.round(offset));
+    phrase += " · " + minutes + " minute" + (minutes === 1 ? "" : "s") + " " + (offset < 0 ? "before" : "after");
+  }
+  return phrase;
+}
+
+/* What the account page shows. It does not ask for notification permission. */
+export function summaryLines(record) {
+  const raw = record && typeof record === "object" ? record : {};
+  return {
+    morning: lineFor("Morning", raw.morning, "sunrise"),
+    evening: lineFor("Evening", raw.evening, "sunset"),
+  };
+}
+
 function load() {
   const settings = window.YantraSettings;
   if (settings) {
@@ -337,5 +362,9 @@ function boot() {
   }
 }
 
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-else boot();
+if (typeof window !== "undefined") window.YantraReminders = { load, summaryLines };
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+}

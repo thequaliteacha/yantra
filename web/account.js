@@ -42,10 +42,24 @@
     }
   }
 
-  function reminderLine() {
-    const raw = reminderRecord();
-    const on = (theme) => raw[theme] && raw[theme].on;
-    return "Morning " + (on("morning") ? "on" : "off") + " · Evening " + (on("evening") ? "on" : "off");
+  function notificationLine() {
+    if (typeof Notification === "undefined") return "Notifications: unsupported";
+    if (Notification.permission === "granted") return "Notifications: granted";
+    if (Notification.permission === "denied") return "Notifications: denied";
+    return "Notifications: default";
+  }
+
+  function paintReminders() {
+    const record = reminderRecord();
+    const lines = window.YantraReminders
+      ? window.YantraReminders.summaryLines(record)
+      : { morning: "Morning off", evening: "Evening off" };
+    const morning = document.getElementById("account-reminders-morning");
+    const evening = document.getElementById("account-reminders-evening");
+    const push = document.getElementById("account-reminders-push");
+    if (morning) morning.textContent = lines.morning;
+    if (evening) evening.textContent = lines.evening;
+    if (push) push.textContent = notificationLine();
   }
 
   function paintProfile() {
@@ -100,19 +114,83 @@
     if (signOut) signOut.hidden = !showSignOut;
   }
 
-  function paintTalks() {
+  let talkRowsPromise = null;
+
+  function savedIds() {
+    if (window.YantraSavedTalks) return window.YantraSavedTalks.saved();
+    const list = settings() ? settings().get("talks.saved") : [];
+    return Array.isArray(list) ? list : [];
+  }
+
+  function catalogRows() {
+    if (!talkRowsPromise) {
+      talkRowsPromise = fetch("talks.json", { cache: "no-store" })
+        .then((response) => (response.ok ? response.json() : []))
+        .then((data) => (window.YantraSavedTalks ? window.YantraSavedTalks.rowsOf(data) : []))
+        .catch(() => []);
+    }
+    return talkRowsPromise;
+  }
+
+  function playSaved(item) {
+    if (!item || typeof item.url !== "string" || item.url.charAt(0) !== "/") return;
+    if (typeof window.yantraOpenTalk === "function") {
+      window.yantraOpenTalk(item.id);
+      return;
+    }
+    const audio = document.getElementById("account-talks-audio");
+    if (!audio) return;
+    document.querySelectorAll("audio").forEach((node) => {
+      if (node !== audio && !node.paused) node.pause();
+    });
+    if (audio.getAttribute("src") !== item.url) audio.src = item.url;
+    audio.hidden = false;
+    const pending = audio.play();
+    if (pending) pending.catch(() => {});
+  }
+
+  async function paintTalks() {
     const list = document.getElementById("account-talks");
     const empty = document.getElementById("account-talks-empty");
+    const note = document.getElementById("account-talks-note");
     if (!list) return;
-    const saved = settings() ? settings().get("talks.saved") : [];
+    const saved = savedIds();
+    const rows = await catalogRows();
+    if (savedIds().join() !== saved.join()) return paintTalks();
     list.replaceChildren();
     saved.forEach((id) => {
+      const known = rows.find((row) => row && row.id === id) || null;
+      const playable = known && window.YantraSavedTalks ? window.YantraSavedTalks.playable(known) : null;
       const row = document.createElement("li");
-      row.textContent = id;
+      const title = document.createElement("span");
+      title.textContent = (playable && playable.title) || (known && known.title) || id;
+      const actions = document.createElement("div");
+      actions.className = "links";
+      const play = document.createElement("button");
+      play.type = "button";
+      play.className = "quiet";
+      play.textContent = "Play";
+      if (playable) play.addEventListener("click", () => playSaved(playable));
+      else {
+        play.disabled = true;
+        play.title = "This talk is not listed on this copy yet.";
+      }
+      const unsave = document.createElement("button");
+      unsave.type = "button";
+      unsave.className = "quiet";
+      unsave.textContent = "Unsave";
+      unsave.addEventListener("click", () => {
+        if (window.YantraSavedTalks) window.YantraSavedTalks.toggle(id);
+        else if (settings()) settings().set("talks.saved", savedIds().filter((item) => item !== id));
+        paintTalks();
+      });
+      actions.append(play, unsave);
+      row.append(title, actions);
       list.append(row);
     });
     list.hidden = !saved.length;
     if (empty) empty.hidden = saved.length > 0;
+    if (note) note.hidden = !saved.length;
   }
 
   async function paintAccess() {
@@ -145,9 +223,8 @@
     paintPractice();
     paintSpotify();
     paintAccess();
+    paintReminders();
     paintTalks();
-    const reminders = document.getElementById("account-reminders-status");
-    if (reminders) reminders.textContent = reminderLine();
     paintResources();
     paintGreeting();
   }
