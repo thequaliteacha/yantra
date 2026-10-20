@@ -1,3 +1,7 @@
+import { indexEntry, runReminders } from "./dispatch.js";
+import { sendPush } from "./push.js";
+import { sanitizeSchedule } from "../../web/schedule.js";
+
 /* Sangha edition of Yantra on Cloudflare.
  *
  * The page, discs.json and web/ are static assets. Requests under /web/audio/
@@ -32,7 +36,7 @@ const SAFETY = {
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY",
   "strict-transport-security": "max-age=31536000; includeSubDomains",
-  "permissions-policy": "camera=(), geolocation=(), payment=(), usb=(), microphone=(), autoplay=(self)",
+  "permissions-policy": "camera=(), geolocation=(self), payment=(), usb=(), microphone=(), autoplay=(self)",
   "cross-origin-opener-policy": "same-origin",
 };
 
@@ -42,6 +46,9 @@ export default {
     const headers = new Headers(response.headers);
     for (const [name, value] of Object.entries(SAFETY)) headers.set(name, value);
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  },
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(runReminders(env, Date.now(), sendPush));
   },
 };
 
@@ -72,6 +79,13 @@ async function route(request, env) {
     }
     const zazen = level === "zazen";
 
+    if (url.pathname === "/push/key" && request.method === "GET") return pushKey(env);
+    if (url.pathname === "/push" && request.method === "POST") return saveReminder(request, env);
+    if (url.pathname === "/push/delete" && request.method === "POST") return deleteReminder(request, env);
+    if (url.pathname === "/push" || url.pathname === "/push/key" || url.pathname === "/push/delete") {
+      return new Response("Method not allowed", { status: 405 });
+    }
+
     if (url.pathname === "/discs.json") return shelf(request, env, zazen);
     if (url.pathname === "/web/tracks.json" || url.pathname === "/web/audio.json") return trackLinks(request, env, zazen);
     if (url.pathname.startsWith(PREFIX)) return recording(request, env, url, zazen);
@@ -89,10 +103,95 @@ async function gatedIds(request, env) {
   return new Set(discs.discs.filter((d) => d.circle !== OPEN_CIRCLE).map((d) => d.id));
 }
 
-function privateJson(data) {
+function privateJson(data, status) {
   return new Response(JSON.stringify(data), {
+    status: status || 200,
     headers: { "content-type": "application/json", "cache-control": "private, no-store", vary: "cookie" },
   });
+}
+
+const ANON = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function remindersUnavailable() {
+  return privateJson({ error: "Reminders are not turned on for this site yet. The times stay on this device." }, 503);
+}
+
+export async function pushKey(env) {
+  if (!env.REMINDERS || !env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return remindersUnavailable();
+  return privateJson({ publicKey: env.VAPID_PUBLIC_KEY });
+}
+
+async function readReminderBody(request) {
+  const text = await request.text();
+  if (text.length > 8000) return null;
+  try {
+    const data = JSON.parse(text);
+    return data && typeof data === "object" ? data : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function cleanSubscription(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const endpoint = raw.endpoint;
+  const keys = raw.keys || {};
+  if (typeof endpoint !== "string" || !endpoint.startsWith("https://") || endpoint.length > 2000) return null;
+  if (typeof keys.p256dh !== "string" || typeof keys.auth !== "string") return null;
+  if (keys.p256dh.length < 8 || keys.p256dh.length > 200 || keys.auth.length < 4 || keys.auth.length > 100) return null;
+  return { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } };
+}
+
+async function readIndex(env) {
+  try {
+    const parsed = JSON.parse(await env.REMINDERS.get("index") || "[]");
+    return Array.isArray(parsed) ? parsed.filter((row) => row && row.id) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function writeIndexRow(env, id, entry) {
+  const index = (await readIndex(env)).filter((row) => row.id !== id);
+  if (entry && entry.at) index.push({ id, at: entry.at });
+  await env.REMINDERS.put("index", JSON.stringify(index));
+}
+
+async function loadReminder(env, id) {
+  try {
+    const parsed = JSON.parse(await env.REMINDERS.get("sub:" + id) || "null");
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function saveReminder(request, env) {
+  if (!env.REMINDERS || !env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return remindersUnavailable();
+  const body = await readReminderBody(request);
+  if (!body || !ANON.test(body.id || "")) return privateJson({ error: "The reminder could not be saved." }, 400);
+  const schedule = sanitizeSchedule(body);
+  const subscription = cleanSubscription(body.subscription);
+  const existing = await loadReminder(env, body.id);
+  const record = Object.assign({}, schedule, {
+    subscription: subscription || (existing && existing.subscription) || null,
+    sent: (existing && existing.sent) || {},
+  });
+  const wants = record.morning.on || record.evening.on;
+  if (wants && !record.subscription) return privateJson({ error: "The reminder could not be saved." }, 400);
+  await env.REMINDERS.put("sub:" + body.id, JSON.stringify(record));
+  const entry = wants ? indexEntry(body.id, record, Date.now()) : null;
+  await writeIndexRow(env, body.id, entry);
+  return privateJson({ ok: true });
+}
+
+export async function deleteReminder(request, env) {
+  if (!env.REMINDERS) return privateJson({ ok: true });
+  const body = await readReminderBody(request);
+  if (!body || !ANON.test(body.id || "")) return privateJson({ error: "The reminder data could not be deleted." }, 400);
+  await env.REMINDERS.delete("sub:" + body.id);
+  await writeIndexRow(env, body.id, null);
+  return privateJson({ ok: true });
 }
 
 async function shelf(request, env, zazen) {

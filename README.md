@@ -80,6 +80,15 @@ Nothing is uploaded. A sit counts after one minute of listening; paused time
 does not. Morning and evening each keep their own run of days, and either one
 keeps the daily run. The day is the device's own date.
 
+Morning and evening reminders are on that same page, each one on or off by
+itself. A reminder can follow sunrise or sunset (a few minutes before or after,
+if you like) or a time you set. The sun is calculated on the device. A place
+stays there too: typed as a city or rounded coordinates, or read only when you
+ask. What leaves the device is an anonymous id, the push subscription, and
+either a clock time or coordinates rounded to a tenth of a degree. Delete my
+reminder data removes that record. On iPhone and iPad the note arrives only
+from the Home Screen app.
+
 ### Setting up the connections (once, by the site owner)
 
 `web/config.json` holds one public value:
@@ -111,6 +120,20 @@ python3 web/build_audio.py ~/Music/vayu-sangha ~/Music/zazen-sangha   # stage re
 deploy/cloudflare/upload.sh                      # send new recordings to R2
 deploy/cloudflare/build.sh && wrangler deploy    # build and publish the site
 ```
+
+Reminders need a one-time setup before the first deploy that includes them.
+From `deploy/cloudflare`:
+
+```sh
+./setup-reminders.sh
+./build.sh && npx -y wrangler@4.151.0 deploy
+```
+
+The script creates a KV namespace named REMINDERS, writes its id into
+`wrangler.jsonc`, and stores `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`. It
+does not replace keys that are already set. `./setup-reminders.sh --rotate`
+makes a new pair, and phones then save their reminders again. The usual build
+and deploy is enough after that. The Worker checks for a reminder once a minute.
 
 The old GitHub Pages address now forwards to yantramedi.app.
 
