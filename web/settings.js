@@ -2,7 +2,7 @@
    yantra.settings.v1. The practice record stays in yantra.practice.v1. */
 (function (root) {
   const KEY = "yantra.settings.v1";
-  const KEY_RE = /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){0,4}$/;
+  const KEY_RE = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){0,4}$/;
   const GREETINGS = ["none", "hello", "time"];
   const LEVELS = ["", "sangha", "zazen"];
   const DEFAULTS = {
@@ -16,6 +16,25 @@
     "account.preferredMethod": "telegram",
     "flags.accountSync": false,
     "flags.accountSignOut": false,
+    "sit.minutes": 15,
+    "sit.midway": "none",
+    "sit.background": "silent",
+    "sit.bedVolume": 0.35,
+    "bell.on": true,
+    "bell.volume": 0.7,
+    "bell.ending": true,
+    "bell.sameTone": true,
+    "bell.startTone": "medium",
+    "bell.startStrikes": null,
+    "bell.midStrikes": null,
+    "bell.endStrikes": null,
+    "bell.endTone": "medium",
+    "bell.midTone": null,
+    "bell.halfTone": "medium",
+    "bell.quarterTone": "medium",
+    "bell.threeQuarterTone": "medium",
+    "glow.levelDark": null,
+    "glow.levelLight": null,
   };
   const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow"];
   const listeners = new Set();
@@ -71,6 +90,15 @@
         if (typeof id === "string" && /^[\w.-]{1,80}$/.test(id) && ids.indexOf(id) < 0) ids.push(id);
       });
       return ids.slice(0, 200);
+    }
+    if (key === "bell.startStrikes" || key === "bell.midStrikes" || key === "bell.endStrikes") {
+      if (value === null || value === undefined || value === "") return null;
+      const count = Number(value);
+      if (count === 0 || count === 1 || count === 2 || count === 3 || count === 4) return count;
+      return null;
+    }
+    if (key === "bell.startTone" || key === "bell.endTone" || key === "bell.halfTone" || key === "bell.quarterTone" || key === "bell.threeQuarterTone") {
+      return value === "small" || value === "medium" || value === "deep" ? value : "medium";
     }
     if (key === "theme.light" || key === "flags.accountSync" || key === "flags.accountSignOut") return !!value;
     if (key === "glow.level") {
