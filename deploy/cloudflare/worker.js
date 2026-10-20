@@ -164,13 +164,15 @@ export function signOutResponse() {
   });
 }
 
-/* A real navigation, so iOS standalone replaces the app with the word prompt. */
+/* A real navigation, so iOS standalone replaces the app with the word prompt.
+   The status is 200: a home-screen app will not show a 401 body, so Log out
+   would clear the cookie and leave Stephen on the account page. */
 export function logoutResponse() {
   const page = gatePage("");
   const headers = new Headers(page.headers);
   headers.set("set-cookie", CLEAR_COOKIE);
   headers.set("cache-control", "no-store");
-  return new Response(page.body, { status: page.status, headers });
+  return new Response(page.body, { status: 200, headers });
 }
 
 /* Drop Zazen privilege without asking for a word, and without storing one. */

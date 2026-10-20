@@ -18,7 +18,7 @@ const body = await out.json();
 assert.strictEqual(body.ok, true);
 
 const left = logoutResponse();
-assert.strictEqual(left.status, 401);
+assert.strictEqual(left.status, 200);
 const leftCookie = left.headers.get("set-cookie");
 assert.ok(leftCookie.startsWith("yantra=;"));
 assert.ok(leftCookie.includes("Max-Age=0"));

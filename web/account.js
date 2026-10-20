@@ -58,10 +58,7 @@
   }
 
   function paintPractice() {
-    const node = document.getElementById("account-practice");
-    const practice = window.YantraPractice;
-    if (!node || !practice) return;
-    node.textContent = practice.lead(practice.summary());
+    if (typeof window.paintPractice === "function") window.paintPractice();
   }
 
   function paintSpotify() {
@@ -128,8 +125,8 @@
       if (!response.ok) throw new Error("closed");
       const data = await response.json();
       level = data.level === "zazen" || data.level === "sangha" ? data.level : "";
-      if (level === "zazen") node.textContent = "Sangha and Zazen. The full shelf is open.";
-      else if (level === "sangha") node.textContent = "Sangha word. The Vayu recordings are open.";
+      if (level === "zazen") node.textContent = "Access level: Zazen. The full shelf is open.";
+      else if (level === "sangha") node.textContent = "Access level: Sangha. The Vayu recordings are open.";
       else node.textContent = "The word gate is not open in this copy.";
     } catch (e) {
       node.textContent = "The word gate is not open in this copy.";
@@ -137,8 +134,8 @@
     if (settings() && level) settings().set("access.level", level);
     if (zazen) {
       zazen.hidden = !level;
-      zazen.setAttribute("aria-pressed", String(level === "zazen"));
-      zazen.textContent = level === "zazen" ? "Zazen access on" : "Zazen access";
+      zazen.setAttribute("aria-checked", String(level === "zazen"));
+      zazen.textContent = level === "zazen" ? "Switch to Sangha" : "Switch to Zazen";
     }
   }
 
@@ -254,7 +251,7 @@
     const zazen = document.getElementById("account-zazen");
     if (zazen) {
       zazen.addEventListener("click", () => {
-        if (zazen.getAttribute("aria-pressed") === "true") showConfirm("account-zazen-drop", true);
+        if (zazen.getAttribute("aria-checked") === "true") showConfirm("account-zazen-drop", true);
         else showConfirm("account-zazen-ask", true);
       });
     }
@@ -266,6 +263,14 @@
         if (status) status.textContent = "Zazen access stayed on. The word gate did not change.";
       });
     });
+    const openPractice = document.getElementById("account-practice-open");
+    if (openPractice) {
+      openPractice.addEventListener("click", () => {
+        const practice = document.getElementById("practice");
+        if (practice) practice.dataset.from = "account";
+        if (typeof window.showRoom === "function") window.showRoom("practice");
+      });
+    }
     document.getElementById("account-leave").addEventListener("click", () => showConfirm("account-leave-confirm", true));
     document.getElementById("account-leave-keep").addEventListener("click", () => showConfirm("account-leave-confirm", false));
     document.getElementById("account-spotify-connect").addEventListener("click", () => {
