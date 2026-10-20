@@ -15,7 +15,7 @@ const account = fs.readFileSync(path.join(__dirname, "account.js"), "utf8");
 const practiceAt = page.indexOf("<h3>Practice</h3>");
 const resourcesAt = page.indexOf("<h3>Resources</h3>");
 assert.ok(practiceAt > 0 && resourcesAt > practiceAt);
-assert.ok(page.includes('id="account-library"'));
+assert.ok(page.includes('id="account-resources"'));
 assert.strictEqual(account.includes('target = "_blank"'), false);
 assert.strictEqual(account.includes("noopener"), false);
 assert.strictEqual(account.includes("iframe"), false);

@@ -1,11 +1,13 @@
 /* Dharma Talks on this site. web/talks.json is the list.
-   A talk or a meditation plays from /talks/<id>.<ext> in the R2 bucket.
+   A talk or a meditation plays from /talks/ in the R2 bucket.
+   The key may include one folder, as in talks/rama-live-la/<id>.mp3.
    A quote is the text in the manifest. source is never turned into a link. */
 (function (root) {
   const CREDIT = "from the Rama Meditation Society";
+  const COLLECTIONS = ["Dharma Talks", "Rama Live LA"];
   const KINDS = ["talk", "meditation", "quote"];
   const ID = /^[a-z0-9][a-z0-9-]{0,80}$/;
-  const KEY = /^talks\/([a-z0-9][a-z0-9-]{0,80})\.([a-z0-9]{1,8})$/;
+  const KEY = /^talks\/(?:[a-z0-9][a-z0-9-]{0,40}\/)*([a-z0-9][a-z0-9-]{0,80})\.([a-z0-9]{1,8})$/;
   const HEADINGS = { talk: "Talks", meditation: "Meditations", quote: "Quotes" };
 
   function clean(value, max) {
@@ -22,6 +24,8 @@
     const size = Number(raw.size);
     if (!Number.isFinite(duration) || duration < 0 || duration > 8 * 3600) return null;
     if (!Number.isFinite(size) || size < 0 || size > 2 * 1024 * 1024 * 1024) return null;
+    const collection = clean(raw.collection, 80);
+    if (!collection || /https?:|\/\//i.test(collection)) return null;
     const text = typeof raw.text === "string" ? raw.text.trim().slice(0, 4000) : "";
     let r2Key = "";
     if (raw.r2Key) {
@@ -36,6 +40,7 @@
       title,
       description: clean(raw.description, 600),
       kind: raw.kind,
+      collection,
       duration: Math.round(duration),
       size: Math.round(size),
       source: typeof raw.source === "string" ? raw.source.trim().slice(0, 300) : "",
@@ -66,6 +71,24 @@
     })).filter((group) => group.items.length);
   }
 
+  /* Dharma Talks, then Rama Live LA, then any later collection in list order. */
+  function collections(items) {
+    const seen = [];
+    items.forEach((item) => {
+      if (!seen.includes(item.collection)) seen.push(item.collection);
+    });
+    const names = COLLECTIONS.filter((name) => seen.includes(name))
+      .concat(seen.filter((name) => !COLLECTIONS.includes(name)));
+    return names.map((name) => ({
+      collection: name,
+      groups: groups(items.filter((item) => item.collection === name)),
+    }));
+  }
+
+  function slug(name) {
+    return String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "collection";
+  }
+
   /* Fields the room is allowed to show. source stays off the screen. */
   function view(item) {
     return {
@@ -78,11 +101,22 @@
     };
   }
 
-  const api = { CREDIT, KINDS, entry, catalog, groups, view };
+  const api = { CREDIT, COLLECTIONS, KINDS, entry, catalog, groups, collections, view };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 
   let current = null;
   let dragging = false;
+  let focusName = "";
+
+  async function loadItems() {
+    try {
+      const response = await fetch("talks.json", { cache: "no-store" });
+      if (!response.ok) throw new Error("missing");
+      return catalog(await response.json());
+    } catch (e) {
+      return [];
+    }
+  }
 
   function clock(seconds) {
     const whole = Math.max(0, Math.round(Number(seconds) || 0));
@@ -121,7 +155,7 @@
     session.metadata = new MediaMetadata({
       title: item.title,
       artist: "Rama",
-      album: "Dharma Talks",
+      album: item.collection || "Dharma Talks",
       artwork: [{ src: art, sizes: "180x180", type: "image/png" }],
     });
     const seekTo = (time) => {
@@ -154,17 +188,30 @@
     if (audio && !audio.paused) audio.pause();
   }
 
+  function rowFor(item) {
+    const row = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "talk";
+    const name = document.createElement("span");
+    name.textContent = item.title;
+    const meta = document.createElement("small");
+    const bits = [];
+    if (item.example) bits.push("Example");
+    if (item.kind === "quote") bits.push("Text");
+    else if (item.duration) bits.push(clock(item.duration));
+    if (item.description) bits.push(item.description);
+    meta.textContent = bits.join(" · ");
+    button.append(name, meta);
+    button.addEventListener("click", () => openItem(item));
+    row.append(button);
+    return row;
+  }
+
   async function paint() {
     const list = document.getElementById("talks-list");
     if (!list) return;
-    let items = [];
-    try {
-      const response = await fetch("talks.json", { cache: "no-store" });
-      if (!response.ok) throw new Error("missing");
-      items = catalog(await response.json());
-    } catch (e) {
-      items = [];
-    }
+    const items = await loadItems();
     const note = document.getElementById("talks-example");
     if (note) note.hidden = !(items.length && items.every((item) => item.example));
     list.replaceChildren();
@@ -174,30 +221,44 @@
       list.append(empty);
       return;
     }
-    groups(items).forEach((group) => {
+    const wanted = focusName;
+    focusName = "";
+    collections(items).forEach((set) => {
+      const block = document.createElement("section");
+      block.id = "talks-collection-" + slug(set.collection);
       const heading = document.createElement("h3");
-      heading.textContent = group.heading;
-      const ul = document.createElement("ul");
-      group.items.forEach((item) => {
-        const row = document.createElement("li");
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "talk";
-        const name = document.createElement("span");
-        name.textContent = item.title;
-        const meta = document.createElement("small");
-        const bits = [];
-        if (item.example) bits.push("Example");
-        if (item.kind === "quote") bits.push("Text");
-        else if (item.duration) bits.push(clock(item.duration));
-        if (item.description) bits.push(item.description);
-        meta.textContent = bits.join(" · ");
-        button.append(name, meta);
-        button.addEventListener("click", () => openItem(item));
-        row.append(button);
-        ul.append(row);
+      heading.textContent = set.collection;
+      block.append(heading);
+      set.groups.forEach((group) => {
+        const kind = document.createElement("h4");
+        kind.textContent = group.heading;
+        const ul = document.createElement("ul");
+        group.items.forEach((item) => ul.append(rowFor(item)));
+        block.append(kind, ul);
       });
-      list.append(heading, ul);
+      list.append(block);
+    });
+    if (wanted) {
+      const node = document.getElementById("talks-collection-" + slug(wanted));
+      if (node && node.scrollIntoView) node.scrollIntoView({ block: "start" });
+    }
+  }
+
+  async function paintResources() {
+    const host = document.getElementById("account-resources");
+    if (!host) return;
+    const items = await loadItems();
+    host.replaceChildren();
+    collections(items).forEach((set) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "choice";
+      button.textContent = set.collection;
+      button.addEventListener("click", () => {
+        focusName = set.collection;
+        if (typeof window.showRoom === "function") window.showRoom("talks");
+      });
+      host.append(button);
     });
   }
 
@@ -289,6 +350,7 @@
   if (root) {
     root.YantraTalks = api;
     root.paintTalkLibrary = paint;
+    root.paintTalkResources = paintResources;
     root.yantraTalksPause = pauseTalk;
     if (typeof document !== "undefined") {
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

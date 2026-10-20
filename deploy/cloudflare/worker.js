@@ -276,7 +276,7 @@ async function recording(request, env, url, zazen) {
   return objectAudio(request, object, "audio/mpeg");
 }
 
-const TALK_KEY = /^talks\/[a-z0-9][a-z0-9-]{0,80}\.[a-z0-9]{1,8}$/;
+const TALK_KEY = /^talks\/(?:[a-z0-9][a-z0-9-]{0,40}\/)*[a-z0-9][a-z0-9-]{0,80}\.[a-z0-9]{1,8}$/;
 const AUDIO_TYPES = {
   mp3: "audio/mpeg",
   m4a: "audio/mp4",

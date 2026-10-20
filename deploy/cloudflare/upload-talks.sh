@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Upload staged talks (web/talks-stage/<id>.<ext>) into talks/ on the private R2
-# bucket, skipping keys already there. The names come from web/talks.json.
+# Upload staged talks into talks/ on the private R2 bucket, skipping keys already
+# there. A key may include a folder, so talks/rama-live-la/<id>.mp3 is staged at
+# web/talks-stage/rama-live-la/<id>.mp3. The names come from web/talks.json.
 # Needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. Does not deploy.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
@@ -41,7 +42,7 @@ while true; do
 done
 
 cd "$here"
-jq -r '.[] | .r2Key // empty | select(test("^talks/[a-z0-9][a-z0-9-]*\\.[a-z0-9]+$"))' "$manifest" | while read -r key; do
+jq -r '.[] | .r2Key // empty | select(test("^talks/(?:[a-z0-9][a-z0-9-]*/)*[a-z0-9][a-z0-9-]*\\.[a-z0-9]+$"))' "$manifest" | while read -r key; do
   if grep -qxF "$key" <<<"$existing"; then continue; fi
   file="$stage/${key#talks/}"
   if [[ ! -f "$file" ]]; then

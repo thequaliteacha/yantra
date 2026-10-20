@@ -4,6 +4,7 @@
     "title": "Example talk",
     "description": "Example data. Not a recording. A real talk replaces this row when talks.json is updated.",
     "kind": "talk",
+    "collection": "Dharma Talks",
     "duration": 90,
     "size": 0,
     "source": "example",
@@ -15,6 +16,7 @@
     "title": "Example meditation",
     "description": "Example data. Not a recording. It will play from the bucket once that object is uploaded.",
     "kind": "meditation",
+    "collection": "Dharma Talks",
     "duration": 600,
     "size": 0,
     "source": "example",
@@ -26,11 +28,24 @@
     "title": "Example quote",
     "description": "Example data. Quotes are text in this manifest, not a page on another site.",
     "kind": "quote",
+    "collection": "Dharma Talks",
     "duration": 0,
     "size": 0,
     "source": "example",
     "r2Key": "",
     "text": "Example quote. The line from the end of a sit will replace this when the real manifest is added.",
+    "example": true
+  },
+  {
+    "id": "example-live",
+    "title": "Example live talk",
+    "description": "Example data. Not a recording. Rama Live LA files use a folder in the bucket key.",
+    "kind": "talk",
+    "collection": "Rama Live LA",
+    "duration": 120,
+    "size": 0,
+    "source": "example",
+    "r2Key": "talks/rama-live-la/example-live.mp3",
     "example": true
   }
 ]

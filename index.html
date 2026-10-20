@@ -304,8 +304,14 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #talks h2 { margin-bottom: 0.15rem; }
   #talks .credit { margin: 0; color: rgba(232, 204, 146, 0.72); font-size: 0.92rem; }
   #talks-example { font-size: 0.92rem; color: rgba(232, 204, 146, 0.75); }
+  #account-resources { display: flex; flex-direction: column; gap: 0.65rem; }
+  #account-resources .choice { padding: 0.85rem 0; }
   #talks-list h3 {
-    margin: 1rem 0 0.15rem; font-weight: 500; font-size: 0.82rem; letter-spacing: 0.12em;
+    margin: 1.25rem 0 0.15rem; font-weight: 500; font-size: 1.15rem; letter-spacing: 0.02em;
+    text-transform: none; color: #f7edd4;
+  }
+  #talks-list h4 {
+    margin: 0.85rem 0 0.1rem; font-weight: 500; font-size: 0.82rem; letter-spacing: 0.12em;
     text-transform: uppercase; color: rgba(230, 201, 138, 0.78);
   }
   #talks-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
@@ -647,7 +653,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <h3>Resources</h3>
       <p>Dharma talks, the meditations, and the quotes from the end of the sits.</p>
       <p class="account-credit">from the Rama Meditation Society</p>
-      <button class="choice" type="button" id="account-library" data-room="talks">Dharma Talks</button>
+      <div id="account-resources"></div>
     </section>
     <section class="account-block">
       <h3>Privacy</h3>

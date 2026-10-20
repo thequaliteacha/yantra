@@ -151,6 +151,7 @@
     paintTalks();
     const reminders = document.getElementById("account-reminders-status");
     if (reminders) reminders.textContent = reminderLine();
+    if (window.paintTalkResources) window.paintTalkResources();
     paintGreeting();
   }
 

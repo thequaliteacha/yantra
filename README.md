@@ -99,10 +99,12 @@ app. **Sign out** is reserved for a later account and stays hidden. A Zazen
 access switch asks for the Zazen word through the existing gate, and can return
 to the sangha shelf without keeping that word. Export and erase cover the
 practice record, every setting, and saved talks. Erase everything on this
-device also clears Spotify and the cookie. Resources opens Dharma Talks in
-the app: the talks, the meditations, and the quotes from the end of the sits,
-from the Rama Meditation Society. They play from this site. The list is
-`web/talks.json`. The copy in the repo is example data until that file is replaced.
+device also clears Spotify and the cookie. Resources opens the talks in the
+app, grouped as Dharma Talks and Rama Live LA: the talks, the meditations, and
+the quotes from the end of the sits, from the Rama Meditation Society. They
+play from this site. The list is `web/talks.json`, and a recording may live in
+a folder such as `talks/rama-live-la/`. The copy in the repo is example data
+until that file is replaced.
 
 ### Setting up the connections (once, by the site owner)
 
