@@ -16,7 +16,14 @@ const PREFIX = "/web/audio/";
 const OPEN_CIRCLE = "vayu";
 const COOKIE = "yantra";
 const YEAR = 365 * 24 * 3600;
-const PUBLIC = /^\/(web\/manifest\.webmanifest|web\/icons\/[\w.-]+|favicon\.ico)$/;
+const PUBLIC = /^\/(web\/manifest\.webmanifest|web\/icons\/[\w.-]+)$/;
+// iOS asks the site root for these when a page, including the 401 gate, has no
+// icon of its own. There is no favicon.ico on disk; the Sri Yantra png stands in.
+const ROOT_ICON = {
+  "/apple-touch-icon.png": "/web/icons/apple-touch-icon.png",
+  "/apple-touch-icon-precomposed.png": "/web/icons/apple-touch-icon.png",
+  "/favicon.ico": "/web/icons/icon-192.png",
+};
 
 /* Privacy and safety headers on every response: no referrer sent to other sites,
    no framing, no MIME sniffing, HTTPS pinned. The microphone is never allowed. */
@@ -48,6 +55,11 @@ async function route(request, env) {
     }
     if (url.pathname === "/") return Response.redirect(new URL("/web/", url), 302);
     if (url.pathname === "/enter" && request.method === "POST") return enter(request, env, url);
+
+    const icon = ROOT_ICON[url.pathname];
+    if (icon && (request.method === "GET" || request.method === "HEAD")) {
+      return env.ASSETS.fetch(new Request(new URL(icon, url), request));
+    }
 
     // The app's name and icons load without cookies (browsers fetch the manifest
     // anonymously), and reveal nothing.
@@ -185,6 +197,13 @@ function gatePage(note) {
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#05040a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Yantra">
+<link rel="manifest" href="/web/manifest.webmanifest">
+<link rel="icon" href="/web/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/web/icons/apple-touch-icon.png" sizes="180x180">
 <title>Yantra Meditation</title>
 <style>
   html, body { margin: 0; height: 100%; background: #05040a; color: #f3e6c8; }
