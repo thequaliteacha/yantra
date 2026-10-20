@@ -90,7 +90,26 @@
     paintAccess();
     const reminders = document.getElementById("account-reminders-status");
     if (reminders) reminders.textContent = reminderLine();
+    paintResources();
     paintGreeting();
+  }
+
+  function paintResources() {
+    const list = document.getElementById("account-resources");
+    const items = window.YantraResources && window.YantraResources.list;
+    if (!list || !items || list.childElementCount) return;
+    items.forEach((item) => {
+      const row = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = item.url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = item.label;
+      const note = document.createElement("span");
+      note.textContent = item.note;
+      row.append(link, note);
+      list.append(row);
+    });
   }
 
   function showConfirm(id, open) {
