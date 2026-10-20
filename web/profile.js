@@ -26,7 +26,17 @@
     return { name: "", greeting: "none" };
   }
 
+  function settingsApi() {
+    if (root && root.YantraSettings) return root.YantraSettings;
+    if (typeof require === "function") {
+      try { return require("./settings.js"); } catch (e) { return null; }
+    }
+    return null;
+  }
+
   function load() {
+    const settings = settingsApi();
+    if (settings) return normalize({ name: settings.get("profile.name"), greeting: settings.get("profile.greeting") });
     const kept = storage();
     if (!kept) return empty();
     try { return normalize(JSON.parse(kept.getItem(KEY) || "null")); } catch (e) { return empty(); }
@@ -34,6 +44,12 @@
 
   function save(profile) {
     const clean = normalize(profile);
+    const settings = settingsApi();
+    if (settings) {
+      settings.set("profile.name", clean.name);
+      settings.set("profile.greeting", clean.greeting);
+      return clean;
+    }
     const kept = storage();
     if (!kept) return clean;
     try { kept.setItem(KEY, JSON.stringify(clean)); } catch (e) {}

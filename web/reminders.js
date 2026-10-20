@@ -15,6 +15,12 @@ const OFFSETS = [
 ];
 
 function load() {
+  const settings = window.YantraSettings;
+  if (settings) {
+    const value = settings.get("reminders");
+    if (value && typeof value === "object") return value;
+    return {};
+  }
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) || "null");
     if (raw && typeof raw === "object") return raw;
@@ -23,6 +29,11 @@ function load() {
 }
 
 function save(record) {
+  const settings = window.YantraSettings;
+  if (settings) {
+    settings.set("reminders", record);
+    return;
+  }
   try { localStorage.setItem(KEY, JSON.stringify(record)); } catch (e) {}
 }
 
@@ -234,7 +245,11 @@ async function deleteReminders(record) {
     if (subscription) await subscription.unsubscribe();
   } catch (e) {}
   if (record.id) await pushServer("/push/delete", { id: record.id }).catch(() => {});
-  try { localStorage.removeItem(KEY); } catch (e) {}
+  const settings = window.YantraSettings;
+  if (settings) settings.set("reminders", {});
+  else {
+    try { localStorage.removeItem(KEY); } catch (e) {}
+  }
   const fresh = {};
   applyTheme("morning", fresh.morning);
   applyTheme("evening", fresh.evening);

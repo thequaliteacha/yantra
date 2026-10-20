@@ -4,6 +4,10 @@
     return window.YantraProfile || null;
   }
 
+  function settings() {
+    return window.YantraSettings || null;
+  }
+
   function paintGreeting() {
     const api = profile();
     const text = api ? api.line(api.load(), new Date()) : "";
@@ -13,16 +17,35 @@
       node.textContent = text;
       node.hidden = !text;
     });
+    paintCorner();
+  }
+
+  function paintCorner() {
+    const button = document.getElementById("account-corner");
+    if (!button || !window.YANTRA_WEB) return;
+    const api = profile();
+    const name = api ? api.load().name : "";
+    button.textContent = name ? name.slice(0, 1).toUpperCase() : "You";
+    button.hidden = false;
+  }
+
+  function reminderRecord() {
+    const api = settings();
+    if (api) {
+      const value = api.get("reminders");
+      return value && typeof value === "object" ? value : {};
+    }
+    try {
+      return JSON.parse(localStorage.getItem("yantra.reminders.v1") || "null") || {};
+    } catch (e) {
+      return {};
+    }
   }
 
   function reminderLine() {
-    try {
-      const raw = JSON.parse(localStorage.getItem("yantra.reminders.v1") || "null") || {};
-      const on = (theme) => raw[theme] && raw[theme].on;
-      return "Morning " + (on("morning") ? "on" : "off") + " · Evening " + (on("evening") ? "on" : "off");
-    } catch (e) {
-      return "Morning off · Evening off";
-    }
+    const raw = reminderRecord();
+    const on = (theme) => raw[theme] && raw[theme].on;
+    return "Morning " + (on("morning") ? "on" : "off") + " · Evening " + (on("evening") ? "on" : "off");
   }
 
   function paintProfile() {
@@ -68,26 +91,64 @@
     if (clear) clear.hidden = !status.unlisted;
   }
 
+  function paintSync() {
+    const card = document.getElementById("account-sync");
+    const method = document.getElementById("account-sync-method");
+    const signOut = document.getElementById("account-signout-block");
+    const api = settings();
+    const sync = api ? api.get("flags.accountSync") === true : false;
+    const showSignOut = api ? api.get("flags.accountSignOut") === true : false;
+    if (card) card.hidden = !sync;
+    if (method && api) method.textContent = "Preferred later: " + api.get("account.preferredMethod") + ".";
+    if (signOut) signOut.hidden = !showSignOut;
+  }
+
+  function paintTalks() {
+    const list = document.getElementById("account-talks");
+    const empty = document.getElementById("account-talks-empty");
+    if (!list) return;
+    const saved = settings() ? settings().get("talks.saved") : [];
+    list.replaceChildren();
+    saved.forEach((id) => {
+      const row = document.createElement("li");
+      row.textContent = id;
+      list.append(row);
+    });
+    list.hidden = !saved.length;
+    if (empty) empty.hidden = saved.length > 0;
+  }
+
   async function paintAccess() {
     const node = document.getElementById("account-access");
+    const zazen = document.getElementById("account-zazen");
     if (!node) return;
+    let level = "";
     try {
       const response = await fetch("/access", { cache: "no-store" });
       if (!response.ok) throw new Error("closed");
       const data = await response.json();
-      if (data.level === "zazen") node.textContent = "Sangha and Zazen. The full shelf is open.";
-      else if (data.level === "sangha") node.textContent = "Sangha word. The Vayu recordings are open.";
+      level = data.level === "zazen" || data.level === "sangha" ? data.level : "";
+      if (level === "zazen") node.textContent = "Sangha and Zazen. The full shelf is open.";
+      else if (level === "sangha") node.textContent = "Sangha word. The Vayu recordings are open.";
       else node.textContent = "The word gate is not open in this copy.";
     } catch (e) {
       node.textContent = "The word gate is not open in this copy.";
     }
+    if (settings() && level) settings().set("access.level", level);
+    if (zazen) {
+      zazen.hidden = !level;
+      zazen.setAttribute("aria-pressed", String(level === "zazen"));
+      zazen.textContent = level === "zazen" ? "Zazen access on" : "Zazen access";
+    }
   }
 
   function paintAccount() {
+    paintSync();
     paintProfile();
     paintPractice();
     paintSpotify();
     paintAccess();
+    paintTalks();
     const reminders = document.getElementById("account-reminders-status");
     if (reminders) reminders.textContent = reminderLine();
     paintResources();
@@ -123,18 +184,19 @@
     if (panel) panel.hidden = !open;
   }
 
-  async function signOut() {
-    const response = await fetch("/leave", { method: "POST" });
+  async function dropZazen() {
+    const response = await fetch("/access/sangha", { method: "POST" });
     if (!response.ok) {
       const status = document.getElementById("account-access");
-      if (status) status.textContent = "Sign out did not complete. The word gate is still open.";
-      showConfirm("account-signout-confirm", false);
+      if (status) status.textContent = "Zazen access stayed on. The word gate did not change.";
       return;
     }
-    location.replace("/");
+    if (settings()) settings().set("access.level", "sangha");
+    showConfirm("account-zazen-drop", false);
+    await paintAccess();
   }
 
-  async function eraseEverything() {
+  async function forgetPush() {
     try {
       if (navigator.serviceWorker) {
         const registration = await navigator.serviceWorker.ready;
@@ -142,11 +204,7 @@
         if (subscription) await subscription.unsubscribe();
       }
     } catch (e) {}
-    let id = "";
-    try {
-      const raw = JSON.parse(localStorage.getItem("yantra.reminders.v1") || "null");
-      if (raw && raw.id) id = raw.id;
-    } catch (e) {}
+    const id = reminderRecord().id || "";
     if (id) {
       await fetch("/push/delete", {
         method: "POST",
@@ -154,18 +212,34 @@
         body: JSON.stringify({ id: id }),
       }).catch(() => {});
     }
+  }
+
+  async function eraseEverything() {
+    await forgetPush();
     const api = profile();
     if (api) {
       api.clearYantra(localStorage);
       try { api.clearYantra(sessionStorage); } catch (e) {}
     }
-    await fetch("/leave", { method: "POST" }).catch(() => {});
-    location.replace("/");
+    await fetch("/logout", { method: "POST" }).catch(() => {});
+    location.replace("/logout");
+  }
+
+  function exportBundle() {
+    const practice = window.YantraPractice ? window.YantraPractice.exportData() : {};
+    const stored = settings() ? settings().entries() : {};
+    return Object.assign({}, practice, { settings: stored });
   }
 
   function boot() {
     if (!window.YANTRA_WEB || !document.getElementById("account")) return;
     paintGreeting();
+    const corner = document.getElementById("account-corner");
+    if (corner) {
+      corner.addEventListener("click", () => {
+        if (typeof window.showRoom === "function") window.showRoom("account");
+      });
+    }
     document.getElementById("account-save").addEventListener("click", () => {
       const api = profile();
       if (!api) return;
@@ -177,14 +251,23 @@
       if (note) note.textContent = "Saved on this device.";
       paintGreeting();
     });
-    document.getElementById("account-signout").addEventListener("click", () => showConfirm("account-signout-confirm", true));
-    document.getElementById("account-signout-keep").addEventListener("click", () => showConfirm("account-signout-confirm", false));
-    document.getElementById("account-signout-yes").addEventListener("click", () => {
-      signOut().catch(() => {
+    const zazen = document.getElementById("account-zazen");
+    if (zazen) {
+      zazen.addEventListener("click", () => {
+        if (zazen.getAttribute("aria-pressed") === "true") showConfirm("account-zazen-drop", true);
+        else showConfirm("account-zazen-ask", true);
+      });
+    }
+    document.getElementById("account-zazen-cancel").addEventListener("click", () => showConfirm("account-zazen-ask", false));
+    document.getElementById("account-zazen-drop-keep").addEventListener("click", () => showConfirm("account-zazen-drop", false));
+    document.getElementById("account-zazen-drop-yes").addEventListener("click", () => {
+      dropZazen().catch(() => {
         const status = document.getElementById("account-access");
-        if (status) status.textContent = "Sign out did not complete. The word gate is still open.";
+        if (status) status.textContent = "Zazen access stayed on. The word gate did not change.";
       });
     });
+    document.getElementById("account-leave").addEventListener("click", () => showConfirm("account-leave-confirm", true));
+    document.getElementById("account-leave-keep").addEventListener("click", () => showConfirm("account-leave-confirm", false));
     document.getElementById("account-spotify-connect").addEventListener("click", () => {
       if (window.yantraSpotify) window.yantraSpotify.connect();
     });
@@ -223,6 +306,8 @@
 
   window.paintGreeting = paintGreeting;
   window.paintAccount = paintAccount;
+  window.yantraExportBundle = exportBundle;
+  window.yantraForgetPush = forgetPush;
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
