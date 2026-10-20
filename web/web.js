@@ -26,13 +26,30 @@
     realFetch("config.json", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
     realFetch("sets.json").then((r) => r.json()).catch(() => null),
     realFetch("audio.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
-  ]).then(([discs, songs, settings, sessionSets, files]) => {
+    realFetch("/access", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+  ]).then(async ([discs, songs, settings, sessionSets, files, access]) => {
+    const level = (access && access.level) || "";
+    window.YANTRA_LEVEL = level;
+    window.yantraQuotes = [];
+    if (level === "sangha") {
+      discs.circles = (discs.circles || []).filter((circle) => circle.id === "vayu");
+      discs.discs = discs.discs.filter((disc) => disc.circle === "vayu");
+    }
+    discs.circles = (discs.circles || []).filter((circle) => circle.id !== "lumikara");
+    discs.discs = discs.discs.filter((disc) => disc.circle !== "lumikara");
     sets = sessionSets;
     recordings = files || {};
     Object.assign(config, settings || {});
     collection = discs;
     links = songs || {};
     for (const disc of discs.discs) DISCS[disc.id] = disc;
+    if (level === "zazen") {
+      const response = await realFetch("quotes.json", { cache: "no-store" }).catch(() => null);
+      if (response && response.ok) {
+        const rows = await response.json().catch(() => []);
+        window.yantraQuotes = Array.isArray(rows) ? rows : [];
+      }
+    }
   });
 
   /* ---- the shelf ---- */
@@ -61,10 +78,21 @@
     return path ? config.audioBase + path : "";
   }
   const onRecordings = (disc) => disc.tracks.length > 0 && disc.tracks.every((track) => recordingOf(disc.id, track.n));
+  const Playback = window.YantraPlayback;
+  const failedKeys = {};
+  function navEnv() {
+    return {
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+      maxTouchPoints: typeof navigator !== "undefined" ? (navigator.maxTouchPoints || 0) : 0,
+    };
+  }
 
-  /* On the web only recorded or catalog albums can play. Discs on none of them
-     stay hidden, as they do on the desktop until a track is installed. */
-  const playable = (disc) => onRecordings(disc) || !!disc.spotifyAlbum || !!appleId(disc);
+  /* A disc is on the shelf when at least one of its songs can play here.
+     Lumikara is never part of the meditation. */
+  function playable(disc) {
+    if (!disc || disc.circle === "lumikara") return false;
+    return disc.tracks.some((track) => itemPlayable({ discId: disc.id, n: track.n }));
+  }
 
   function trackRef(discId, number) {
     const disc = DISCS[discId];
@@ -74,20 +102,21 @@
     return {
       discId, n: number, title: track.title, disc: disc.title, artist: disc.artist,
       chakra: chakraOf(disc, number), onSpotify, onApple, installed: false,
-      playable: onSpotify || onApple,
+      playable: itemPlayable({ discId, n: number }),
     };
   }
 
   function collectionPayload() {
     const payload = Object.assign({}, collection);
+    payload.circles = (collection.circles || []).filter((circle) => circle.id !== "lumikara");
     payload.discs = collection.discs.filter(playable).map((disc) => Object.assign({}, disc, {
-      tracks: disc.tracks.map((track) => Object.assign({}, track, { chakra: chakraOf(disc, track.n), installed: false })),
+      tracks: disc.tracks.filter((track) => itemPlayable({ discId: disc.id, n: track.n })).map((track) => Object.assign({}, track, { chakra: chakraOf(disc, track.n), installed: false })),
       onSpotify: !!disc.spotifyAlbum,
       onApple: !!appleId(disc),
-      onRecordings: onRecordings(disc),
+      onRecordings: disc.tracks.filter((track) => itemPlayable({ discId: disc.id, n: track.n })).every((track) => recordingOf(disc.id, track.n)),
       installed: 0,
       installDir: "",
-    }));
+    })).filter((disc) => disc.tracks.length > 0);
     payload.installRoot = "";
     payload.chakras = [
       { id: "naval", name: "Navel", third: "first" },
@@ -127,9 +156,12 @@
 
   function chakraPool(chakra) {
     const pool = [];
-    for (const disc of collection.discs.filter(playable)) {
+    for (const disc of collection.discs) {
+      if (!disc || disc.circle === "lumikara") continue;
       for (const track of disc.tracks) {
-        if (chakraOf(disc, track.n) === chakra) pool.push([disc.id, track.n]);
+        if (chakraOf(disc, track.n) !== chakra) continue;
+        if (!itemPlayable({ discId: disc.id, n: track.n })) continue;
+        pool.push([disc.id, track.n]);
       }
     }
     return pool;
@@ -167,7 +199,7 @@
     const disc = DISCS[discId];
     if (!disc || !disc.tracks.some((track) => track.n === number)) return [null, "That song is not on the shelf."];
     const isIn = ordered.some((item) => item.discId === disc.id && item.n === number);
-    if (!isIn && !playable(disc)) return [null, "That song is not on Spotify or Apple Music."];
+    if (!isIn && !itemPlayable({ discId: disc.id, n: number })) return [null, "That song can't be played here."];
     if (isIn) {
       return [ordered.filter((item) => !(item.discId === disc.id && item.n === number)), null];
     }
@@ -368,7 +400,7 @@
     connected: false, status: "Stopped", title: "", artist: "", album: "", track: 0, length: 0,
     position: 0, art: "", discId: "", onSamurai: false, source: "", allowed: false, blocked: false,
     blockedTitle: "", blockedArtist: "", installed: {}, form: "", formIndex: 0, formTotal: 0,
-    formPlan: [], chakra: "",
+    formPlan: [], chakra: "", notice: "", moving: false,
   };
 
   function reply(body, status = 200) {
@@ -505,6 +537,8 @@
     blocked: "",
     checked: false,
     lastFailure: "",
+    sessionFailed: false,
+    handset: false,
     load() {
       try { this.token = JSON.parse(localStorage.getItem("yantra.spotify") || "null"); } catch (e) {}
     },
@@ -578,6 +612,7 @@
       }).catch(() => null);
     },
     startSdk() {
+      if (!Playback.spotifySdkSupported(navEnv())) return;
       if (this.sdk || !this.connected()) return;
       this.sdk = true;
       window.onSpotifyWebPlaybackSDKReady = () => {
@@ -652,12 +687,55 @@
       this.blocked = "";
       return "";
     },
+    async outputDevice() {
+      const list = await this.api("GET", "/me/player/devices");
+      const devices = list && list.ok ? ((await list.json().catch(() => ({}))).devices || []) : [];
+      const usable = devices.filter((device) => !device.is_restricted && device.name !== "Yantra");
+      return usable.find((device) => device.type === "Smartphone") || usable.find((device) => device.is_active) || usable[0] || null;
+    },
     async play(body) {
       this.elsewhere = "";
       this.lastFailure = "";
       if (this.blocked === "unlisted" || this.blocked === "premium") {
         this.lastFailure = this.blocked;
         return false;
+      }
+      if (this.sessionFailed) {
+        this.lastFailure = "sdk";
+        return false;
+      }
+      // Phones cannot host the in-page player. Never register it there: that device
+      // accepts play() and then sits at position 0 with no sound. Use a real
+      // Spotify app that is already open, the phone first.
+      if (!Playback.spotifySdkSupported(navEnv())) {
+        const pick = await this.outputDevice();
+        this.handset = !!pick;
+        if (!pick) {
+          this.lastFailure = "sdk";
+          return false;
+        }
+        const target = "?device_id=" + pick.id;
+        const response = await this.api("PUT", "/me/player/play" + target, body);
+        if (response && response.status === 403) {
+          const why = await failureKindFrom(response);
+          if (why === "premium") {
+            this.blocked = "premium";
+            this.lastFailure = "premium";
+          } else {
+            this.noteUnlisted();
+          }
+          return false;
+        }
+        if (!response || !(response.ok || response.status === 204)) {
+          this.lastFailure = "failed";
+          return false;
+        }
+        this.deviceId = pick.id;
+        this.elsewhere = pick.name;
+        const device = "&" + target.slice(1);
+        this.api("PUT", "/me/player/shuffle?state=false" + device);
+        this.api("PUT", "/me/player/repeat?state=off" + device);
+        return true;
       }
       // A tap soon after the page opens can come before the in-page player is ready.
       for (let waited = 0; this.sdk && !this.deviceId && !this.sdkFailed && waited < 5000; waited += 250) {
@@ -787,6 +865,9 @@
     audio: null,
     keys: [],
     index: -1,
+    token: 0,
+    onfail: null,
+    heardAt: 0,
     available() { return Object.keys(recordings).length > 0; },
     connected() { return this.available(); },
     element() {
@@ -794,17 +875,26 @@
         this.audio = new Audio();
         this.audio.preload = "auto";
         this.audio.addEventListener("ended", () => {
-          if (this.index + 1 < this.keys.length) this.start(this.index + 1);
+          const next = this.index + 1;
+          if (next >= this.keys.length) return;
+          this.start(next).then((ok) => {
+            if (!ok && this.onfail) this.onfail(next, "rejected");
+          });
         });
+        this.audio.addEventListener("error", () => {
+          if (this.onfail && this.index >= 0) this.onfail(this.index, "error");
+        });
+        this.audio.addEventListener("timeupdate", () => { this.heardAt = Date.now(); });
       }
       return this.audio;
     },
     start(index) {
       const audio = this.element();
       this.index = index;
+      const token = ++this.token;
       audio.src = this.keys[index];
       studyRecording(this.keys[index]);
-      return audio.play().then(() => true, () => false);
+      return audio.play().then(() => this.token === token, () => false);
     },
     play(keys) {
       this.keys = keys.slice();
@@ -824,6 +914,28 @@
   };
 
   /* Each song's key on each service, read from its direct link. */
+  function playbackSession() {
+    return {
+      sdk: Playback.spotifySdkSupported(navEnv()) && !spotify.sessionFailed,
+      connected: spotify.connected() && !spotify.sessionFailed,
+      handset: !!spotify.handset,
+      blocked: spotify.blocked === "unlisted" || spotify.blocked === "premium",
+      failed: !!spotify.sessionFailed,
+      failedKeys: failedKeys,
+    };
+  }
+
+  function itemPlayable(item) {
+    const disc = item && DISCS[item.discId];
+    if (!disc || disc.circle === "lumikara") return false;
+    return Playback.trackOffered({
+      key: item.discId + "#" + item.n,
+      circle: disc.circle,
+      hosted: !!recordingOf(item.discId, item.n),
+      spotify: !!songKey(item, "spotify"),
+    }, playbackSession());
+  }
+
   function songKey(item, service) {
     if (service === "recordings") return recordingOf(item.discId, item.n);
     const url = ((links[item.discId] || {})[String(item.n)] || {})[service] || "";
@@ -837,7 +949,8 @@
 
   const services = { recordings: recorded, spotify, apple };
   const recordedAll = (items) => items.length > 0 && items.every((item) => recordingOf(item.discId, item.n));
-  const live = { service: null, name: "", items: [], keys: [], seen: false, timer: 0, form: false, chakras: null, lastHeard: false };
+  const live = { service: null, name: "", items: [], keys: [], seen: false, timer: 0, form: false, chakras: null, lastHeard: false, recovering: false };
+  const progressWatch = Playback.createProgressWatch(Playback.STALL_MS);
 
   /* The morning and evening sets: 1 song is the heart song, 3 is one per chakra,
      6 is two per chakra, 12 is four per chakra, always navel, heart, third eye. */
@@ -863,9 +976,11 @@
      album chosen, each sit brings a different one, recorded ones first until
      Spotify is connected. */
   function albumFits(disc, count) {
-    if (!playable(disc)) return false;
+    if (!disc || disc.circle === "lumikara") return false;
+    const offered = (track, chakra) => chakraOf(disc, track.n) === chakra && itemPlayable({ discId: disc.id, n: track.n });
+    const sizes = CHAKRAS.map((chakra) => disc.tracks.filter((track) => offered(track, chakra)).length);
+    if (!sizes.some((size) => size > 0)) return false;
     const per = count === 1 ? 0 : count / 3;
-    const sizes = CHAKRAS.map((chakra) => disc.tracks.filter((track) => chakraOf(disc, track.n) === chakra).length);
     return count === 1 ? sizes[1] > 0 : sizes.every((size) => size >= per);
   }
   function albumSit(count, discId) {
@@ -886,7 +1001,7 @@
     const per = count === 1 ? 1 : count / 3;
     const items = [];
     for (const chakra of count === 1 ? ["heart"] : CHAKRAS) {
-      const songs = disc.tracks.filter((track) => chakraOf(disc, track.n) === chakra);
+      const songs = disc.tracks.filter((track) => chakraOf(disc, track.n) === chakra && itemPlayable({ discId: disc.id, n: track.n }));
       for (const track of sample(songs, per).sort((a, b) => a.n - b.n)) items.push({ discId: disc.id, n: track.n, chakra });
     }
     return items;
@@ -932,6 +1047,86 @@
     live.seen = false;
   }
 
+  function markFailed(item, fromSpotify) {
+    if (!item) return;
+    failedKeys[item.discId + "#" + item.n] = true;
+    if (fromSpotify) {
+      spotify.sessionFailed = true;
+      spotify.handset = false;
+    }
+  }
+
+  function showSkipLine(text) {
+    if (!nextButton || !text) return;
+    nextButton.hidden = false;
+    nextButton.classList.remove("due");
+    nextButton.textContent = text;
+    nextButton.onclick = () => { nextButton.hidden = true; nextButton.onclick = null; };
+    setTimeout(() => { if (nextButton.textContent === text) nextButton.click(); }, 6000);
+  }
+
+  function giveUp(line) {
+    const offer = makeOffer({
+      reason: spotify.sessionFailed ? "sdk" : (spotify.lastFailure || "failed"),
+      mode: "session",
+      theme: sitTheme || "morning",
+      count: live.items.length || 3,
+    });
+    offer.text = line + (offer.albums.length ? " Choose a hosted album to begin." : "");
+    NOW.notice = offer.text;
+    NOW.status = "Stopped";
+    NOW.moving = false;
+    NOW.connected = false;
+    showSkipLine(line);
+    liveStop(true);
+    dispatchEvent(new CustomEvent("yantra:unplayed", { detail: offer }));
+    dispatchEvent(new Event("yantra:shelf"));
+  }
+
+  async function skipFrom(index, reason) {
+    if (!live.service || live.recovering) return;
+    live.recovering = true;
+    try {
+      const fromSpotify = live.service === "spotify";
+      markFailed(live.items[index], fromSpotify);
+      if (fromSpotify) {
+        const line = Playback.calmLine(false);
+        NOW.notice = line;
+        NOW.moving = false;
+        NOW.status = "Starting";
+        giveUp(line);
+        return;
+      }
+      let cursor = index;
+      while (live.service) {
+        const next = Playback.nextPlayable(live.items, cursor, (row) => {
+          if (!itemPlayable(row)) return false;
+          if (live.service === "recordings") return !!recordingOf(row.discId, row.n);
+          return false;
+        });
+        const line = Playback.calmLine(next >= 0);
+        NOW.notice = line;
+        NOW.moving = false;
+        NOW.status = "Starting";
+        if (next < 0) {
+          giveUp(line);
+          return;
+        }
+        const ok = await recorded.start(next);
+        if (ok) {
+          progressWatch.reset();
+          showSkipLine(line);
+          dispatchEvent(new Event("yantra:shelf"));
+          return;
+        }
+        markFailed(live.items[next], false);
+        cursor = next;
+      }
+    } finally {
+      live.recovering = false;
+    }
+  }
+
   async function livePoll() {
     if (!live.service) return;
     const state = await services[live.service].state();
@@ -975,9 +1170,18 @@
       complete();
       return;
     }
+    const watch = progressWatch.sample(state.key, state.position, state.playing, Date.now());
+    if (watch.stalled) {
+      await skipFrom(index, "stall");
+      return;
+    }
+    const shown = Playback.presentState(state, watch);
+    if (shown.status === "Playing") NOW.notice = "";
     Object.assign(NOW, {
       connected: true,
-      status: state.playing ? "Playing" : (last && state.position < 1 ? "Stopped" : "Paused"),
+      status: shown.status,
+      moving: shown.moving,
+      notice: NOW.notice,
       title: track.title, artist: disc.artist, album: disc.title, track: item.n,
       length: state.length || track.length || 0, position: state.position,
       discId: disc.id, allowed: true, source: live.service,
@@ -1108,7 +1312,29 @@
     if (service === "spotify" && spotify.player && spotify.player.activateElement) spotify.player.activateElement();
     let started;
     if (service === "recordings") {
-      started = recorded.play(live.keys);
+      started = (async () => {
+        recorded.keys = live.keys.slice();
+        recorded.onfail = null;
+        live.recovering = true;
+        try {
+          for (let i = 0; i < live.items.length; i += 1) {
+            if (!recordingOf(live.items[i].discId, live.items[i].n)) {
+              markFailed(live.items[i], false);
+              continue;
+            }
+            const playing = await recorded.start(i);
+            if (playing) {
+              progressWatch.reset();
+              return true;
+            }
+            markFailed(live.items[i], false);
+            NOW.notice = Playback.calmLine(live.items.slice(i + 1).some((item) => recordingOf(item.discId, item.n)));
+          }
+          return false;
+        } finally {
+          live.recovering = false;
+        }
+      })();
     } else if (service === "spotify" && albumOptions && albumOptions.spotify) {
       started = spotify.play(albumOptions.spotify);
     } else if (service === "spotify") {
@@ -1126,6 +1352,8 @@
       if (live.service === service) liveStop(false);
       return false;
     }
+    progressWatch.reset();
+    if (service === "recordings") recorded.onfail = (index, reason) => { skipFrom(index, reason); };
     if (service === "spotify" && spotify.elsewhere && nextButton) {
       // Say where the music went, so a quiet page never leaves the listener guessing.
       nextButton.hidden = false;
@@ -1180,7 +1408,12 @@
         localStorage.removeItem("yantra.forms.v1");
       }
     } catch (e) {}
-    spotify.startSdk();
+    if (Playback.spotifySdkSupported(navEnv())) {
+      spotify.handset = true;
+      spotify.startSdk();
+    } else if (spotify.connected()) {
+      spotify.handset = !!(await spotify.outputDevice());
+    }
     apple.load();
     paintConnect();
   });
@@ -1302,6 +1535,8 @@
   /* Already known, without waiting on the network. Unlisted sticks: connecting again
      cannot add an account to Spotify's listener list. Premium is rechecked once a page. */
   function spotifyKnownUnavailable() {
+    if (spotify.sessionFailed) return "sdk";
+    if (!Playback.spotifySdkSupported(navEnv()) && !spotify.handset) return "sdk";
     if (spotify.blocked === "unlisted") return "unlisted";
     try {
       if (localStorage.getItem("yantra.spotifyNote") === "unlisted") return "unlisted";
@@ -1364,6 +1599,25 @@
     const albumId = String(payload.album || "");
     const name = String(payload.name || theme);
     const askedDisc = !mix && albumId ? DISCS[albumId] : null;
+    if (askedDisc && askedDisc.circle === "lumikara") {
+      const offer = makeOffer({
+        reason: "offline",
+        asked: askedDisc.title,
+        askedId: askedDisc.id,
+        theme, count, mode: "session",
+      });
+      offer.text = "Lumikara isn't part of this meditation.";
+      return [{ ok: false, error: offer.text, offer }, 409];
+    }
+    if (askedDisc && !askedDisc.tracks.some((track) => itemPlayable({ discId: askedDisc.id, n: track.n }))) {
+      const offer = makeOffer({
+        reason: spotifyKnownUnavailable() || "offline",
+        asked: askedDisc.title,
+        askedId: askedDisc.id,
+        theme, count, mode: "session",
+      });
+      return [{ ok: false, error: offer.text, offer }, 409];
+    }
     if (askedDisc && onRecordings(askedDisc)) {
       const picked = albumSit(count, askedDisc.id);
       if (!picked) return [{ ok: false, error: askedDisc.title + " is too short for " + count + " songs." }, 404];
@@ -1478,9 +1732,19 @@
     spotify.load();
     stopQueue();
     const disc = DISCS[payload.id];
-    if (!disc) return [{ ok: false, error: "That disc is not on the shelf." }, 404];
-    const albumItems = disc.tracks.map((track) => ({ discId: disc.id, n: track.n }));
-    if (onRecordings(disc)) {
+    if (!disc || disc.circle === "lumikara") return [{ ok: false, error: "That disc is not on the shelf." }, 404];
+    const albumItems = disc.tracks.filter((track) => itemPlayable({ discId: disc.id, n: track.n })).map((track) => ({ discId: disc.id, n: track.n }));
+    if (!albumItems.length) {
+      const offer = makeOffer({
+        reason: spotifyKnownUnavailable() || "offline",
+        asked: disc.title,
+        askedId: disc.id,
+        mode: "album",
+        count: 0,
+      });
+      return [{ ok: false, error: offer.text, offer }, 409];
+    }
+    if (albumItems.every((item) => recordingOf(item.discId, item.n))) {
       const ok = await liveStart(disc.title, albumItems, "recordings", false, null);
       return ok ? [{ ok: true, source: "recordings" }] : [{ ok: false, error: "This album did not start." }, 404];
     }
