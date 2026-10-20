@@ -485,6 +485,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <button type="button" data-move="restart" aria-label="Start this song again"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 1 0 2.1-5"/><path d="M5 4v4h4"/></svg></button>
   <button type="button" data-move="next" aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M18 5v14"/><path d="M6 6l9 6-9 6z"/></svg></button>
 </div>
+<script src="/web/series.js"></script>
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
@@ -694,6 +695,15 @@ function glowBlend() {
   return isLight() ? "multiply" : "lighter";
 }
 
+function goldBlur(blur) {
+  const dpr = window.devicePixelRatio || 1;
+  const shortSide = Math.min(innerWidth, innerHeight);
+  // A full-screen iPad redraws this shadow on every gold line. Past here the
+  // extra fringe costs a frame and does not read as a brighter line.
+  if (dpr >= 2 && shortSide >= 744) return Math.min(blur, 16);
+  return blur;
+}
+
 function gold(ctx, alpha, blur, glow) {
   ctx.lineWidth = Math.max(1.15, Math.min(innerWidth, innerHeight) * 0.0018);
   ctx.lineJoin = "round";
@@ -701,7 +711,7 @@ function gold(ctx, alpha, blur, glow) {
   ctx.strokeStyle = rgba(inkOf(hue.tint), alpha);
   const lift = glow == null ? 0.35 + shown * 0.35 : glow;
   ctx.shadowColor = rgba(inkOf(hue.glow), isLight() ? lift * 0.4 : lift);
-  ctx.shadowBlur = blur;
+  ctx.shadowBlur = goldBlur(blur);
 }
 
 /* The Sri Yantra blossoms out of the bindu over each song. Nothing is traced:
@@ -872,7 +882,7 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
     ctx.fill();
     ctx.save();
     ctx.shadowColor = rgba(isLight() ? [200, 110, 30] : [255, 236, 190], glow);
-    ctx.shadowBlur = Math.max(6, R * 0.07);
+    ctx.shadowBlur = goldBlur(Math.max(6, R * 0.07));
     ctx.fillStyle = rgba(isLight() ? [130, 56, 8] : [255, 255, 252], glow);
     ctx.beginPath();
     ctx.arc(cx, cy, Math.max(2.2, R * (0.016 + 0.005 * warmth)), 0, Math.PI * 2);
@@ -1036,6 +1046,7 @@ function advancePace(state, series, now) {
 }
 
 function forwardPortion(state, key, portion) {
+  if (window.YantraSeries) return window.YantraSeries.forwardPortion(state, key, portion);
   const next = Math.max(0, Math.min(1, portion || 0));
   if (state.key !== key) {
     state.key = key;
@@ -1090,24 +1101,43 @@ function frame(now) {
   if (sitting) {
     if (!window.ink) window.ink = { key: "", portion: 0 };
     if (!window.pace) window.pace = { key: "", pos: 0 };
-    const live = window.series;
+    let live = window.series;
+    let songChanged = false;
+    // A blank or shifted report is held, so a volume blip is not a new song.
+    if (window.YantraSeries) {
+      if (!window.seriesHold || window.seriesHold.epoch !== (window.drawEpoch || 0)) {
+        window.seriesHold = { epoch: window.drawEpoch || 0, state: null };
+      }
+      const settled = window.YantraSeries.holdSeries(window.seriesHold.state, window.series, now);
+      window.seriesHold.state = settled.state;
+      live = settled.series;
+      songChanged = settled.songChanged;
+    }
     let portion = window.ink.portion || 0;
     if (live && live.lengths && live.lengths.length) {
       const paced = advancePace(window.pace, live, now);
-      // The song is part of the key, so the drawing starts over with each new song.
+      // The song is part of the key, so the ink starts over only when the song does.
       const inkKey = (window.drawEpoch || 0) + ":" + (live.key || "") + ":" + (live.index || 0);
       portion = forwardPortion(window.ink, inkKey, revealOf(paced));
     }
     reveal = stageReveal(portion);
-    const key = live ? live.key + ":" + live.index : "";
-    if (key !== window.lastSeriesKey) {
-      window.lastSeriesKey = key;
-      window.seriesEdge = now;
+    if (window.YantraSeries) {
+      if (songChanged) window.seriesEdge = now;
+      const age = window.seriesEdge == null ? 1700 : now - window.seriesEdge;
+      bloom = age >= 0 && age < 1700 ? 1 - age / 1700 : 0;
+    } else {
+      const key = live ? live.key + ":" + live.index : "";
+      if (key !== window.lastSeriesKey) {
+        window.lastSeriesKey = key;
+        window.seriesEdge = now;
+      }
+      const age = now - (window.seriesEdge || now);
+      bloom = age >= 0 && age < 1700 ? 1 - age / 1700 : 0;
     }
-    const age = now - (window.seriesEdge || now);
-    bloom = age >= 0 && age < 1700 ? 1 - age / 1700 : 0;
     lotus = CHAKRA[(live && live.chakra) || ""] || null;
   } else {
+    window.seriesHold = null;
+    window.seriesEdge = null;
     window.pace.key = "";
     window.pace.pos = 0;
     window.ink.key = "";

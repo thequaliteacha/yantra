@@ -137,4 +137,41 @@ assert.strictEqual(readme.includes("34 albums"), false);
 assert.ok(/never asks for the microphone/i.test(readme));
 assert.strictEqual(/through the microphone/i.test(readme), false);
 
+const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "manifest.webmanifest"), "utf8"));
+const origin = "https://yantramedi.app";
+const manifestUrl = new URL("/web/manifest.webmanifest", origin);
+const start = new URL(manifest.start_url, manifestUrl);
+const scope = new URL(manifest.scope, manifestUrl);
+assert.strictEqual(start.pathname, "/web/");
+assert.ok(start.href.startsWith(scope.href), "the installed app opens inside its scope");
+for (const icon of manifest.icons) {
+  const resolved = new URL(icon.src, manifestUrl);
+  assert.strictEqual(resolved.origin, origin);
+  assert.ok(resolved.pathname.startsWith("/web/icons/"));
+  assert.ok(fs.existsSync(path.join(__dirname, "..", resolved.pathname.slice(1))));
+}
+for (const pagePath of ["/web/", "/web/index.html"]) {
+  const installed = new URL(pagePath, origin);
+  assert.ok(installed.href.startsWith(scope.href));
+  assert.strictEqual(new URL("/web/manifest.webmanifest", installed).pathname, "/web/manifest.webmanifest");
+}
+assert.ok(worker.includes('rel="apple-touch-icon" href="/web/icons/apple-touch-icon.png"'));
+assert.ok(worker.includes('rel="icon" href="/web/icons/icon.svg"'));
+assert.ok(worker.includes('rel="manifest" href="/web/manifest.webmanifest"'));
+assert.ok(worker.includes('name="apple-mobile-web-app-title" content="Yantra"'));
+assert.ok(worker.includes('name="apple-mobile-web-app-capable" content="yes"'));
+assert.ok(worker.includes('name="mobile-web-app-capable" content="yes"'));
+const iconMap = {};
+const iconBlock = worker.match(/const ROOT_ICON = \{([\s\S]*?)\};/);
+assert.ok(iconBlock);
+for (const match of iconBlock[1].matchAll(/"([^"]+)": "([^"]+)"/g)) iconMap[match[1]] = match[2];
+assert.strictEqual(iconMap["/apple-touch-icon.png"], "/web/icons/apple-touch-icon.png");
+assert.strictEqual(iconMap["/apple-touch-icon-precomposed.png"], "/web/icons/apple-touch-icon.png");
+assert.strictEqual(iconMap["/favicon.ico"], "/web/icons/icon-192.png");
+for (const target of Object.values(iconMap)) {
+  assert.ok(fs.existsSync(path.join(__dirname, "..", target.slice(1))), target);
+}
+assert.ok(page.includes('src="/web/series.js"'));
+require("./series.test.js");
+
 console.log("practice.test.js ok");
