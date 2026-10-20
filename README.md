@@ -103,8 +103,7 @@ device also clears Spotify and the cookie. Resources opens the talks in the
 app, grouped as Dharma Talks and Rama Live LA: the talks, the meditations, and
 the quotes from the end of the sits, from the Rama Meditation Society. They
 play from this site. The list is `web/talks.json`, and a recording may live in
-a folder such as `talks/rama-live-la/`. The copy in the repo is example data
-until that file is replaced.
+a folder such as `talks/rama-live-la/`. `web/talks.json` is the list of those talks and the practice quotes. A practice quote is shown as text, with an author line only when the manifest names one.
 
 ### Setting up the connections (once, by the site owner)
 

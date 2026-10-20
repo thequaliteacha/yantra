@@ -86,15 +86,50 @@ assert.deepStrictEqual(items.map((item) => item.id), ["example-later", "example-
 assert.deepStrictEqual(T.collections(items).map((group) => group.collection), ["Dharma Talks", "Rama Live LA", "Later notes"]);
 assert.deepStrictEqual(T.collections(items)[0].groups.map((group) => group.heading), ["Talks", "Quotes"]);
 
-const onDisk = T.catalog(JSON.parse(fs.readFileSync(path.join(__dirname, "talks.json"), "utf8")));
+const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "talks.json"), "utf8"));
+const onDisk = T.catalog(manifest);
 assert.deepStrictEqual(T.COLLECTIONS, ["Dharma Talks", "Rama Live LA"]);
+assert.strictEqual(onDisk.length, 16);
 assert.deepStrictEqual(T.collections(onDisk).map((group) => group.collection), ["Dharma Talks", "Rama Live LA"]);
-assert.ok(onDisk.every((item) => item.example === true));
-assert.ok(onDisk.some((item) => item.kind === "talk" && item.collection === "Dharma Talks" && item.url === "/talks/example-talk.mp3"));
-assert.ok(onDisk.some((item) => item.kind === "meditation" && item.url.startsWith("/talks/")));
-assert.ok(onDisk.some((item) => item.kind === "quote" && item.text && item.url === ""));
-assert.ok(onDisk.some((item) => item.collection === "Rama Live LA" && item.url === "/talks/rama-live-la/example-live.mp3"));
+assert.strictEqual(onDisk.filter((item) => item.collection === "Dharma Talks" && item.kind === "talk").length, 4);
+assert.strictEqual(onDisk.filter((item) => item.collection === "Rama Live LA" && item.kind === "talk").length, 6);
+assert.strictEqual(onDisk.filter((item) => item.kind === "quote").length, 6);
+assert.ok(onDisk.every((item) => item.example !== true));
 assert.ok(onDisk.every((item) => !item.url.startsWith("http")));
+assert.ok(onDisk.filter((item) => item.kind === "talk").every((item) => item.url === "/" + item.r2Key && item.duration > 0 && item.size > 0));
+assert.ok(onDisk.some((item) => item.r2Key === "talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3"));
+const intermediate = onDisk.find((item) => item.id === "intermediate-meditation");
+assert.strictEqual(intermediate.duration, 3557);
+assert.strictEqual(intermediate.size, 57366419);
+assert.ok(intermediate.quotes[0].includes("you’re touching light more deeply"));
+assert.strictEqual(intermediate.attribution, "Rama – Dr. Frederick Lenz");
+assert.strictEqual(intermediate.source, "https://www.ramameditationsociety.org/free-resource/intermediate-meditation/");
+assert.strictEqual(JSON.stringify(T.view(intermediate)).includes("http"), false);
+assert.strictEqual(JSON.stringify(T.view(intermediate)).includes("fredericklenzfoundation"), false);
+const practice = onDisk.find((item) => item.id === "meditation-practice-quote-01");
+assert.strictEqual(practice.url, "");
+assert.strictEqual(practice.attribution, "");
+assert.strictEqual(T.view(practice).attribution, "");
+assert.ok(practice.text.startsWith("Meditation is the process of silencing our thoughts."));
+assert.strictEqual(JSON.stringify(T.view(practice)).includes("http"), false);
+assert.ok(onDisk.filter((item) => item.kind === "quote").every((item) => item.text && !item.attribution && item.quotes.length === 0));
+const named = T.entry({
+  id: "named-quote",
+  title: "Named",
+  kind: "quote",
+  collection: "Dharma Talks",
+  durationSec: null,
+  sizeBytes: null,
+  sourcePageUrl: "https://www.ramameditationsociety.org/meditation/",
+  r2Key: null,
+  text: "A line.",
+  attribution: "Rama – Dr. Frederick Lenz",
+});
+assert.strictEqual(named.duration, 0);
+assert.strictEqual(named.size, 0);
+assert.strictEqual(named.r2Key, "");
+assert.strictEqual(T.view(named).attribution, "Rama – Dr. Frederick Lenz");
+assert.strictEqual(JSON.stringify(T.view(named)).includes("http"), false);
 
 assert.strictEqual(R.room, "talks");
 assert.strictEqual(R.credit, "from the Rama Meditation Society");
@@ -119,6 +154,7 @@ assert.ok(page.includes('id="talks"'));
 assert.ok(page.includes('id="talks-audio"'));
 assert.ok(page.includes("playsinline"));
 assert.ok(page.includes('id="talks-quote-text"'));
+assert.ok(page.includes('id="talks-quote-by"'));
 assert.ok(page.includes("yantraTalksPause"));
 assert.strictEqual(page.includes("iframe"), false);
 
@@ -133,6 +169,7 @@ assert.ok(upload.includes("yantra-sangha-audio"));
 assert.ok(upload.includes("prefix=talks/"));
 assert.ok(upload.includes("grep -qxF"));
 assert.ok(upload.includes("talks-stage"));
+assert.ok(upload.includes('.talks'));
 assert.strictEqual(upload.includes("wrangler deploy"), false);
 const build = fs.readFileSync(path.join(__dirname, "../deploy/cloudflare/build.sh"), "utf8");
 assert.ok(build.includes("talks-stage"));

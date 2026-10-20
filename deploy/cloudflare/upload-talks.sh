@@ -42,7 +42,7 @@ while true; do
 done
 
 cd "$here"
-jq -r '.[] | .r2Key // empty | select(test("^talks/(?:[a-z0-9][a-z0-9-]*/)*[a-z0-9][a-z0-9-]*\\.[a-z0-9]+$"))' "$manifest" | while read -r key; do
+jq -r '(if type == "array" then . else .talks end)[] | .r2Key // empty | select(test("^talks/(?:[a-z0-9][a-z0-9-]*/)*[a-z0-9][a-z0-9-]*\\.[a-z0-9]+$"))' "$manifest" | while read -r key; do
   if grep -qxF "$key" <<<"$existing"; then continue; fi
   file="$stage/${key#talks/}"
   if [[ ! -f "$file" ]]; then

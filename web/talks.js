@@ -14,14 +14,31 @@
     return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
   }
 
+  /* durationSec/sizeBytes/sourcePageUrl are the manifest names. duration/size/source still work. */
+  function amount(raw, primary, fallback) {
+    const value = raw[primary] != null ? raw[primary] : raw[fallback];
+    if (value == null || value === "") return 0;
+    return Number(value);
+  }
+
+  function linesOf(raw) {
+    if (!Array.isArray(raw.quotes)) return [];
+    const lines = [];
+    raw.quotes.forEach((line) => {
+      if (typeof line !== "string" || !line.trim()) return;
+      lines.push(line.length > 4000 ? line.slice(0, 4000) : line);
+    });
+    return lines;
+  }
+
   function entry(raw) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
     const id = String(raw.id || "");
     if (!ID.test(id) || !KINDS.includes(raw.kind)) return null;
     const title = clean(raw.title, 180);
     if (!title) return null;
-    const duration = Number(raw.duration);
-    const size = Number(raw.size);
+    const duration = amount(raw, "durationSec", "duration");
+    const size = amount(raw, "sizeBytes", "size");
     if (!Number.isFinite(duration) || duration < 0 || duration > 8 * 3600) return null;
     if (!Number.isFinite(size) || size < 0 || size > 2 * 1024 * 1024 * 1024) return null;
     const collection = clean(raw.collection, 80);
@@ -35,6 +52,7 @@
     }
     if (raw.kind === "quote" && !text) return null;
     if (raw.kind !== "quote" && !r2Key) return null;
+    const page = raw.sourcePageUrl != null ? raw.sourcePageUrl : raw.source;
     return {
       id,
       title,
@@ -43,18 +61,21 @@
       collection,
       duration: Math.round(duration),
       size: Math.round(size),
-      source: typeof raw.source === "string" ? raw.source.trim().slice(0, 300) : "",
+      source: typeof page === "string" ? page.trim().slice(0, 300) : "",
       r2Key,
       text,
+      quotes: linesOf(raw),
+      attribution: typeof raw.attribution === "string" ? clean(raw.attribution, 180) : "",
       example: raw.example === true,
       url: r2Key ? "/" + r2Key : "",
     };
   }
 
   function catalog(list) {
+    const rows = Array.isArray(list) ? list : (list && Array.isArray(list.talks) ? list.talks : []);
     const items = [];
     const seen = new Set();
-    (Array.isArray(list) ? list : []).forEach((raw) => {
+    rows.forEach((raw) => {
       const item = entry(raw);
       if (!item || seen.has(item.id)) return;
       seen.add(item.id);
@@ -96,6 +117,7 @@
       description: item.description,
       text: item.kind === "quote" ? item.text : "",
       audio: item.kind === "quote" ? "" : item.url,
+      attribution: item.kind === "quote" ? (item.attribution || "") : "",
       example: item.example,
       credit: CREDIT,
     };
@@ -283,6 +305,11 @@
         quote.hidden = false;
         document.getElementById("talks-quote-title").textContent = shown.title;
         document.getElementById("talks-quote-text").textContent = shown.text;
+        const by = document.getElementById("talks-quote-by");
+        if (by) {
+          by.textContent = shown.attribution || "";
+          by.hidden = !shown.attribution;
+        }
       }
       return;
     }
