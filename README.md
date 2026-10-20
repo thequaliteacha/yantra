@@ -99,9 +99,9 @@ app. **Sign out** is reserved for a later account and stays hidden. A Zazen
 access switch asks for the Zazen word through the existing gate, and can return
 to the sangha shelf without keeping that word. Export and erase cover the
 practice record, every setting, and saved talks. Erase everything on this
-device also clears Spotify and the cookie. Resources links to Rama's published
-talks, guided meditations, the lines that can close a sit, and the music, video,
-and books on the Rama Meditation Society site.
+device also clears Spotify and the cookie. Resources opens the Dharma Talks
+section on the Rama Meditation Society site, which holds the talks, the
+meditations, and the quotes from the end of the sits.
 
 ### Setting up the connections (once, by the site owner)
 
