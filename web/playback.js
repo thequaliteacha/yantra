@@ -1,6 +1,7 @@
 /* What can actually play on this device, and when a sit should give up on a song.
    Hosted mp3s play in the page. Spotify's in-page player does not play on phones,
-   and a Spotify device that never advances the playhead is not playing. */
+   and a Spotify device that never advances the playhead is not playing.
+   Lumikara is for the Zazen word only. */
 (function (root) {
   const LUMAKARA = "lumikara";
   const STALL_MS = 5000;
@@ -28,9 +29,13 @@
     return (track.discId || "") + "#" + track.n;
   }
 
+  function circleOpen(circle, level) {
+    return circle !== LUMAKARA || level === "zazen";
+  }
+
   function trackOffered(track, session) {
     if (!track) return false;
-    if (track.circle === LUMAKARA) return false;
+    if (!circleOpen(track.circle, session && session.level)) return false;
     const key = trackKey(track);
     if (key && session && session.failedKeys && session.failedKeys[key]) return false;
     if (track.hosted) return true;
@@ -45,7 +50,7 @@
   function filterDiscs(discs, session) {
     const out = [];
     for (const disc of discs || []) {
-      if (!disc || disc.circle === LUMAKARA) continue;
+      if (!disc || !circleOpen(disc.circle, session && session.level)) continue;
       const tracks = (disc.tracks || []).filter((track) => trackOffered(
         Object.assign({ circle: disc.circle }, track),
         session,
@@ -128,6 +133,7 @@
     STALL_MS: STALL_MS,
     spotifySdkSupported: spotifySdkSupported,
     spotifyUsable: spotifyUsable,
+    circleOpen: circleOpen,
     trackOffered: trackOffered,
     filterTracks: filterTracks,
     filterDiscs: filterDiscs,

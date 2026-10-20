@@ -1,0 +1,139 @@
+{
+ "heading": "Rama talks",
+ "note": "Dharma talks by Rama, Dr. Frederick Lenz, for the Zazen word.",
+ "attribution": "Rama – Dr. Frederick Lenz",
+ "sets": [
+  {
+   "id": "dharma-talks",
+   "title": "Dharma Talks",
+   "talks": [
+    {
+     "title": "Meditation",
+     "series": "The Enlightenment Cycle",
+     "key": "talks/meditation.mp3",
+     "seconds": 1797
+    },
+    {
+     "title": "Intermediate Meditation",
+     "series": "The Enlightenment Cycle",
+     "key": "talks/intermediate-meditation.mp3",
+     "seconds": 3557
+    },
+    {
+     "title": "Advanced Meditation",
+     "series": "The Lakshmi Series",
+     "key": "talks/advanced-meditation.mp3",
+     "seconds": 3363
+    },
+    {
+     "title": "Awareness of Meditation",
+     "series": "Tantric Buddhism",
+     "key": "talks/awareness-of-meditation.mp3",
+     "seconds": 1989
+    }
+   ]
+  },
+  {
+   "id": "rama-live-la",
+   "title": "Rama Live LA",
+   "talks": [
+    {
+     "title": "Consciousness Expansion and Desire",
+     "key": "talks/rama-live-la/rama-live-la-01-consciousness-expansion-and-desire.mp3",
+     "seconds": 5128
+    },
+    {
+     "title": "Cosmic Awareness",
+     "key": "talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3",
+     "seconds": 5750
+    },
+    {
+     "title": "Reincarnation & the Tibetan Rebirth Process",
+     "key": "talks/rama-live-la/rama-live-la-03-reincarnation-the-tibetan-rebirth-process.mp3",
+     "seconds": 4292
+    },
+    {
+     "title": "Seeing, Dreaming & Places of Power",
+     "key": "talks/rama-live-la/rama-live-la-04-seeing-dreaming-places-of-power.mp3",
+     "seconds": 3436
+    },
+    {
+     "title": "Tantric Mysticism & Meditation",
+     "key": "talks/rama-live-la/rama-live-la-05-tantric-mysticism-meditation.mp3",
+     "seconds": 4605
+    },
+    {
+     "title": "For Every Ending There Is a New Beginning",
+     "key": "talks/rama-live-la/rama-live-la-06-for-every-ending-there-is-a-new-beginning.mp3",
+     "seconds": 3565
+    }
+   ]
+  },
+  {
+   "id": "the-enlightenment-cycle",
+   "title": "The Enlightenment Cycle",
+   "talks": [
+    {
+     "title": "Meditation",
+     "key": "talks/meditation.mp3",
+     "seconds": 1797
+    },
+    {
+     "title": "Buddhism",
+     "key": "talks/enlightenment-cycle/02-buddhism.mp3",
+     "seconds": 1767
+    },
+    {
+     "title": "Power",
+     "key": "talks/enlightenment-cycle/03-power.mp3",
+     "seconds": 3588
+    },
+    {
+     "title": "Balance",
+     "key": "talks/enlightenment-cycle/04-balance.mp3",
+     "seconds": 1802
+    },
+    {
+     "title": "Wisdom",
+     "key": "talks/enlightenment-cycle/05-wisdom.mp3",
+     "seconds": 1815
+    },
+    {
+     "title": "Enlightenment",
+     "key": "talks/enlightenment-cycle/06-enlightenment.mp3",
+     "seconds": 1793
+    },
+    {
+     "title": "Personal Happiness",
+     "key": "talks/enlightenment-cycle/07-personal-happiness.mp3",
+     "seconds": 1810
+    },
+    {
+     "title": "Reincarnation",
+     "key": "talks/enlightenment-cycle/08-reincarnation.mp3",
+     "seconds": 1810
+    },
+    {
+     "title": "Career Success",
+     "key": "talks/enlightenment-cycle/09-career-success.mp3",
+     "seconds": 1803
+    },
+    {
+     "title": "Miracles",
+     "key": "talks/enlightenment-cycle/10-miracles.mp3",
+     "seconds": 1795
+    },
+    {
+     "title": "Intermediate Meditation",
+     "key": "talks/intermediate-meditation.mp3",
+     "seconds": 3557
+    },
+    {
+     "title": "The Enlightenment Cycle",
+     "key": "talks/enlightenment-cycle/12-the-enlightenment-cycle.mp3",
+     "seconds": 1949
+    }
+   ]
+  }
+ ]
+}

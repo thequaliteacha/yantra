@@ -11,16 +11,14 @@ import { sanitizeSchedule } from "../../web/schedule.js";
  * No accounts: a listener types the sangha word once, and the phone keeps a
  * signed cookie for a year. SANGHA_WORD opens Vayu meditations only. ZAZEN_WORD,
  * given after the Rama talk, also opens Zazen and the lineage, plus Rama quotes
- * and Rama talk audio. Lumikara is not part of the meditation. The Zazen data
- * itself stays in the files. Both words and COOKIE_KEY are Worker secrets, kept
+ * and Rama talk audio, and Lumikara. The Zazen data itself stays in the files. Both words and COOKIE_KEY are Worker secrets, kept
  * out of this public repo.
  */
 const PREFIX = "/web/audio/";
 const TALK_PREFIX = "/talks/";
-// The Sangha word opens only Vayu. The Zazen word opens Zazen and the lineage too.
-// Lumikara is left off for every word.
+// The Sangha word opens only Vayu. The Zazen word opens every circle:
+// Vayu, Zazen, the lineage, and Lumikara.
 const OPEN_CIRCLE = "vayu";
-const CLOSED_CIRCLE = "lumikara";
 // Quote text, talk pages, and talk audio. A sangha cookie is refused these.
 const RAMA_PATH = /^\/(?:talks(?:\/|$)|web\/talks(?:\/|$)|web\/talks\.json$|talks\.json$|web\/quotes\.json$|quotes\.json$)/;
 const COOKIE = "yantra";
@@ -64,8 +62,8 @@ export function ramaDenied(level, pathname) {
 
 export function visibleShelf(data, level) {
   const zazen = level === "zazen";
-  const discs = (data.discs || []).filter((disc) => disc.circle !== CLOSED_CIRCLE && (zazen || disc.circle === OPEN_CIRCLE));
-  const circles = (data.circles || []).filter((circle) => circle.id !== CLOSED_CIRCLE && (zazen || circle.id === OPEN_CIRCLE));
+  const discs = (data.discs || []).filter((disc) => zazen || disc.circle === OPEN_CIRCLE);
+  const circles = (data.circles || []).filter((circle) => zazen || circle.id === OPEN_CIRCLE);
   return Object.assign({}, data, { discs, circles });
 }
 
@@ -112,7 +110,7 @@ export async function route(request, env) {
 
     if (url.pathname === "/discs.json") return shelf(request, env, level);
     if (url.pathname === "/web/tracks.json" || url.pathname === "/web/audio.json") return trackLinks(request, env, level);
-    if (url.pathname === "/web/quotes.json") return quotes(request, env);
+    if (url.pathname === "/web/quotes.json" || url.pathname === "/web/talks.json") return quotes(request, env);
     if (url.pathname.startsWith(TALK_PREFIX)) return talk(request, env, url);
     if (url.pathname.startsWith(PREFIX)) return recording(request, env, url, level);
     // The web loader fetches ../index.html. Assets would redirect that to "/", which
@@ -274,7 +272,13 @@ async function recording(request, env, url, level) {
   if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
   const key = decodeURIComponent(url.pathname.slice(PREFIX.length));
   if (!/^[a-z0-9-]+\/\d{2}\.mp3$/.test(key)) return new Response("Not found", { status: 404 });
-  if ((await hiddenDiscIds(request, env, level)).has(key.split("/")[0])) return new Response("Not found", { status: 404 });
+  // A recording outside the listener's circles is refused, not just unlisted.
+  if ((await hiddenDiscIds(request, env, level)).has(key.split("/")[0])) {
+    return new Response("This is for the Zazen word.", {
+      status: 403,
+      headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "private, no-store" },
+    });
+  }
   const object = await env.AUDIO.get(key, { range: request.headers, onlyIf: request.headers });
   if (object === null) return new Response("Not found", { status: 404 });
   return streamObject(request, object);

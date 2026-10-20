@@ -286,6 +286,15 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .practice-row.dusk { box-shadow: inset 2px 0 0 rgba(120, 170, 165, 0.8); }
   #practice-note { font-size: 0.92rem; color: rgba(243, 230, 200, 0.62); }
   #practice-confirm[hidden] { display: none; }
+  #practice-talks[hidden], #practice-talks audio[hidden] { display: none; }
+  #practice-talks { margin-top: 1.6rem; text-align: left; }
+  #practice-talks h4 { margin: 1.1rem 0 0.4rem; font-weight: 500; color: #f7edd4; letter-spacing: 0.04em; }
+  .talk-note, .talk-now { font-size: 0.92rem; color: rgba(243, 230, 200, 0.62); }
+  .talk { display: flex; justify-content: space-between; gap: 1rem; width: 100%; padding: 0.55rem 0.2rem;
+          font: inherit; text-align: left; color: inherit; background: transparent; border: 0;
+          border-bottom: 1px solid rgba(230, 201, 138, 0.18); cursor: pointer; }
+  .talk span:nth-child(2) { color: rgba(232, 204, 146, 0.55); font-size: 0.88rem; white-space: nowrap; }
+  #practice-talks audio { width: 100%; margin-top: 0.6rem; }
   #done-practice { text-align: center; color: rgba(232, 204, 146, 0.8); min-height: 1.3rem; }
   #reminders[hidden] { display: none; }
   #reminders { margin-top: 0.4rem; padding-top: 1.2rem; border-top: 1px solid rgba(230, 201, 138, 0.16); text-align: left; }
@@ -442,6 +451,13 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <button class="quiet" type="button" id="practice-keep">Keep</button>
         <button class="quiet" type="button" id="practice-erase-yes">Erase</button>
       </div>
+    </div>
+    <div id="practice-talks" hidden>
+      <h3 data-talk-head></h3>
+      <p class="talk-note" data-talk-note></p>
+      <div data-talk-list></div>
+      <p class="talk-now" data-talk-now></p>
+      <audio controls preload="none" hidden></audio>
     </div>
     <div id="reminders" hidden>
       <h3>Reminders</h3>
@@ -2003,7 +2019,20 @@ function paintPractice() {
   document.getElementById("practice-erase").hidden = !has;
   document.getElementById("practice-confirm").hidden = true;
   document.getElementById("practice-actions").hidden = false;
+  paintTalks();
 }
+/* Talks: shown for the Zazen word only, filled by talks.js from talks.json. */
+function paintTalks() {
+  const section = document.getElementById("practice-talks");
+  if (!section) return;
+  if (!window.YantraTalks || window.YANTRA_LEVEL !== "zazen") {
+    section.hidden = true;
+    return;
+  }
+  if (section.dataset.painted === "1" && !section.hidden) return;
+  section.dataset.painted = window.YantraTalks.render(section, window.yantraTalks, window.YANTRA_LEVEL) ? "1" : "";
+}
+window.paintTalks = paintTalks;
 function showRoom(name) {
   document.body.classList.toggle("at-home", name === "home");
   for (const id of rooms) document.getElementById(id).hidden = id !== name;
