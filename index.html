@@ -331,6 +331,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #talks-list button.talk small { color: rgba(243, 230, 200, 0.62); font-size: 0.88rem; line-height: 1.4; }
   #talks-now[hidden], #talks-quote[hidden], #talks-example[hidden] { display: none; }
   #talks-quote blockquote { margin: 0.2rem 0 0; padding: 0; font-style: italic; color: #f3e6c8; line-height: 1.55; }
+  #talks-quote-by { margin: 0.7rem 0 0; color: rgba(243, 230, 200, 0.62); font-size: 0.9rem; }
+  #talks-quote-by[hidden] { display: none; }
   #talks-audio {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
     clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
@@ -694,6 +696,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <section id="talks-quote" hidden>
       <h3 id="talks-quote-title"></h3>
       <blockquote id="talks-quote-text"></blockquote>
+      <p id="talks-quote-by" hidden></p>
     </section>
   </div>
 </div>

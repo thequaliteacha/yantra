@@ -24,12 +24,16 @@ file.quotes.forEach((quote, index) => {
   });
 });
 
-const talks = JSON.parse(fs.readFileSync(path.join(__dirname, "talks.json"), "utf8"));
-const pool = Q.poolFrom(file, talks);
+const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "talks.json"), "utf8"));
+const listed = Array.isArray(manifest) ? manifest : manifest.talks;
+const pool = Q.poolFrom(file, listed.filter((row) => row.kind !== "quote"));
 assert.strictEqual(pool.length, 8);
 assert.ok(pool.every((quote) => rama.some((row) => row[0] === quote.text)));
 assert.ok(!pool.some((quote) => quote.text.startsWith("Example quote")));
 assert.ok(pool.every((quote) => quote.source.startsWith("https://www.ramameditationsociety.org/")));
+assert.strictEqual(listed.filter((row) => row.kind === "quote").length, 6);
+assert.ok(listed.some((row) => row.kind === "talk" && Array.isArray(row.quotes) && row.quotes.length > 0));
+assert.strictEqual(Q.poolFrom(file, listed.filter((row) => row.kind === "talk")).length, 8);
 
 const discs = JSON.parse(fs.readFileSync(path.join(__dirname, "../discs.json"), "utf8"));
 const byId = new Map(discs.discs.map((disc) => [disc.id, disc]));
@@ -68,8 +72,19 @@ const realTalk = {
 };
 const fixtureLine = "FIXTURE LINE ONE";
 const otherLine = "FIXTURE LINE TWO";
-const withTalks = talks.concat([
+const withTalks = [
   realTalk,
+  {
+    id: "example-talk",
+    title: "Example talk",
+    kind: "talk",
+    example: true,
+    collection: "Dharma Talks",
+    duration: 10,
+    size: 1,
+    source: "example",
+    r2Key: "talks/example-talk.mp3",
+  },
   {
     id: "end-line",
     title: "End line",
@@ -99,7 +114,7 @@ const withTalks = talks.concat([
     source: file.quotes[0].source,
     from: "real-talk",
   },
-]);
+];
 const mixed = Q.poolFrom(file, withTalks);
 assert.strictEqual(mixed.length, 10);
 const linked = mixed.find((quote) => quote.id === "end-line");
