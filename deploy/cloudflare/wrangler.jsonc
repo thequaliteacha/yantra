@@ -11,12 +11,16 @@
     "run_worker_first": true
   },
   "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "yantra-sangha-audio" }],
+  // Reminders: one anonymous record per device. setup-reminders.sh fills in the id.
+  "kv_namespaces": [{ "binding": "REMINDERS", "id": "REPLACE_WITH_setup-reminders" }],
+  "triggers": { "crons": ["* * * * *"] },
   "workers_dev": true,
   "routes": [
     { "pattern": "yantramedi.app", "custom_domain": true },
     { "pattern": "www.yantramedi.app", "custom_domain": true }
   ],
   "preview_urls": false
-  // SANGHA_WORD, ZAZEN_WORD and COOKIE_KEY are secrets (wrangler secret put ...),
-  // kept out of this public repo.
+  // SANGHA_WORD, ZAZEN_WORD, COOKIE_KEY, VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY
+  // are secrets (wrangler secret put ...), kept out of this public repo.
+  // VAPID_PRIVATE_KEY is the JWK JSON. VAPID_PUBLIC_KEY is the raw P-256 key, base64url.
 }

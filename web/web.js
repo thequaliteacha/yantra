@@ -1626,7 +1626,7 @@
 
   window.fetch = function (input, init) {
     const url = typeof input === "string" ? input : input && input.url;
-    if (typeof url === "string" && url.startsWith("/")) {
+    if (typeof url === "string" && url.startsWith("/") && !url.startsWith("/push")) {
       const path = url.split("?")[0];
       const method = String((init && init.method) || "GET").toUpperCase();
       // Opening a window must happen inside the click, so those requests are

@@ -281,6 +281,29 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #practice-note { font-size: 0.92rem; color: rgba(243, 230, 200, 0.62); }
   #practice-confirm[hidden] { display: none; }
   #done-practice { text-align: center; color: rgba(232, 204, 146, 0.8); min-height: 1.3rem; }
+  #reminders[hidden] { display: none; }
+  #reminders { margin-top: 0.4rem; padding-top: 1.2rem; border-top: 1px solid rgba(230, 201, 138, 0.16); text-align: left; }
+  #reminders h3 { font-weight: 500; font-size: 1.35rem; color: #f7edd4; text-align: center; margin: 0.2rem 0 0.2rem; }
+  .remind-block { display: flex; flex-direction: column; gap: 0.55rem; margin: 0.3rem 0 0.2rem; }
+  .remind-head { display: flex; justify-content: space-between; align-items: center; }
+  .remind-head span { color: #f7edd4; letter-spacing: 0.06em; }
+  .remind-head button {
+    font: inherit; cursor: pointer; background: transparent; color: rgba(232, 204, 146, 0.8);
+    border: 1px solid rgba(230, 201, 138, 0.4); padding: 0.28rem 0.75rem; letter-spacing: 0.08em;
+  }
+  .remind-head button[aria-pressed="true"] { color: #f7edd4; border-color: rgba(230, 201, 138, 0.9); }
+  .remind-modes { display: flex; gap: 1.1rem; flex-wrap: wrap; color: rgba(243, 230, 200, 0.86); font-size: 0.98rem; }
+  .remind-modes label, .remind-field { display: flex; gap: 0.4rem; align-items: center; }
+  .remind-field { flex-direction: column; align-items: stretch; gap: 0.28rem; font-size: 0.82rem; color: rgba(232, 204, 146, 0.7); text-align: left; }
+  #reminders select, #reminders input[type="time"], #remind-place {
+    font: inherit; font-size: 1rem; color: #f7edd4; background: rgba(5, 4, 10, 0.6);
+    border: 1px solid rgba(230, 201, 138, 0.35); padding: 0.55rem 0.55rem; width: 100%; box-sizing: border-box;
+    color-scheme: dark;
+  }
+  #reminders select:disabled, #reminders input:disabled { opacity: 0.38; }
+  #remind-next, #remind-copy, #remind-ios, #remind-status { font-size: 0.92rem; color: rgba(243, 230, 200, 0.72); }
+  #remind-status:empty { display: none; }
+  #remind-save { margin-top: 0.2rem; }
 
   /* Phones and narrow windows: one column, room for thumbs, nothing under the notch. */
   @media (max-width: 760px) {
@@ -370,7 +393,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <p><b>Choose an album</b> above the song counts, or let each sit bring a new one. <b>Mix It Up</b> draws the songs from across the albums instead.</p>
     <p>The yantra draws itself once with each song. Tap the screen to show <b>End sitting</b>.</p>
     <p><b>Keep it on your phone:</b> on Android, open the menu and choose <b>Install app</b> or <b>Add to Home screen</b>. On iPhone, tap <b>Share</b>, then <b>Add to Home Screen</b>.</p>
-    <p>Your sits are remembered on this device, under <b>Your practice</b>. They are not sent anywhere.</p>
+    <p>Your sits are remembered on this device, under <b>Your practice</b>. They are not sent anywhere. Morning and evening reminders, if you want them, are set on that same page.</p>
   </div>
 </div>
 <div class="room" id="about" hidden>
@@ -413,6 +436,59 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <button class="quiet" type="button" id="practice-keep">Keep</button>
         <button class="quiet" type="button" id="practice-erase-yes">Erase</button>
       </div>
+    </div>
+    <div id="reminders" hidden>
+      <h3>Reminders</h3>
+      <p>A quiet note in the morning and again in the evening. Each one can follow the sun, or a time you choose. The place stays on this device.</p>
+      <div class="remind-block" data-theme="morning">
+        <div class="remind-head"><span>Morning</span><button type="button" data-on aria-pressed="false">Off</button></div>
+        <div class="remind-modes">
+          <label><input type="radio" name="morning-mode" data-mode value="sun" checked> Sunrise</label>
+          <label><input type="radio" name="morning-mode" data-mode value="clock"> A set time</label>
+        </div>
+        <label class="remind-field">Offset
+          <select data-offset>
+            <option value="-60">60 minutes before</option>
+            <option value="-30">30 minutes before</option>
+            <option value="-15">15 minutes before</option>
+            <option value="0" selected>No offset</option>
+            <option value="15">15 minutes after</option>
+            <option value="30">30 minutes after</option>
+            <option value="60">60 minutes after</option>
+          </select>
+        </label>
+        <label class="remind-field">Time<input data-time type="time" value="06:30"></label>
+      </div>
+      <div class="remind-block" data-theme="evening">
+        <div class="remind-head"><span>Evening</span><button type="button" data-on aria-pressed="false">Off</button></div>
+        <div class="remind-modes">
+          <label><input type="radio" name="evening-mode" data-mode value="sun" checked> Sunset</label>
+          <label><input type="radio" name="evening-mode" data-mode value="clock"> A set time</label>
+        </div>
+        <label class="remind-field">Offset
+          <select data-offset>
+            <option value="-60">60 minutes before</option>
+            <option value="-30">30 minutes before</option>
+            <option value="-15">15 minutes before</option>
+            <option value="0" selected>No offset</option>
+            <option value="15">15 minutes after</option>
+            <option value="30">30 minutes after</option>
+            <option value="60">60 minutes after</option>
+          </select>
+        </label>
+        <label class="remind-field">Time<input data-time type="time" value="19:00"></label>
+      </div>
+      <label class="remind-field">Place
+        <input id="remind-place" list="remind-places" autocomplete="off" placeholder="City, or 21.3, -157.9" enterkeyhint="done">
+      </label>
+      <datalist id="remind-places"></datalist>
+      <div class="links"><button class="quiet" type="button" id="remind-here">Use where I am</button></div>
+      <p id="remind-next"></p>
+      <p id="remind-copy"></p>
+      <p id="remind-ios" hidden></p>
+      <button class="choice" type="button" id="remind-save">Save reminders</button>
+      <div class="links"><button class="quiet" type="button" id="remind-delete">Delete my reminder data</button></div>
+      <p id="remind-status" role="status"></p>
     </div>
   </div>
 </div>
@@ -2116,7 +2192,19 @@ if (window.YANTRA_WEB) {
     installPrompt = null;
     document.getElementById("install-app").hidden = true;
   });
-  if (!params.get("menu") && !params.get("sit")) showRoom("home");
+  function openReadySit(theme) {
+    sessionTheme = theme === "evening" ? "evening" : "morning";
+    document.getElementById("pick-title").textContent =
+      sessionTheme === "morning" ? "Begin your morning meditation" : "Begin your evening meditation";
+    document.getElementById("pick").dataset.theme = sessionTheme;
+    roomTrail = [];
+    showRoom("pick");
+    paintPick();
+  }
+  window.openReadySit = openReadySit;
+  const ready = params.get("ready");
+  if (ready === "morning" || ready === "evening") openReadySit(ready);
+  else if (!params.get("menu") && !params.get("sit")) showRoom("home");
 }
 let menu = params.get("menu") === "playlists" ? "playlists" : "albums";
 function showMenu() {
@@ -2225,6 +2313,7 @@ fetch("/collection", { cache: "no-store" })
       })
       .catch(() => {});
     applyNow();
+    if (window.YANTRA_WEB) paintPick();
     if (params.get("sit") === "1") begin();
   })
   .catch(() => {
