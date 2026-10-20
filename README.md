@@ -99,9 +99,11 @@ app. **Sign out** is reserved for a later account and stays hidden. A Zazen
 access switch asks for the Zazen word through the existing gate, and can return
 to the sangha shelf without keeping that word. Export and erase cover the
 practice record, every setting, and saved talks. Erase everything on this
-device also clears Spotify and the cookie. Resources opens the Dharma Talks
-section on the Rama Meditation Society site, which holds the talks, the
-meditations, and the quotes from the end of the sits.
+device also clears Spotify and the cookie. Resources opens the talks in the
+app, grouped as Dharma Talks and Rama Live LA: the talks, the meditations, and
+the quotes from the end of the sits, from the Rama Meditation Society. They
+play from this site. The list is `web/talks.json`, and a recording may live in
+a folder such as `talks/rama-live-la/`. `web/talks.json` is the list of those talks and the practice quotes. A practice quote is shown as text, with an author line only when the manifest names one.
 
 ### Setting up the connections (once, by the site owner)
 
@@ -125,13 +127,16 @@ Spotify app on the phone, so open Spotify once before the first sit.
 
 `deploy/cloudflare/` holds the Cloudflare Worker that serves the site. The
 recordings live in a private R2 bucket and stream through the Worker with byte
-ranges. The Worker checks the sangha word's signed cookie and leaves circles off
+ranges. Dharma Talks use the same bucket, under `talks/`, and the same word
+gate. The Worker checks the sangha word's signed cookie and leaves circles off
 the shelf that the word doesn't open. The words and the cookie key are Worker
-secrets, never in this repo.
+secrets, never in this repo. The service worker does not cache the talk files.
 
 ```sh
 python3 web/build_audio.py ~/Music/vayu-sangha ~/Music/zazen-sangha   # stage recordings, write web/audio.json
 deploy/cloudflare/upload.sh                      # send new recordings to R2
+# Put each talk in web/talks-stage/ under the file name from its r2Key, then:
+deploy/cloudflare/upload-talks.sh                # send missing talks/ objects to R2
 deploy/cloudflare/build.sh && wrangler deploy    # build and publish the site
 ```
 

@@ -231,7 +231,9 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .room .quiet:hover { color: #f7edd4; }
   .room .links { display: flex; justify-content: center; gap: 1.4rem; flex-wrap: wrap; margin-top: 1.6rem; }
   .room .back {
-    position: fixed; left: max(1.4rem, env(safe-area-inset-left)); top: max(1.4rem, env(safe-area-inset-top));
+    /* Above the room's content: the settled .inner keeps a transform, so without this a tall
+       page (Your practice with reminders) covered the arrow and swallowed taps. */
+    position: fixed; z-index: 6; left: max(1.4rem, env(safe-area-inset-left)); top: max(1.4rem, env(safe-area-inset-top));
     background: transparent; border: 0; color: rgba(243, 230, 200, 0.8); font-size: 1.5rem; cursor: pointer; padding: 0.3rem 0.5rem;
   }
   .room .corner {
@@ -295,19 +297,42 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     color-scheme: dark;
   }
   #account-saved:empty { display: none; }
-  #account-resources { display: flex; flex-direction: column; gap: 0.35rem; }
-  #account-resources h4 {
+  .account-credit { color: rgba(232, 204, 146, 0.72); font-size: 0.92rem; }
+  #talks { justify-content: flex-start; overflow: auto; -webkit-overflow-scrolling: touch; }
+  #talks .inner { margin: 0.4rem auto 2.4rem; text-align: left; }
+  #talks h2, #talks .credit { text-align: center; }
+  #talks h2 { margin-bottom: 0.15rem; }
+  #talks .credit { margin: 0; color: rgba(232, 204, 146, 0.72); font-size: 0.92rem; }
+  #talks-example { font-size: 0.92rem; color: rgba(232, 204, 146, 0.75); }
+  #account-resources { display: flex; flex-direction: column; gap: 0.65rem; }
+  #account-resources .choice { padding: 0.85rem 0; }
+  #talks-list h3 {
+    margin: 1.25rem 0 0.15rem; font-weight: 500; font-size: 1.15rem; letter-spacing: 0.02em;
+    text-transform: none; color: #f7edd4;
+  }
+  #talks-list h4 {
     margin: 0.85rem 0 0.1rem; font-weight: 500; font-size: 0.82rem; letter-spacing: 0.12em;
     text-transform: uppercase; color: rgba(230, 201, 138, 0.78);
   }
-  #account-resources h4:first-child { margin-top: 0.15rem; }
-  #account-resources ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.85rem; }
-  #account-resources li {
-    display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem;
-    padding: 0; font-size: 1rem; color: inherit;
+  #talks-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  #talks-list li { display: block; padding: 0; }
+  #talks-list button.talk {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 0.12rem;
+    width: 100%; text-align: left; font: inherit; cursor: pointer; background: transparent;
+    color: #f7edd4; border: 0; border-bottom: 1px solid rgba(230, 201, 138, 0.16);
+    padding: 0.75rem 0.05rem;
   }
-  #account-resources a { color: #e6c98a; text-underline-offset: 3px; line-height: 1.35; }
-  #account-resources span { display: block; margin: 0; color: rgba(243, 230, 200, 0.62); font-size: 0.92rem; line-height: 1.45; }
+  #talks-list button.talk small { color: rgba(243, 230, 200, 0.62); font-size: 0.88rem; line-height: 1.4; }
+  #talks-now[hidden], #talks-quote[hidden], #talks-example[hidden] { display: none; }
+  #talks-quote blockquote { margin: 0.2rem 0 0; padding: 0; font-style: italic; color: #f3e6c8; line-height: 1.55; }
+  #talks-quote-by { margin: 0.7rem 0 0; color: rgba(243, 230, 200, 0.62); font-size: 0.9rem; }
+  #talks-quote-by[hidden] { display: none; }
+  #talks-audio {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  #talks-seek { width: 100%; accent-color: #e6c98a; }
+  #talks-status:empty { display: none; }
   #account-sync { min-height: 7.5rem; }
   #account-sync[hidden] { display: none; }
   #account-talks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
@@ -628,7 +653,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     </section>
     <section class="account-block">
       <h3>Resources</h3>
-      <p>The Dharma Talks section on the Rama Meditation Society site. It holds the talks, the meditations, and the quotes from the end of the sits. Each link opens in a new tab.</p>
+      <p>Dharma talks, the meditations, and the quotes from the end of the sits.</p>
+      <p class="account-credit">from the Rama Meditation Society</p>
       <div id="account-resources"></div>
     </section>
     <section class="account-block">
@@ -642,6 +668,29 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
           <button class="quiet" type="button" id="account-wipe-yes">Erase everything</button>
         </div>
       </div>
+    </section>
+  </div>
+</div>
+<div class="room" id="talks" hidden>
+  <button class="back" type="button" data-room="back" aria-label="Back">&#8592;</button>
+  <div class="inner">
+    <h2>Dharma Talks</h2>
+    <p class="credit">from the Rama Meditation Society</p>
+    <p id="talks-example" hidden>Example data. These rows stand in until the real manifest is added. Nothing here is fetched from another site.</p>
+    <div id="talks-list"></div>
+    <section id="talks-now" hidden>
+      <h3 id="talks-title"></h3>
+      <p id="talks-description"></p>
+      <audio id="talks-audio" preload="none" playsinline></audio>
+      <input id="talks-seek" type="range" min="0" max="1000" value="0" aria-label="Position in the talk">
+      <p id="talks-clock"></p>
+      <div class="links"><button class="quiet" type="button" id="talks-play">Play</button></div>
+      <p id="talks-status" role="status"></p>
+    </section>
+    <section id="talks-quote" hidden>
+      <h3 id="talks-quote-title"></h3>
+      <blockquote id="talks-quote-text"></blockquote>
+      <p id="talks-quote-by" hidden></p>
     </section>
   </div>
 </div>
@@ -1793,6 +1842,7 @@ function followHearing() {
 }
 
 function begin() {
+  if (window.yantraTalksPause) window.yantraTalksPause();
   window.drawEpoch = (window.drawEpoch || 0) + 1;
   document.body.classList.add("sitting");
   caption.classList.add("show");
@@ -2108,7 +2158,7 @@ document.getElementById("form-play").addEventListener("click", () => {
 });
 
 /* ---- Morning and evening sits (web edition) ---- */
-const rooms = ["home", "pick", "guide", "about", "done", "practice", "account"];
+const rooms = ["home", "pick", "guide", "about", "done", "practice", "account", "talks"];
 let roomTrail = [];
 let sessionTheme = "morning";
 let sessionLive = false;
@@ -2165,6 +2215,7 @@ function showRoom(name) {
   if (name !== "pick") document.getElementById("pick-tip").hidden = true;
   if (name === "practice") paintPractice();
   if (name === "account" && window.paintAccount) window.paintAccount();
+  if (name === "talks" && window.paintTalkLibrary) window.paintTalkLibrary();
   if ((name === "home" || name === "done") && window.paintGreeting) window.paintGreeting();
 }
 window.showRoom = showRoom;

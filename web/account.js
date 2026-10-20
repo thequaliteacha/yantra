@@ -151,32 +151,8 @@
     paintTalks();
     const reminders = document.getElementById("account-reminders-status");
     if (reminders) reminders.textContent = reminderLine();
-    paintResources();
+    if (window.paintTalkResources) window.paintTalkResources();
     paintGreeting();
-  }
-
-  function paintResources() {
-    const root = document.getElementById("account-resources");
-    const groups = window.YantraResources && window.YantraResources.groups;
-    if (!root || !groups || root.childElementCount) return;
-    groups.forEach((group) => {
-      const heading = document.createElement("h4");
-      heading.textContent = group.heading;
-      const list = document.createElement("ul");
-      group.items.forEach((item) => {
-        const row = document.createElement("li");
-        const link = document.createElement("a");
-        link.href = item.url;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.textContent = item.label;
-        const note = document.createElement("span");
-        note.textContent = item.note;
-        row.append(link, note);
-        list.append(row);
-      });
-      root.append(heading, list);
-    });
   }
 
   function showConfirm(id, open) {
