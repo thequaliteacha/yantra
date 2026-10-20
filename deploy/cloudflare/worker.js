@@ -9,15 +9,20 @@ import { sanitizeSchedule } from "../../web/schedule.js";
  * player can seek.
  *
  * No accounts: a listener types the sangha word once, and the phone keeps a
- * signed cookie for a year. SANGHA_WORD opens the Vayu recordings for everyone in
- * the group. Zazen is shared only after Chitananda gives the student the Rama talk,
- * so only ZAZEN_WORD opens the rest of the shelf (Zazen,
- * Lumikara, Lineage); with the Sangha word those circles are left off. The Zazen data itself stays in the files. Both words and COOKIE_KEY
- * are Worker secrets, kept out of this public repo.
+ * signed cookie for a year. SANGHA_WORD opens Vayu meditations only. ZAZEN_WORD,
+ * given after the Rama talk, also opens Zazen and the lineage, plus Rama quotes
+ * and Rama talk audio. Lumikara is not part of the meditation. The Zazen data
+ * itself stays in the files. Both words and COOKIE_KEY are Worker secrets, kept
+ * out of this public repo.
  */
 const PREFIX = "/web/audio/";
-// The Sangha word opens only Vayu; the Zazen word opens every circle.
+const TALK_PREFIX = "/talks/";
+// The Sangha word opens only Vayu. The Zazen word opens Zazen and the lineage too.
+// Lumikara is left off for every word.
 const OPEN_CIRCLE = "vayu";
+const CLOSED_CIRCLE = "lumikara";
+// Quote text, talk pages, and talk audio. A sangha cookie is refused these.
+const RAMA_PATH = /^\/(?:talks(?:\/|$)|web\/talks(?:\/|$)|web\/talks\.json$|talks\.json$|web\/quotes\.json$|quotes\.json$)/;
 const COOKIE = "yantra";
 const YEAR = 365 * 24 * 3600;
 const PUBLIC = /^\/(web\/manifest\.webmanifest|web\/icons\/[\w.-]+)$/;
@@ -52,7 +57,19 @@ export default {
   },
 };
 
-async function route(request, env) {
+export function ramaDenied(level, pathname) {
+  if (level === "zazen") return false;
+  return RAMA_PATH.test(pathname || "");
+}
+
+export function visibleShelf(data, level) {
+  const zazen = level === "zazen";
+  const discs = (data.discs || []).filter((disc) => disc.circle !== CLOSED_CIRCLE && (zazen || disc.circle === OPEN_CIRCLE));
+  const circles = (data.circles || []).filter((circle) => circle.id !== CLOSED_CIRCLE && (zazen || circle.id === OPEN_CIRCLE));
+  return Object.assign({}, data, { discs, circles });
+}
+
+export async function route(request, env) {
   {
     const url = new URL(request.url);
     // One home address: www and the old workers.dev link both move to yantramedi.app.
@@ -77,7 +94,14 @@ async function route(request, env) {
       const wantsPage = (request.headers.get("accept") || "").includes("text/html");
       return wantsPage ? gatePage("") : new Response("Enter the sangha word first.", { status: 401 });
     }
-    const zazen = level === "zazen";
+    if (ramaDenied(level, url.pathname)) {
+      return new Response("This is for the Zazen word.", {
+        status: 403,
+        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "private, no-store" },
+      });
+    }
+    if (url.pathname === "/access" && request.method === "GET") return privateJson({ level });
+    if (url.pathname === "/access") return new Response("Method not allowed", { status: 405 });
 
     if (url.pathname === "/push/key" && request.method === "GET") return pushKey(env);
     if (url.pathname === "/push" && request.method === "POST") return saveReminder(request, env);
@@ -86,9 +110,11 @@ async function route(request, env) {
       return new Response("Method not allowed", { status: 405 });
     }
 
-    if (url.pathname === "/discs.json") return shelf(request, env, zazen);
-    if (url.pathname === "/web/tracks.json" || url.pathname === "/web/audio.json") return trackLinks(request, env, zazen);
-    if (url.pathname.startsWith(PREFIX)) return recording(request, env, url, zazen);
+    if (url.pathname === "/discs.json") return shelf(request, env, level);
+    if (url.pathname === "/web/tracks.json" || url.pathname === "/web/audio.json") return trackLinks(request, env, level);
+    if (url.pathname === "/web/quotes.json") return quotes(request, env);
+    if (url.pathname.startsWith(TALK_PREFIX)) return talk(request, env, url);
+    if (url.pathname.startsWith(PREFIX)) return recording(request, env, url, level);
     // The web loader fetches ../index.html. Assets would redirect that to "/", which
     // points back at the loader, so serve the page itself.
     if (url.pathname === "/index.html") return env.ASSETS.fetch(new Request(new URL("/", url), request));
@@ -98,9 +124,14 @@ async function route(request, env) {
 
 /* ---- What each listener sees ---- */
 
-async function gatedIds(request, env) {
-  const discs = await (await env.ASSETS.fetch(new Request(new URL("/discs.json", request.url)))).json();
-  return new Set(discs.discs.filter((d) => d.circle !== OPEN_CIRCLE).map((d) => d.id));
+async function loadDiscs(request, env) {
+  return (await env.ASSETS.fetch(new Request(new URL("/discs.json", request.url)))).json();
+}
+
+async function hiddenDiscIds(request, env, level) {
+  const data = await loadDiscs(request, env);
+  const shown = new Set(visibleShelf(data, level).discs.map((disc) => disc.id));
+  return new Set((data.discs || []).filter((disc) => !shown.has(disc.id)).map((disc) => disc.id));
 }
 
 function privateJson(data, status) {
@@ -194,42 +225,39 @@ export async function deleteReminder(request, env) {
   return privateJson({ ok: true });
 }
 
-async function shelf(request, env, zazen) {
+async function shelf(request, env, level) {
   const response = await env.ASSETS.fetch(request);
   if (!response.ok) return response;
-  const data = await response.json();
-  if (!zazen) {
-    data.circles = data.circles.filter((c) => c.id === OPEN_CIRCLE);
-    data.discs = data.discs.filter((d) => d.circle === OPEN_CIRCLE);
-  }
-  return privateJson(data);
+  return privateJson(visibleShelf(await response.json(), level));
 }
 
 // Song links and the recordings list are both keyed by disc, so both lose the gated discs.
-async function trackLinks(request, env, zazen) {
+async function trackLinks(request, env, level) {
   const response = await env.ASSETS.fetch(request);
-  if (!response.ok || zazen) return response.ok ? privateJson(await response.json()) : response;
+  if (!response.ok) return response;
   const data = await response.json();
-  for (const id of await gatedIds(request, env)) delete data[id];
+  for (const id of await hiddenDiscIds(request, env, level)) delete data[id];
   return privateJson(data);
 }
 
-async function recording(request, env, url, zazen) {
+async function quotes(request, env) {
   if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
-  const key = decodeURIComponent(url.pathname.slice(PREFIX.length));
-  if (!/^[a-z0-9-]+\/\d{2}\.mp3$/.test(key)) return new Response("Not found", { status: 404 });
-  if (!zazen && (await gatedIds(request, env)).has(key.split("/")[0])) return new Response("Not found", { status: 404 });
+  const response = await env.ASSETS.fetch(request);
+  if (!response.ok) return response;
+  const headers = new Headers(response.headers);
+  headers.set("content-type", "application/json");
+  headers.set("cache-control", "private, no-store");
+  headers.set("vary", "cookie");
+  return new Response(request.method === "HEAD" ? null : response.body, { status: 200, headers });
+}
 
-  const object = await env.AUDIO.get(key, { range: request.headers, onlyIf: request.headers });
-  if (object === null) return new Response("Not found", { status: 404 });
-
+function streamObject(request, object) {
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
   headers.set("accept-ranges", "bytes");
   headers.set("cache-control", "private, max-age=86400");
   if (!headers.has("content-type")) headers.set("content-type", "audio/mpeg");
-
   if (!("body" in object)) return new Response(null, { status: 304, headers });
   if (object.range && request.headers.has("range")) {
     const start = object.range.offset ?? 0;
@@ -240,6 +268,27 @@ async function recording(request, env, url, zazen) {
   }
   headers.set("content-length", String(object.size));
   return new Response(request.method === "HEAD" ? null : object.body, { headers });
+}
+
+async function recording(request, env, url, level) {
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
+  const key = decodeURIComponent(url.pathname.slice(PREFIX.length));
+  if (!/^[a-z0-9-]+\/\d{2}\.mp3$/.test(key)) return new Response("Not found", { status: 404 });
+  if ((await hiddenDiscIds(request, env, level)).has(key.split("/")[0])) return new Response("Not found", { status: 404 });
+  const object = await env.AUDIO.get(key, { range: request.headers, onlyIf: request.headers });
+  if (object === null) return new Response("Not found", { status: 404 });
+  return streamObject(request, object);
+}
+
+async function talk(request, env, url) {
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
+  const key = "talks/" + decodeURIComponent(url.pathname.slice(TALK_PREFIX.length));
+  if (!/^talks\/[a-z0-9][a-z0-9./_-]{0,160}\.mp3$/.test(key) || key.includes("..")) {
+    return new Response("Not found", { status: 404 });
+  }
+  const object = await env.AUDIO.get(key, { range: request.headers, onlyIf: request.headers });
+  if (object === null) return new Response("Not found", { status: 404 });
+  return streamObject(request, object);
 }
 
 /* ---- The sangha word ---- */
@@ -255,6 +304,11 @@ function same(a, b) {
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
+}
+
+export async function mintCookie(env, level, now = Date.now()) {
+  const exp = Math.floor(now / 1000) + YEAR;
+  return `${level}.${exp}.${await hmac(env, level + "." + exp)}`;
 }
 
 async function cookieLevel(request, env) {
@@ -280,8 +334,7 @@ async function enter(request, env, url) {
     await new Promise((r) => setTimeout(r, 800));
     return gatePage("That word doesn't open it. Ask Chitananda for the sangha word.");
   }
-  const exp = Math.floor(Date.now() / 1000) + YEAR;
-  const value = `${level}.${exp}.${await hmac(env, level + "." + exp)}`;
+  const value = await mintCookie(env, level);
   return new Response(null, {
     status: 303,
     headers: {

@@ -33,8 +33,9 @@ your own computer, and everything stays on that machine.
 
 The web edition lives at [yantramedi.app](https://yantramedi.app). The first
 visit asks for the sangha word, which Chitananda shares with the group; the
-phone then remembers it for a year. The sangha word opens Vayu Meditation, and
-the Zazen word, given after the Rama talk, opens every circle.
+phone then remembers it for a year. The sangha word opens Vayu Meditation only.
+The Zazen word, given after the Rama talk, also opens Zazen and the lineage,
+plus Rama quotes and talks. Lumikara is not part of the meditation.
 
 It opens like the Heart School meditation app: **Morning
 Meditation** or **Evening Meditation**, then 1, 3, 6 or 12 songs. A sit keeps
@@ -46,7 +47,8 @@ let each sit bring a new one. **Mix It Up** goes across albums instead,
 following the Heart School app's curation of Vayu Meditation songs
 (`web/sets.json`). The sangha's own recordings play right in the page with no
 account needed. Twenty albums are hosted in full (of the 36) and play that way.
-Big Island is hosted except for one track, so that album still plays from Spotify,
+Big Island is hosted except for one track. Where every offered song is hosted,
+the page plays those copies; otherwise that album still plays from Spotify,
 along with the albums that are not recorded yet. Where a mixed set calls for a song that isn't recorded, a
 recorded song for the same chakra takes its place. Albums without recordings play from
 the listener's own Spotify. A hosted recording moves the yantra; a Spotify sit
@@ -59,8 +61,10 @@ The link above opens the web edition on any computer or phone. For albums
 that aren't recorded, press *Connect* beside *Listen on Spotify* once. After that,
 *Begin sitting* and a form's *Sit* play every song right in the page, in order,
 and the caption follows the whole sit. There are no other windows and nothing
-to press until the sit ends. Spotify needs Premium. On a phone, Spotify plays through the Spotify app that is open on
-it.
+to press until the sit ends. Spotify needs Premium. On a phone the in-page
+Spotify player cannot play, so a sit uses the hosted recordings. Spotify plays
+only when the Spotify app is already available. A song that never starts is
+skipped, and the next playable song begins.
 
 Each listener's forms are their own. On the web they are kept in that browser
 under the listener's Spotify account, and every saved form also becomes a
@@ -104,16 +108,19 @@ audio files and the silenced notifications belong to the desktop app.
 Open the link and add Yantra to the home screen: on Android, Chrome's menu ›
 *Add to Home screen* (or *Install app*); on iPhone, Safari's Share › *Add to
 Home Screen*. It then opens full screen like an app, keeps the screen awake
-during a sitting, and a tap shows *End sitting*. Spotify plays through the
-Spotify app on the phone, so open Spotify once before the first sit.
+during a sitting, and a tap shows *End sitting*. The in-page Spotify player
+cannot play on a phone, so sits use the hosted recordings. Spotify plays only
+when the Spotify app is already available. A song that never starts is skipped.
 
 ### Hosting (yantramedi.app)
 
 `deploy/cloudflare/` holds the Cloudflare Worker that serves the site. The
 recordings live in a private R2 bucket and stream through the Worker with byte
-ranges. The Worker checks the sangha word's signed cookie and leaves circles off
-the shelf that the word doesn't open. The words and the cookie key are Worker
-secrets, never in this repo.
+ranges. The Worker checks the signed cookie. The sangha word leaves every circle
+but Vayu off the shelf, and is refused Rama quotes and talk audio. The Zazen
+word also opens Zazen, the lineage, Rama quotes, and Rama talk audio. Lumikara
+is left off for both. The words and the cookie key are Worker secrets, never in
+this repo.
 
 ```sh
 python3 web/build_audio.py ~/Music/vayu-sangha ~/Music/zazen-sangha   # stage recordings, write web/audio.json
