@@ -89,6 +89,11 @@ either a clock time or coordinates rounded to a tenth of a degree. Delete my
 reminder data removes that record. On iPhone and iPad the note arrives only
 from the Home Screen app.
 
+*Settings*, beside *Your practice*, is this device only. An optional name can
+greet you on the home screen and when a sit ends. It is not uploaded. Sign out
+clears the word-gate cookie. Erase everything on this device also clears
+practice, reminders, Spotify, and that name.
+
 ### Setting up the connections (once, by the site owner)
 
 `web/config.json` holds one public value:

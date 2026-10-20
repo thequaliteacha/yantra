@@ -281,6 +281,21 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #practice-note { font-size: 0.92rem; color: rgba(243, 230, 200, 0.62); }
   #practice-confirm[hidden] { display: none; }
   #done-practice { text-align: center; color: rgba(232, 204, 146, 0.8); min-height: 1.3rem; }
+  #home-greeting, #done-greeting { text-align: center; color: rgba(232, 204, 146, 0.88); margin: 0; }
+  #home-greeting[hidden], #done-greeting[hidden] { display: none; }
+  #account { justify-content: flex-start; overflow: auto; -webkit-overflow-scrolling: touch; }
+  #account .inner { margin-top: 0.4rem; margin-bottom: 2.4rem; text-align: left; }
+  #account h2 { text-align: center; }
+  #account h3 { font-weight: 500; font-size: 1.15rem; color: #f7edd4; margin: 0.2rem 0 0.15rem; }
+  .account-block { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.35rem; padding-top: 1rem; border-top: 1px solid rgba(230, 201, 138, 0.16); }
+  .account-field { display: flex; flex-direction: column; gap: 0.28rem; font-size: 0.82rem; color: rgba(232, 204, 146, 0.7); text-align: left; }
+  #account input, #account select {
+    font: inherit; font-size: 1rem; color: #f7edd4; background: rgba(5, 4, 10, 0.6);
+    border: 1px solid rgba(230, 201, 138, 0.35); padding: 0.55rem 0.55rem; width: 100%; box-sizing: border-box;
+    color-scheme: dark;
+  }
+  #account-saved:empty { display: none; }
+  #account-signout-confirm[hidden], #account-wipe-confirm[hidden] { display: none; }
   #reminders[hidden] { display: none; }
   #reminders { margin-top: 0.4rem; padding-top: 1.2rem; border-top: 1px solid rgba(230, 201, 138, 0.16); text-align: left; }
   #reminders h3 { font-weight: 500; font-size: 1.35rem; color: #f7edd4; text-align: center; margin: 0.2rem 0 0.2rem; }
@@ -351,6 +366,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 <div class="room" id="home" hidden>
   <div class="inner">
     <h1>Yantra Meditation</h1>
+    <p id="home-greeting" hidden></p>
     <div id="home-mark" aria-hidden="true"></div>
     <button class="choice dawn" type="button" data-theme="morning">Morning Meditation</button>
     <button class="choice dusk" type="button" data-theme="evening">Evening Meditation</button>
@@ -358,6 +374,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <div class="links">
       <button class="quiet" type="button" data-room="guide">Getting Started</button>
       <button class="quiet" type="button" data-room="practice">Your practice</button>
+      <button class="quiet" type="button" data-room="account">Settings</button>
       <button class="quiet" type="button" id="open-shelf">Albums and forms</button>
       <button class="quiet" type="button" id="install-app" hidden>Install Yantra</button>
     </div>
@@ -393,7 +410,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <p><b>Choose an album</b> above the song counts, or let each sit bring a new one. <b>Mix It Up</b> draws the songs from across the albums instead.</p>
     <p>The yantra draws itself once with each song. Tap the screen to show <b>End sitting</b>.</p>
     <p><b>Keep it on your phone:</b> on Android, open the menu and choose <b>Install app</b> or <b>Add to Home screen</b>. On iPhone, tap <b>Share</b>, then <b>Add to Home Screen</b>.</p>
-    <p>Your sits are remembered on this device, under <b>Your practice</b>. They are not sent anywhere. Morning and evening reminders, if you want them, are set on that same page.</p>
+    <p>Your sits are remembered on this device, under <b>Your practice</b>. They are not sent anywhere. Morning and evening reminders, if you want them, are set on that same page. <b>Settings</b> holds a name for this device, Spotify, and sign-out.</p>
   </div>
 </div>
 <div class="room" id="about" hidden>
@@ -408,6 +425,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 <div class="room" id="done" hidden>
   <div class="inner">
     <h2>Meditation Complete</h2>
+    <p id="done-greeting" hidden></p>
     <p id="done-line" style="text-align:center">Well done. Your morning meditation is complete.</p>
     <p id="done-practice"></p>
     <blockquote id="done-words" hidden>
@@ -492,6 +510,77 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     </div>
   </div>
 </div>
+<div class="room" id="account" hidden>
+  <button class="back" type="button" data-room="home" aria-label="Back">&#8592;</button>
+  <div class="inner">
+    <h2>Your account</h2>
+    <p>There is no account on a server. This page is this device: a name if you want one, the word that opened the shelf, and the choices already kept here.</p>
+    <section class="account-block">
+      <h3>Name</h3>
+      <label class="account-field">Display name
+        <input id="account-name" type="text" maxlength="40" autocomplete="nickname" placeholder="Optional">
+      </label>
+      <label class="account-field">Greeting
+        <select id="account-greeting">
+          <option value="none">No greeting</option>
+          <option value="hello">Hello</option>
+          <option value="time">By time of day</option>
+        </select>
+      </label>
+      <p>The name stays on this device. It is never sent.</p>
+      <button class="choice" type="button" id="account-save">Save</button>
+      <p id="account-saved" role="status"></p>
+    </section>
+    <section class="account-block">
+      <h3>Access</h3>
+      <p id="account-access">Checking the word gate…</p>
+      <div class="links"><button class="quiet" type="button" id="account-signout">Sign out</button></div>
+      <div id="account-signout-confirm" hidden>
+        <p>Sign out on this device? The sangha word will be asked for again. Practice, reminders, and Spotify stay here.</p>
+        <div class="links">
+          <button class="quiet" type="button" id="account-signout-keep">Stay</button>
+          <button class="quiet" type="button" id="account-signout-yes">Sign out</button>
+        </div>
+      </div>
+    </section>
+    <section class="account-block">
+      <h3>Spotify</h3>
+      <p id="account-spotify"></p>
+      <p id="account-spotify-note" hidden></p>
+      <div class="links">
+        <button class="quiet" type="button" id="account-spotify-connect" hidden>Connect</button>
+        <button class="quiet" type="button" id="account-spotify-disconnect" hidden>Disconnect</button>
+        <button class="quiet" type="button" id="account-spotify-clear" hidden>Forget the listener note</button>
+      </div>
+    </section>
+    <section class="account-block">
+      <h3>Practice</h3>
+      <p id="account-practice"></p>
+      <div class="links">
+        <button class="quiet" type="button" id="account-export">Export</button>
+        <button class="quiet" type="button" id="account-erase">Erase</button>
+      </div>
+      <p>Export and erase are the same ones under Your practice.</p>
+    </section>
+    <section class="account-block">
+      <h3>Reminders</h3>
+      <p id="account-reminders-status"></p>
+      <div class="links"><button class="quiet" type="button" id="account-reminders">Reminder settings</button></div>
+    </section>
+    <section class="account-block">
+      <h3>Privacy</h3>
+      <p>Your name, practice, glow, and reminder choices stay in this browser. Spotify's sign-in stays here until you disconnect. The sangha site keeps only the word-gate cookie, and, if reminders are on, an anonymous id with a push subscription and either a clock time or a place rounded to about a tenth of a degree. There is no account and no tracking.</p>
+      <div class="links"><button class="quiet" type="button" id="account-wipe">Erase everything on this device</button></div>
+      <div id="account-wipe-confirm" hidden>
+        <p>Erase everything on this device? The name, practice, reminders, Spotify sign-in, and the sangha word will be removed. This cannot be undone.</p>
+        <div class="links">
+          <button class="quiet" type="button" id="account-wipe-keep">Keep</button>
+          <button class="quiet" type="button" id="account-wipe-yes">Erase everything</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
 <div id="gate">
   <div class="shelf">
     <div class="menus">
@@ -499,6 +588,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <button id="menu-albums" type="button" class="on">Albums</button>
       <button id="menu-forms" type="button">Playlists</button>
       <button id="menu-practice" type="button" hidden>Practice</button>
+      <button id="menu-account" type="button" hidden>Settings</button>
       <div class="listen" id="listen">
         <span>Listen on</span>
         <button type="button" data-source="spotify">Spotify</button>
@@ -1954,7 +2044,7 @@ document.getElementById("form-play").addEventListener("click", () => {
 });
 
 /* ---- Morning and evening sits (web edition) ---- */
-const rooms = ["home", "pick", "guide", "about", "done", "practice"];
+const rooms = ["home", "pick", "guide", "about", "done", "practice", "account"];
 let roomTrail = [];
 let sessionTheme = "morning";
 let sessionLive = false;
@@ -2010,7 +2100,10 @@ function showRoom(name) {
   if (name) roomTrail.push(name);
   if (name !== "pick") document.getElementById("pick-tip").hidden = true;
   if (name === "practice") paintPractice();
+  if (name === "account" && window.paintAccount) window.paintAccount();
+  if ((name === "home" || name === "done") && window.paintGreeting) window.paintGreeting();
 }
+window.showRoom = showRoom;
 function roomBack() {
   roomTrail.pop();
   showRoom(roomTrail.pop() || "home");
@@ -2108,6 +2201,7 @@ if (window.YANTRA_WEB) {
       else {
         if (to === "home") roomTrail = [];
         if (to === "practice") document.getElementById("practice").dataset.from = "home";
+        if (to === "account") document.getElementById("account").dataset.from = "home";
         showRoom(to);
       }
     });
@@ -2157,7 +2251,13 @@ if (window.YANTRA_WEB) {
   document.getElementById("practice-back").addEventListener("click", () => {
     const from = document.getElementById("practice").dataset.from;
     roomTrail = [];
-    showRoom(from === "shelf" ? "" : "home");
+    showRoom(from === "shelf" ? "" : from === "account" ? "account" : "home");
+  });
+  const menuAccount = document.getElementById("menu-account");
+  menuAccount.hidden = false;
+  menuAccount.addEventListener("click", () => {
+    roomTrail = [];
+    showRoom("account");
   });
   document.getElementById("practice-export").addEventListener("click", () => {
     if (!window.YantraPractice) return;
