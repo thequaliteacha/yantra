@@ -579,6 +579,7 @@
       const data = await response.json();
       this.token = {
         user: this.token && this.token.user,
+        name: this.token && this.token.name,
         access: data.access_token,
         refresh: data.refresh_token || (this.token && this.token.refresh),
         expires: Date.now() + (data.expires_in - 60) * 1000,
@@ -681,6 +682,7 @@
       const me = await response.json().catch(() => ({}));
       if (me.id) {
         this.token.user = me.id;
+        this.token.name = String(me.display_name || this.token.name || "").slice(0, 80);
         this.token.product = me.product || "";
         this.save();
       }
@@ -1386,6 +1388,29 @@
     connectButton.dataset.service = choice;
   }
 
+  window.yantraSpotify = {
+    status() {
+      spotify.load();
+      let unlisted = spotify.blocked === "unlisted";
+      try { if (localStorage.getItem("yantra.spotifyNote") === "unlisted") unlisted = true; } catch (e) {}
+      const token = spotify.token || {};
+      return {
+        available: spotify.available(),
+        connected: spotify.connected(),
+        name: token.name || "",
+        unlisted: unlisted,
+      };
+    },
+    connect() { return spotify.connect(); },
+    disconnect() {
+      spotify.token = null;
+      spotify.deviceId = "";
+      spotify.save();
+      paintConnect();
+    },
+    clearUnlisted() { spotify.clearNote(); },
+  };
+
   let notice = "";
   const session = ready.then(async () => {
     spotify.load();
@@ -1899,6 +1924,7 @@
     const url = typeof input === "string" ? input : input && input.url;
     if (typeof url === "string" && url.startsWith("/") && !url.startsWith("/push")) {
       const path = url.split("?")[0];
+      if (path === "/access" || path === "/leave") return realFetch(input, init);
       const method = String((init && init.method) || "GET").toUpperCase();
       // Opening a window must happen inside the click, so those requests are
       // answered right away. The rest wait for the shelf.

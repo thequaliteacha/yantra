@@ -98,8 +98,11 @@ export async function route(request, env) {
         headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "private, no-store" },
       });
     }
-    if (url.pathname === "/access" && request.method === "GET") return privateJson({ level });
-    if (url.pathname === "/access") return new Response("Method not allowed", { status: 405 });
+    if (url.pathname === "/access" && request.method === "GET") return accessResponse(level);
+    if (url.pathname === "/leave" && request.method === "POST") return signOutResponse();
+    if (url.pathname === "/access" || url.pathname === "/leave") {
+      return new Response("Method not allowed", { status: 405 });
+    }
 
     if (url.pathname === "/push/key" && request.method === "GET") return pushKey(env);
     if (url.pathname === "/push" && request.method === "POST") return saveReminder(request, env);
@@ -140,6 +143,21 @@ function privateJson(data, status) {
 }
 
 const ANON = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function accessResponse(level) {
+  return privateJson({ level: level === "zazen" ? "zazen" : "sangha" });
+}
+
+/* The gate cookie is HttpOnly, so the page cannot drop it. Sign-out asks the Worker. */
+export function signOutResponse() {
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "private, no-store",
+      "set-cookie": `${COOKIE}=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax`,
+    },
+  });
+}
 
 function remindersUnavailable() {
   return privateJson({ error: "Reminders are not turned on for this site yet. The times stay on this device." }, 503);
