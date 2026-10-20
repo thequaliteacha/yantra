@@ -51,7 +51,7 @@ along with the albums that are not recorded yet. Where a mixed set calls for a s
 recorded song for the same chakra takes its place. Albums without recordings play from
 the listener's own Spotify. A hosted recording moves the yantra; a Spotify sit
 uses a slow breath instead. The page never asks for the microphone. The yantra draws
-itself once per song, and *Meditation Complete* closes the sit. *Albums and
+itself once per song, and *Meditation Complete* closes the sit. The line there is still a verbatim Rama quote. `web/quotes.json` tags albums, tracks, and those lines by theme, and the screen prefers a line that fits what just played, then falls back to any of the lines. *Albums and
 forms* opens the full shelf. *Getting Started* explains the practice and how to
 install the app on a phone.
 

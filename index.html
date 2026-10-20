@@ -217,6 +217,12 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #done-words p { text-align: center; font-style: italic; color: #f3e6c8; }
   #done-words cite { display: block; margin-top: 0.6rem; font-style: normal; font-size: 0.9rem; color: rgba(243, 230, 200, 0.62); }
   #done-words a { color: inherit; }
+  #done-from {
+    display: inline; background: none; border: 0; padding: 0; margin: 0;
+    font: inherit; font-size: inherit; color: inherit; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  #done-talk[hidden], #done-from[hidden], #done-credit[hidden] { display: none; }
   .room .choice {
     width: 100%; padding: 1.05rem 0; font: inherit; font-size: 1.12rem; letter-spacing: 0.06em; cursor: pointer;
     background: rgba(5, 4, 10, 0.4); color: #f7edd4; border: 1px solid rgba(230, 201, 138, 0.55);
@@ -478,7 +484,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <p id="done-practice"></p>
     <blockquote id="done-words" hidden>
       <p id="done-quote"></p>
-      <cite>&mdash; Rama, <a id="done-talk" target="_blank" rel="noopener"></a></cite>
+      <cite><span id="done-credit">&mdash; Rama, <a id="done-talk" target="_blank" rel="noopener"></a></span><button type="button" id="done-from" hidden></button></cite>
     </blockquote>
     <button class="choice" type="button" data-room="home" style="margin-top:1.4rem">Back to Home</button>
   </div>
@@ -2413,15 +2419,26 @@ if (window.YANTRA_WEB) {
     if (practiceLine && window.YantraPractice) {
       practiceLine.textContent = window.YantraPractice.completeLine(window.YantraPractice.summary(), sessionTheme);
     }
+    const sit = window.yantraLastSit || [];
+    const pending = window.YantraQuotes ? window.YantraQuotes.choose(sit) : Promise.resolve(null);
+    Promise.resolve(pending).then((quote) => {
+      if (!(window.YantraQuotes && window.YantraQuotes.applyQuote(quote))) showRamaWords();
+    }, () => showRamaWords());
+    roomTrail = [];
+    showRoom("done");
+  });
+  function showRamaWords() {
     const [words, talk, page] = RAMA_WORDS[Math.floor(Math.random() * RAMA_WORDS.length)];
     document.getElementById("done-quote").textContent = "\u201c" + words + "\u201d";
     const link = document.getElementById("done-talk");
     link.textContent = talk;
     link.href = page;
+    const credit = document.getElementById("done-credit");
+    if (credit) credit.hidden = false;
+    const from = document.getElementById("done-from");
+    if (from) from.hidden = true;
     document.getElementById("done-words").hidden = false;
-    roomTrail = [];
-    showRoom("done");
-  });
+  }
   addEventListener("yantra:ended", () => {
     if (sessionLive) {
       sessionLive = false;

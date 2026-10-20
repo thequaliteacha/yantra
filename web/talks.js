@@ -8,7 +8,24 @@
   const KINDS = ["talk", "meditation", "quote"];
   const ID = /^[a-z0-9][a-z0-9-]{0,80}$/;
   const KEY = /^talks\/(?:[a-z0-9][a-z0-9-]{0,40}\/)*([a-z0-9][a-z0-9-]{0,80})\.([a-z0-9]{1,8})$/;
+  const THEME = /^[a-z][a-z0-9-]{0,30}$/;
   const HEADINGS = { talk: "Talks", meditation: "Meditations", quote: "Quotes" };
+
+  function themeList(raw) {
+    const out = [];
+    (Array.isArray(raw) ? raw : []).forEach((name) => {
+      const theme = String(name || "");
+      if (!THEME.test(theme) || out.includes(theme)) return;
+      out.push(theme);
+    });
+    return out.slice(0, 12);
+  }
+
+  function fromId(raw, id) {
+    const from = String(raw || "");
+    if (!ID.test(from) || from === id) return "";
+    return from;
+  }
 
   function clean(value, max) {
     return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
@@ -46,6 +63,8 @@
       source: typeof raw.source === "string" ? raw.source.trim().slice(0, 300) : "",
       r2Key,
       text,
+      themes: themeList(raw.themes),
+      from: fromId(raw.from, id),
       example: raw.example === true,
       url: r2Key ? "/" + r2Key : "",
     };
@@ -107,6 +126,7 @@
   let current = null;
   let dragging = false;
   let focusName = "";
+  let pendingId = "";
 
   async function loadItems() {
     try {
@@ -242,6 +262,23 @@
       const node = document.getElementById("talks-collection-" + slug(wanted));
       if (node && node.scrollIntoView) node.scrollIntoView({ block: "start" });
     }
+    if (pendingId) {
+      const id = pendingId;
+      pendingId = "";
+      const item = items.find((row) => row.id === id);
+      if (item) {
+        const node = document.getElementById("talks-collection-" + slug(item.collection));
+        if (node && node.scrollIntoView) node.scrollIntoView({ block: "start" });
+        openItem(item);
+      }
+    }
+  }
+
+  function openTalk(id) {
+    pendingId = String(id || "");
+    if (!pendingId) return;
+    if (typeof window.showRoom === "function") window.showRoom("talks");
+    else paint();
   }
 
   async function paintResources() {
@@ -352,6 +389,7 @@
     root.paintTalkLibrary = paint;
     root.paintTalkResources = paintResources;
     root.yantraTalksPause = pauseTalk;
+    root.yantraOpenTalk = openTalk;
     if (typeof document !== "undefined") {
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
       else boot();
