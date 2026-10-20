@@ -97,7 +97,7 @@ from the Home Screen app.
 greet you on the home screen and when a sit ends. It is not uploaded. Sign out
 clears the word-gate cookie. Erase everything on this device also clears
 practice, reminders, Spotify, and that name. Resources links to Rama's published
-talks, music, video, and books.
+talks, music, video, and books on the Rama Meditation Society site.
 
 ### Setting up the connections (once, by the site owner)
 
