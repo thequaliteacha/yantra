@@ -1,0 +1,36 @@
+[
+  {
+    "id": "example-talk",
+    "title": "Example talk",
+    "description": "Example data. Not a recording. A real talk replaces this row when talks.json is updated.",
+    "kind": "talk",
+    "duration": 90,
+    "size": 0,
+    "source": "example",
+    "r2Key": "talks/example-talk.mp3",
+    "example": true
+  },
+  {
+    "id": "example-meditation",
+    "title": "Example meditation",
+    "description": "Example data. Not a recording. It will play from the bucket once that object is uploaded.",
+    "kind": "meditation",
+    "duration": 600,
+    "size": 0,
+    "source": "example",
+    "r2Key": "talks/example-meditation.mp3",
+    "example": true
+  },
+  {
+    "id": "example-quote",
+    "title": "Example quote",
+    "description": "Example data. Quotes are text in this manifest, not a page on another site.",
+    "kind": "quote",
+    "duration": 0,
+    "size": 0,
+    "source": "example",
+    "r2Key": "",
+    "text": "Example quote. The line from the end of a sit will replace this when the real manifest is added.",
+    "example": true
+  }
+]

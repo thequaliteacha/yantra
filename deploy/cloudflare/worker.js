@@ -6,7 +6,8 @@ import { sanitizeSchedule } from "../../web/schedule.js";
  *
  * The page, discs.json and web/ are static assets. Requests under /web/audio/
  * stream the sangha's mp3s from the private R2 bucket, with byte ranges so the
- * player can seek.
+ * player can seek. Requests under /talks/ stream Dharma Talks from the same
+ * bucket, behind the same word gate, again with byte ranges.
  *
  * No accounts: a listener types the sangha word once, and the phone keeps a
  * signed cookie for a year. SANGHA_WORD opens the Vayu recordings for everyone in
@@ -98,6 +99,7 @@ async function route(request, env) {
     if (url.pathname === "/discs.json") return shelf(request, env, zazen);
     if (url.pathname === "/web/tracks.json" || url.pathname === "/web/audio.json") return trackLinks(request, env, zazen);
     if (url.pathname.startsWith(PREFIX)) return recording(request, env, url, zazen);
+    if (url.pathname.startsWith("/talks/")) return talk(request, env, url);
     // The web loader fetches ../index.html. Assets would redirect that to "/", which
     // points back at the loader, so serve the page itself.
     if (url.pathname === "/index.html") return env.ASSETS.fetch(new Request(new URL("/", url), request));
@@ -271,13 +273,41 @@ async function recording(request, env, url, zazen) {
 
   const object = await env.AUDIO.get(key, { range: request.headers, onlyIf: request.headers });
   if (object === null) return new Response("Not found", { status: 404 });
+  return objectAudio(request, object, "audio/mpeg");
+}
 
+const TALK_KEY = /^talks\/[a-z0-9][a-z0-9-]{0,80}\.[a-z0-9]{1,8}$/;
+const AUDIO_TYPES = {
+  mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  mp4: "audio/mp4",
+  aac: "audio/aac",
+  ogg: "audio/ogg",
+  opus: "audio/ogg",
+  wav: "audio/wav",
+  flac: "audio/flac",
+};
+
+export function talkKey(pathname) {
+  let path = pathname || "";
+  try { path = decodeURIComponent(path); } catch (e) { return ""; }
+  if (!path.startsWith("/talks/") || path.includes("..") || path.includes("\\")) return "";
+  const key = "talks/" + path.slice("/talks/".length);
+  return TALK_KEY.test(key) ? key : "";
+}
+
+function typeFor(key) {
+  return AUDIO_TYPES[key.slice(key.lastIndexOf(".") + 1)] || "application/octet-stream";
+}
+
+/* One response shape for music and talks, including a byte range for seeking. */
+function objectAudio(request, object, fallbackType) {
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
   headers.set("accept-ranges", "bytes");
   headers.set("cache-control", "private, max-age=86400");
-  if (!headers.has("content-type")) headers.set("content-type", "audio/mpeg");
+  if (!headers.has("content-type")) headers.set("content-type", fallbackType);
 
   if (!("body" in object)) return new Response(null, { status: 304, headers });
   if (object.range && request.headers.has("range")) {
@@ -289,6 +319,15 @@ async function recording(request, env, url, zazen) {
   }
   headers.set("content-length", String(object.size));
   return new Response(request.method === "HEAD" ? null : object.body, { headers });
+}
+
+export async function talk(request, env, url) {
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
+  const key = talkKey(url.pathname);
+  if (!key || !env || !env.AUDIO) return new Response("Not found", { status: 404 });
+  const object = await env.AUDIO.get(key, { range: request.headers, onlyIf: request.headers });
+  if (object === null) return new Response("Not found", { status: 404 });
+  return objectAudio(request, object, typeFor(key));
 }
 
 /* ---- The sangha word ---- */
