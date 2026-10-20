@@ -130,7 +130,7 @@ assert.strictEqual(web.includes("captureStream"), false);
 assert.ok(worker.includes("microphone=()"));
 assert.strictEqual(worker.includes("microphone=(self)"), false);
 assert.strictEqual(/Naval/.test(web + page), false);
-assert.ok(sw.includes("yantra-v2"));
+assert.ok(sw.includes("yantra-v3"));
 assert.ok(readme.includes("36"));
 assert.ok(readme.includes("Twenty albums are hosted"));
 assert.strictEqual(readme.includes("34 albums"), false);

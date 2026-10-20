@@ -1204,32 +1204,52 @@ function sourceFor(disc) {
   return installedCount(disc) > 0 ? "local" : "";
 }
 
-/* Begin sitting: the album starts on the chosen source and the yantra opens. */
+/* Begin sitting: the album starts on the chosen source and the yantra opens.
+   The yantra waits until the music has actually started. */
 async function sitAlbum() {
   const disc = selected();
   const source = sourceFor(disc);
   if (!source) {
-    begin();
+    playNote = "This album isn't available here.";
+    applyNow();
     return;
   }
   const where = { spotify: " in Spotify.", apple: " in Apple Music.", local: ".", recordings: "." }[source];
   playNote = (source === "local" ? "Playing the installed " : source === "recordings" ? "Playing " : "Opening ") + disc.title + where;
+  if (window.yantraHold) window.yantraHold();
   // The request goes out inside the click, before anything waits, so a browser lets it open the player.
   const request = fetch("/play", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id: disc.id, source }),
+    body: JSON.stringify({ id: disc.id, source, sit: true }),
   });
-  begin();
   applyNow();
   try {
     const data = await (await request).json();
-    playNote = data.ok ? "" : (data.error || "This disc did not open.");
+    if (!data.ok) {
+      if (document.body.classList.contains("sitting")) endSitting();
+      playNote = "";
+      if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
+      else playNote = data.error || "This album did not start.";
+      applyNow();
+      return;
+    }
+    playNote = "";
+    begin();
+    if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
   } catch (e) {
-    playNote = "This disc did not open.";
+    if (document.body.classList.contains("sitting")) endSitting();
+    playNote = "This album did not start.";
   }
   applyNow();
 }
+window.yantraPlayHosted = function (id) {
+  const disc = (collection && collection.discs || []).find((item) => item.id === id);
+  if (!disc) return;
+  selectedId = id;
+  if (disc.circle) circleId = disc.circle;
+  return sitAlbum();
+};
 let snap = null;
 let snapAt = 0;
 let shownTrack = 0;
@@ -1655,6 +1675,7 @@ async function playForm(name, id, tracks) {
   if (!formReady(tracks)) return;
   playNote = "Opening " + name + ".";
   applyNow();
+  if (window.yantraHold) window.yantraHold();
   try {
     const data = await (await fetch("/play", {
       method: "POST",
@@ -1662,12 +1683,16 @@ async function playForm(name, id, tracks) {
       body: JSON.stringify({ source: "playlist", id: id || "", name, tracks, prefer: listenOn }),
     })).json();
     if (!data.ok) {
-      playNote = data.error || "This form did not play.";
+      playNote = "";
+      if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
+      else playNote = data.error || "This form did not play.";
       applyNow();
       return;
     }
     playNote = "";
     begin();
+    if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
+    applyNow();
   } catch (e) {
     playNote = "This form did not play.";
     applyNow();
@@ -1716,7 +1741,12 @@ async function openDisc() {
       body: JSON.stringify({ id: disc.id, source: disc.onRecordings ? "recordings" : "spotify" }),
     });
     const data = await response.json();
-    playNote = data.ok ? "Opening " + disc.title + "." : (data.error || "This disc did not open.");
+    if (data.offer && window.yantraMusicOffer) {
+      playNote = "";
+      window.yantraMusicOffer(data.offer);
+    } else {
+      playNote = data.ok ? "Opening " + disc.title + "." : (data.error || "This disc did not open.");
+    }
   } catch (e) {
     playNote = "This disc did not open.";
   }
@@ -1933,25 +1963,33 @@ async function playSession(theme, count, choice) {
   const label = (theme === "morning" ? "Morning" : "Evening") + " · " + count + (count === 1 ? " song" : " songs");
   const note = document.getElementById("pick-note");
   note.textContent = "";
+  if (document.body.classList.contains("sitting")) endSitting();
+  if (window.yantraHold) window.yantraHold();
   // The request goes out inside the tap, before anything waits.
   const request = fetch("/play", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ source: "session", theme, count, name: label, prefer: listenOn, mix, album }),
   });
-  sessionLive = true;
-  begin();
   try {
     const data = await (await request).json();
     if (!data.ok) {
       sessionLive = false;
-      endSitting();
-      showRoom("pick");
-      note.textContent = data.error || "The music did not start.";
+      if (document.body.classList.contains("sitting")) endSitting();
+      if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
+      else note.textContent = data.error || "The music did not start.";
+      return;
+    }
+    sessionLive = true;
+    begin();
+    if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
+    else {
+      const panel = document.getElementById("music-offer");
+      if (panel) panel.hidden = true;
     }
   } catch (e) {
     sessionLive = false;
-    endSitting();
+    if (document.body.classList.contains("sitting")) endSitting();
     note.textContent = "The music did not start.";
   }
 }

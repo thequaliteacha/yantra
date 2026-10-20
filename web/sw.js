@@ -1,7 +1,7 @@
 /* Keeps Yantra opening when the connection drops. Each request tries the network
    first and falls back to the last copy, so updates arrive on the next open.
    Requests to other sites (Spotify) and the recordings pass straight through. */
-const CACHE = "yantra-v2";
+const CACHE = "yantra-v3";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(
