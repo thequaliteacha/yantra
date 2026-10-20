@@ -1,4 +1,4 @@
-/* Published teachings of Rama, Dr. Frederick Lenz.
+/* Dharma talks and related pages published on ramameditationsociety.org.
    Edit this list. Each address was checked to load a real page. */
 (function (root) {
   const RESOURCES = [

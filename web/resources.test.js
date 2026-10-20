@@ -10,7 +10,8 @@ for (const item of R.list) {
   assert.strictEqual(typeof item.label, "string");
   assert.ok(item.label.length > 0 && item.label.length < 60);
   assert.ok(item.note.length > 0 && item.note.length < 120);
-  assert.ok(item.url.startsWith("https://"));
+  assert.ok(item.url.startsWith("https://www.ramameditationsociety.org/"));
+  assert.strictEqual(item.url.includes("ramafoundation.org"), false);
   assert.strictEqual(item.url.includes("?"), false, item.url);
   assert.strictEqual(/utm_|fbclid|gclid/.test(item.url), false);
   assert.ok(!seen.has(item.url));
