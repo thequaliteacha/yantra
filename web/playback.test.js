@@ -123,33 +123,39 @@ function shaped(list) {
   }));
 }
 const catalog = shaped(discs.discs);
-const phoneShelf = P.shelfDiscs(catalog, phone);
-const indiaShelf = phoneShelf.find((disc) => disc.id === "india-dream");
-assert.ok(indiaShelf, "a Spotify-only album stays on the shelf");
-assert.strictEqual(indiaShelf.playable, false);
-assert.strictEqual(indiaShelf.unavailable, true);
-assert.strictEqual(indiaShelf.note, P.UNAVAILABLE);
-assert.ok(indiaShelf.tracks.every((track) => track.playable === false && track.note === P.UNAVAILABLE));
-assert.ok(phoneShelf.some((disc) => disc.id === "samurai" && disc.playable === true));
+const circles = discs.circles;
+const phoneShelf = P.filterDiscs(catalog, phone);
+assert.ok(!phoneShelf.some((disc) => disc.id === "india-dream"), "a Spotify-only album is left off a phone");
+assert.ok(!phoneShelf.some((disc) => disc.id === "breathless"));
+assert.ok(!phoneShelf.some((disc) => disc.id === "samsara"));
+assert.ok(phoneShelf.some((disc) => disc.id === "samurai"));
 assert.ok(!phoneShelf.some((disc) => disc.circle === "lumikara"), "Lumikara stays hidden without the Zazen word");
+const island = phoneShelf.find((disc) => disc.id === "big-island");
+assert.ok(island, "a hosted album stays when one song cannot play");
+assert.ok(island.tracks.some((track) => track.n === 1));
+assert.ok(!island.tracks.some((track) => track.title === "Ocean Sunset"));
 
-const zazenPhoneShelf = P.shelfDiscs(catalog, zazenPhone);
-const awakeShelf = zazenPhoneShelf.find((disc) => disc.id === "awake-in-anza-borrego");
-assert.ok(awakeShelf && awakeShelf.playable === false, "Lumikara stays visible for Zazen, shaded when it cannot play");
-assert.strictEqual(awakeShelf.note, "Not available on this device yet");
-const sanghaPhoneShelf = P.shelfDiscs(catalog, Object.assign({}, phone, { level: "sangha" }));
+const zazenPhoneShelf = P.filterDiscs(catalog, zazenPhone);
+assert.ok(!zazenPhoneShelf.some((disc) => disc.id === "awake-in-anza-borrego"), "a Spotify-only Lumikara album is hidden on a phone");
+assert.ok(zazenPhoneShelf.some((disc) => disc.id === "samurai"));
+const zazenSections = P.visibleCircles(circles, zazenPhoneShelf);
+assert.ok(zazenSections.some((circle) => circle.id === "zazen"));
+assert.ok(zazenSections.some((circle) => circle.id === "vayu"));
+assert.ok(!zazenSections.some((circle) => circle.id === "lumikara"), "a section with nothing playable is hidden");
+
+const sanghaPhoneShelf = P.filterDiscs(catalog, Object.assign({}, phone, { level: "sangha" }));
 assert.ok(sanghaPhoneShelf.length > 0 && sanghaPhoneShelf.every((disc) => disc.circle === "vayu"));
-assert.ok(sanghaPhoneShelf.some((disc) => disc.id === "india-dream" && disc.playable === false));
+assert.ok(!sanghaPhoneShelf.some((disc) => disc.id === "india-dream"));
 assert.ok(!sanghaPhoneShelf.some((disc) => disc.circle === "zazen" || disc.circle === "lumikara" || disc.circle === "lineage"));
-assert.ok(!sanghaPhoneShelf.some((disc) => disc.id === "samurai"), "a hidden Zazen album is not shown shaded");
+assert.ok(!sanghaPhoneShelf.some((disc) => disc.id === "samurai"), "a hidden Zazen album stays hidden");
+assert.deepStrictEqual(P.visibleCircles(circles, sanghaPhoneShelf).map((circle) => circle.id), ["vayu"]);
 
-const failedShelf = P.shelfDiscs(catalog, failed).find((disc) => disc.id === "india-dream");
-const failedTrack = failedShelf.tracks.find((track) => track.n === 3);
-assert.strictEqual(failedTrack.playable, false, "a song that failed this session is shaded");
-assert.strictEqual(failedTrack.note, P.UNAVAILABLE);
-assert.ok(failedShelf.tracks.some((track) => track.n !== 3 && track.playable === true));
+const failedShelf = P.filterDiscs(catalog, failed).find((disc) => disc.id === "india-dream");
+assert.ok(failedShelf, "the album stays while another song on it can play");
+assert.ok(!failedShelf.tracks.some((track) => track.n === 3), "a song that failed this visit is left off the list");
+assert.ok(failedShelf.tracks.length > 0);
 
-const mixed = P.shelfDiscs([{
+const mixed = P.filterDiscs([{
   id: "mixed",
   circle: "vayu",
   title: "Mixed",
@@ -158,23 +164,50 @@ const mixed = P.shelfDiscs([{
     { n: 2, title: "Stream only", hosted: false, spotify: true, key: "mixed#2" },
   ],
 }], phone);
-assert.strictEqual(mixed[0].playable, true, "an album with one playable track stays choosable");
-assert.strictEqual(mixed[0].tracks[0].playable, true);
-assert.strictEqual(mixed[0].tracks[1].playable, false);
-assert.strictEqual(mixed[0].tracks[1].note, P.UNAVAILABLE);
-assert.ok(P.filterTracks(mixed[0].tracks.map((track) => Object.assign({ circle: "vayu" }, track)), phone).every((track) => track.playable !== false && track.n === 1));
+assert.strictEqual(mixed.length, 1, "an album with one playable track stays");
+assert.deepStrictEqual(mixed[0].tracks.map((track) => track.n), [1]);
+assert.deepStrictEqual(P.filterTracks(mixed[0].tracks.map((track) => Object.assign({ circle: "vayu" }, track)), phone).map((track) => track.n), [1]);
 
-assert.ok(page.includes("Not available on this device yet"));
-assert.ok(page.includes("unavailable"));
-assert.ok(page.includes("disc.playable === false"));
-assert.strictEqual(P.UNAVAILABLE, "Not available on this device yet");
+const streamOnly = P.filterDiscs([{
+  id: "stream",
+  circle: "lineage",
+  title: "Stream",
+  tracks: [{ n: 1, title: "Only", hosted: false, spotify: true, key: "stream#1" }],
+}], phone);
+assert.deepStrictEqual(streamOnly, []);
+assert.deepStrictEqual(P.visibleCircles([{ id: "lineage", name: "Lineage" }], streamOnly), []);
+
+const quiet = Object.assign({}, desktop, { connected: false });
+assert.strictEqual(P.trackOffered(samurai, quiet), true, "hosted audio stays when Spotify is not connected");
+assert.strictEqual(P.trackOffered(maha, quiet), false);
+assert.strictEqual(P.UNAVAILABLE, undefined);
+assert.strictEqual(P.shelfDiscs, undefined);
+
+assert.ok(!page.includes("Not available on this device yet"));
+assert.ok(!page.includes("unavailable"));
+assert.ok(!page.includes("disc.playable === false"));
+assert.ok(page.includes("albums.some((item) => item.circle === circle.id)"));
+assert.ok(page.includes("mixButton.hidden = !!(collection && collection.mixReady === false)"));
+assert.ok(page.includes("if (track.playable === false) continue"));
 const web = fs.readFileSync(path.join(__dirname, "web.js"), "utf8");
+const playback = fs.readFileSync(path.join(__dirname, "playback.js"), "utf8");
 assert.ok(!web.includes('disc.circle === "lumikara"'), "web.js gates Lumikara through circleOpen");
 assert.ok(web.includes("Playback.circleOpen(disc.circle, level)"));
-assert.ok(web.includes("playable: playable(disc)"));
+assert.ok(web.includes("playable: true"));
 assert.ok(web.includes("playable: itemPlayable"));
-assert.ok(!web.includes(".filter((disc) => disc.tracks.length > 0)"));
-assert.ok(web.includes("Playback.UNAVAILABLE"));
+assert.ok(web.includes(".filter((disc) => disc.tracks.length > 0)"));
+assert.ok(web.includes("Playback.visibleCircles"));
+assert.ok(web.includes('payload.mixReady = ["naval", "heart", "eye"].every((chakra) => chakraPool(chakra).length > 0)'));
+assert.ok(!web.includes("Playback.UNAVAILABLE"));
+assert.ok(!web.includes("Not available on this device yet"));
+assert.ok(!playback.includes("Not available on this device yet"));
+assert.ok(web.includes("markFailed(live.items[index], false)"));
+assert.ok(!web.includes("markFailed(live.items[index], fromSpotify)"));
+assert.ok(!web.includes("const fromSpotify"));
+assert.ok(web.includes("spotify.play({ uris })"));
+assert.ok(web.includes("spotify.sessionFailed || spotify.sdkFailed"));
+assert.ok(web.includes("Playback.calmLine"));
+assert.strictEqual(P.STALL_MS, 5000);
 
 const watch = P.createProgressWatch(5000);
 assert.deepStrictEqual(watch.sample("spotify:track:maha", 0, true, 1000), { stalled: false, moved: false });
