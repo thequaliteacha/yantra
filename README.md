@@ -56,7 +56,8 @@ uses a slow breath instead. The page never asks for the microphone. The yantra d
 itself once per song in the song's chakra: the navel's ten petals in sun gold, the
 heart's twelve in green, the third eye's open ring in violet, in the dark and in
 cream alike. Once the petals open, in the song's last third, the outer wheel
-quivers, a tremor too small to follow that is fullest as the song closes.
+quivers and turns clockwise, an opening wheel that spins up to a turn in about
+half a minute as the song closes.
 *Meditation Complete* closes the sit. For the Zazen word, the line there is still a verbatim Rama quote. `web/quotes.json` tags albums, tracks, and those lines by theme, and the screen prefers a line that fits what just played, then falls back to any of the lines. When that talk is in the talks on the practice page, the credit is *From:* that talk. The Sangha word does not see the quotes. *Albums and
 forms* opens the full shelf. *Getting Started* explains the practice and how to
 install the app on a phone.
