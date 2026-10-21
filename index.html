@@ -1157,9 +1157,10 @@ function quiverAt(now, i, strength) {
   };
 }
 
-function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver) {
+function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin) {
   bloom = bloom || 0;
   quiver = quiver || 0;
+  spin = spin || 0;
   const tris = RAW.map((raw) => triangle(raw, cx, cy, R));
   tris.sort((a, b) => span(a.map((p) => [p[0] - cx, p[1] - cy])) - span(b.map((p) => [p[0] - cx, p[1] - cy])));
   const now = performance.now();
@@ -1227,7 +1228,8 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver) {
     if (count === 2) return;
     for (let i = 0; i < count; i++) {
       const q = quiverAt(now, i + 1, quiver);
-      const a = -Math.PI / 2 + turn + (i * Math.PI * 2) / count + 0.004 * q.a;
+      // The wheel turns as it wakes: still while it forms, then spinning up with the quiver.
+      const a = -Math.PI / 2 + turn + spin + (i * Math.PI * 2) / count + 0.004 * q.a;
       const k = swell * (1 + 0.008 * q.r);
       bud(ctx, cx, cy, a, R * 1.54 * k, R * 1.9 * k, (Math.PI / count) * 0.7, outerPetals);
     }
@@ -1682,7 +1684,10 @@ function frame(now) {
     // In a sit the wheel starts to quiver as its petals open, in the song's last third,
     // and is fullest at the close. Talks and reduced motion hold the figure still.
     const quiver = talkFx || reduceMotion ? 0 : stage(reveal, 0.78, 1);
-    drawSri(ctx, cx, cy, R, reveal, bloom, lotus || CHAKRA.heart, quiver);
+    // An opening chakra turns clockwise, as the wheels of the energy body do. The outer
+    // petals spin up with the quiver, to one turn in about thirty seconds at the close.
+    window.wheelSpin = ((window.wheelSpin || 0) + leanDt * quiver * (Math.PI * 2 / 30)) % (Math.PI * 2);
+    drawSri(ctx, cx, cy, R, reveal, bloom, lotus || CHAKRA.heart, quiver, window.wheelSpin);
     emanate(ctx, cx, cy, R, now, Math.min(1, reveal / 0.12) * rest);
     if (talkFx) {
       talkMotifs(ctx, cx, cy, R, now, talkFx, reduceMotion);
