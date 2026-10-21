@@ -459,6 +459,14 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     color-scheme: dark;
   }
   #reminders select:disabled, #reminders input:disabled { opacity: 0.38; }
+  #remind-places { display: flex; flex-direction: column; gap: 0.2rem; margin-top: -0.2rem; }
+  #remind-places[hidden] { display: none; }
+  .remind-suggest {
+    font: inherit; font-size: 0.98rem; text-align: left; color: #f7edd4; background: rgba(5, 4, 10, 0.5);
+    border: 1px solid rgba(230, 201, 138, 0.22); padding: 0.5rem 0.6rem; cursor: pointer;
+  }
+  .remind-suggest:hover, .remind-suggest:focus-visible { border-color: rgba(230, 201, 138, 0.7); }
+  .remind-none { font-size: 0.85rem; color: rgba(232, 204, 146, 0.7); }
   #remind-next, #remind-copy, #remind-ios, #remind-status { font-size: 0.92rem; color: rgba(243, 230, 200, 0.86); }
   #remind-status:empty { display: none; }
   #remind-save { margin-top: 0.2rem; }
@@ -706,9 +714,9 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <label class="remind-field">Time<input data-time type="time" value="19:00"></label>
       </div>
       <label class="remind-field">Place
-        <input id="remind-place" list="remind-places" autocomplete="off" placeholder="City, or 21.3, -157.9" enterkeyhint="done">
+        <input id="remind-place" autocomplete="off" autocapitalize="words" placeholder="City, or 21.3, -157.9" enterkeyhint="done">
       </label>
-      <datalist id="remind-places"></datalist>
+      <div id="remind-places" hidden></div>
       <div class="links"><button class="quiet" type="button" id="remind-here">Use where I am</button></div>
       <p id="remind-next"></p>
       <p id="remind-copy"></p>
