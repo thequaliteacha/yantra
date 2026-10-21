@@ -99,7 +99,7 @@ reminder data removes that record. On iPhone and iPad the note arrives only
 from the Home Screen app.
 
 *Settings*, from the small mark at the top right, is this device only. The practice
-record (total time, sits, perfect days) is first, then name, access level, Log
+record (total time, sits, perfect days) is first, then name, Log
 out, glow, reminders, and Spotify. The bell has no settings for now.
 Name, reminder choices, theme, glow, and saved talks are in one store,
 `yantra.settings.v1`. The practice record stays separate, and its time, sits,
