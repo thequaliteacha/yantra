@@ -210,6 +210,15 @@
       node.textContent = "The word gate is not open in this copy.";
     }
     if (settings() && level) settings().set("access.level", level);
+    if (level) {
+      window.YANTRA_LEVEL = level;
+      if (level !== "zazen") {
+        window.yantraQuotes = [];
+        window.yantraQuoteFile = null;
+        window.yantraTalks = null;
+        if (window.paintTalks) window.paintTalks();
+      }
+    }
     if (zazen) {
       zazen.hidden = !level;
       zazen.setAttribute("aria-checked", String(level === "zazen"));

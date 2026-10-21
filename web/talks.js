@@ -37,6 +37,34 @@
     return out;
   }
 
+  /* The talk whose title is the quote's source, from the list this level can see. */
+  function findTalk(data, level, title) {
+    const wanted = String(title || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (!wanted) return null;
+    for (const set of talkSections(data, level)) {
+      for (const talk of set.talks) {
+        if (talk.title.replace(/\s+/g, " ").trim().toLowerCase() === wanted) {
+          return { title: talk.title, src: talk.src, setTitle: set.title };
+        }
+      }
+    }
+    return null;
+  }
+
+  /* Plays a talk that is already in the rendered list. */
+  function play(section, src, title) {
+    if (!section || typeof src !== "string" || !src.startsWith("/talks/") || src.includes("..")) return false;
+    const player = section.querySelector("audio");
+    if (!player) return false;
+    if (player.getAttribute("src") !== src) player.setAttribute("src", src);
+    player.hidden = false;
+    const now = section.querySelector("[data-talk-now]");
+    if (now) now.textContent = title || "";
+    const started = player.play();
+    if (started && typeof started.catch === "function") started.catch(() => {});
+    return true;
+  }
+
   /* Fills the #practice-talks section. Returns true when it is shown. */
   function render(section, data, level, doc) {
     if (!section) return false;
@@ -90,7 +118,7 @@
     return true;
   }
 
-  const api = { talkSrc, formatLength, talkSections, render };
+  const api = { talkSrc, formatLength, talkSections, findTalk, play, render };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.YantraTalks = api;
 })(typeof window !== "undefined" ? window : globalThis);

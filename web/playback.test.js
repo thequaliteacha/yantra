@@ -153,7 +153,8 @@ assert.ok(page.includes("YANTRA_LEVEL"));
 assert.ok(page.includes("z-index: 6"));
 assert.ok(fs.readFileSync(path.join(__dirname, "index.html"), "utf8").includes('src="playback.js"'));
 
-const quotes = JSON.parse(fs.readFileSync(path.join(__dirname, "quotes.json"), "utf8"));
+const quoteFile = JSON.parse(fs.readFileSync(path.join(__dirname, "quotes.json"), "utf8"));
+const quotes = Array.isArray(quoteFile) ? quoteFile : quoteFile.quotes;
 assert.ok(quotes.some((row) => row.text.includes("You decide to be happy") && row.href.includes("/balance/")));
 assert.ok(quotes.every((row) => row.by === "Rama" && row.href && row.talk && row.text));
 
