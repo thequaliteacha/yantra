@@ -2,9 +2,10 @@
    yantra.settings.v1. The practice record stays in yantra.practice.v1. */
 (function (root) {
   const KEY = "yantra.settings.v1";
-  const KEY_RE = /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*){0,4}$/;
+  const KEY_RE = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){0,4}$/;
   const GREETINGS = ["none", "hello", "time"];
   const LEVELS = ["", "sangha", "zazen"];
+  const BEDS = ["silent", "white", "pink", "brown", "rain-light", "rain-steady", "rain-roof", "rain-thunder", "drone", "bowl", "pad"];
   const DEFAULTS = {
     "profile.name": "",
     "profile.greeting": "none",
@@ -16,6 +17,25 @@
     "account.preferredMethod": "telegram",
     "flags.accountSync": false,
     "flags.accountSignOut": false,
+    "sit.minutes": 15,
+    "sit.midway": "none",
+    "sit.background": "silent",
+    "sit.bedVolume": 0.35,
+    "bell.on": true,
+    "bell.volume": 0.7,
+    "bell.ending": true,
+    "bell.sameTone": true,
+    "bell.startTone": "medium",
+    "bell.startStrikes": null,
+    "bell.midStrikes": null,
+    "bell.endStrikes": null,
+    "bell.endTone": "medium",
+    "bell.midTone": null,
+    "bell.halfTone": "medium",
+    "bell.quarterTone": "medium",
+    "bell.threeQuarterTone": "medium",
+    "glow.levelDark": null,
+    "glow.levelLight": null,
   };
   const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow"];
   const listeners = new Set();
@@ -72,8 +92,31 @@
       });
       return ids.slice(0, 200);
     }
+    if (key === "bell.startStrikes" || key === "bell.midStrikes" || key === "bell.endStrikes") {
+      if (value === null || value === undefined || value === "") return null;
+      const count = Number(value);
+      if (count === 0 || count === 1 || count === 2 || count === 3 || count === 4) return count;
+      return null;
+    }
+    if (key === "bell.startTone" || key === "bell.endTone" || key === "bell.halfTone" || key === "bell.quarterTone" || key === "bell.threeQuarterTone") {
+      return value === "small" || value === "medium" || value === "deep" ? value : "medium";
+    }
+    if (key === "sit.minutes") {
+      const number = typeof value === "number" ? value : Number(value);
+      if (!Number.isInteger(number) || number < 1 || number > 90) return 15;
+      return number;
+    }
+    if (key === "sit.background") {
+      if (value === "rain") return "rain-steady";
+      return BEDS.indexOf(value) >= 0 ? value : "silent";
+    }
+    if (key === "sit.bedVolume") {
+      const level = Number(value);
+      if (!Number.isFinite(level)) return 0.35;
+      return Math.max(0, Math.min(1, level));
+    }
     if (key === "theme.light" || key === "flags.accountSync" || key === "flags.accountSignOut") return !!value;
-    if (key === "glow.level") {
+    if (key === "glow.level" || key === "glow.levelLight" || key === "glow.levelDark") {
       if (value === null || value === undefined || value === "") return null;
       const level = Number(value);
       if (!Number.isFinite(level)) return null;

@@ -70,6 +70,51 @@ assert.strictEqual(legacy.getItem(S.KEY), null);
 assert.ok(legacy.getItem("yantra.practice.v1"));
 assert.strictEqual(legacy.getItem("yantra.spotify"), "{}");
 
+assert.strictEqual(S.get("bell.sameTone", mem()), true);
+assert.strictEqual(S.get("bell.startTone", mem()), "medium");
+assert.strictEqual(S.get("bell.endTone", mem()), "medium");
+assert.strictEqual(S.get("bell.halfTone", mem()), "medium");
+assert.strictEqual(S.get("bell.quarterTone", mem()), "medium");
+assert.strictEqual(S.get("bell.threeQuarterTone", mem()), "medium");
+S.set("bell.sameTone", false, store);
+assert.strictEqual(S.get("bell.sameTone", store), false);
+S.set("bell.quarterTone", "deep", store);
+S.set("bell.threeQuarterTone", "small", store);
+S.set("bell.halfTone", "gong", store);
+assert.strictEqual(S.get("bell.quarterTone", store), "deep");
+assert.strictEqual(S.get("bell.threeQuarterTone", store), "small");
+assert.strictEqual(S.get("bell.halfTone", store), "medium");
+assert.strictEqual(S.get("bell.startStrikes", mem()), null);
+S.set("bell.endStrikes", "4", store);
+assert.strictEqual(S.get("bell.endStrikes", store), 4);
+S.set("bell.midStrikes", 2, store);
+assert.strictEqual(S.get("bell.midStrikes", store), 2);
+S.set("bell.startStrikes", 5, store);
+assert.strictEqual(S.get("bell.startStrikes", store), null);
+S.set("bell.startStrikes", 0, store);
+assert.strictEqual(S.get("bell.startStrikes", store), 0);
+S.set("glow.levelLight", 90, store);
+assert.strictEqual(S.get("glow.levelLight", store), 90);
+S.set("glow.levelLight", 91.6, store);
+assert.strictEqual(S.get("glow.levelLight", store), 92);
+S.set("glow.levelDark", 400, store);
+assert.strictEqual(S.get("glow.levelDark", store), 200);
+assert.strictEqual(S.get("glow.levelLight", mem()), null);
+assert.strictEqual(S.get("glow.levelDark", mem()), null);
+assert.strictEqual(S.get("sit.minutes", mem()), 15);
+assert.strictEqual(S.get("sit.background", mem()), "silent");
+assert.strictEqual(S.set("sit.minutes", 90, store), 90);
+assert.strictEqual(S.set("sit.minutes", "20", store), 20);
+assert.strictEqual(S.set("sit.minutes", 91, store), 15);
+assert.strictEqual(S.set("sit.minutes", 240, store), 15);
+assert.strictEqual(S.set("sit.minutes", 15.5, store), 15);
+assert.strictEqual(S.set("sit.minutes", 0, store), 15);
+assert.strictEqual(S.set("sit.background", "rain", store), "rain-steady");
+assert.strictEqual(S.set("sit.background", "rain-roof", store), "rain-roof");
+assert.strictEqual(S.set("sit.background", "ocean", store), "silent");
+assert.strictEqual(S.set("sit.bedVolume", 2, store), 1);
+assert.strictEqual(S.set("sit.bedVolume", -1, store), 0);
+
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 const account = fs.readFileSync(path.join(__dirname, "account.js"), "utf8");
 const worker = fs.readFileSync(path.join(__dirname, "../deploy/cloudflare/worker.js"), "utf8");
@@ -90,6 +135,8 @@ const order = [
   "<h3>Name</h3>",
   "<h3>Access</h3>",
   'id="account-practice-block"',
+  'id="account-bell"',
+  'id="account-glow"',
   'id="account-reminders-block"',
   'id="account-talks-block"',
   "<h3>Resources</h3>",
@@ -114,6 +161,15 @@ assert.ok(account.includes("flags.accountSignOut"));
 assert.ok(worker.includes('pathname === "/logout"'));
 assert.ok(fs.readFileSync(path.join(__dirname, "sw.js"), "utf8").includes('pathname === "/logout"'));
 assert.ok(worker.includes('pathname === "/access/sangha"'));
+assert.ok(page.includes(">Meditation bell<"));
+assert.ok(page.includes('id="account-bell"'));
+assert.ok(page.includes('id="practice-bell"'));
+assert.ok(page.includes('data-focus="account-bell"'));
+assert.ok(page.includes('id="bell-start-strikes"'));
+assert.ok(page.includes("Quadruple bell"));
+assert.ok(page.includes("Use same tone for all"));
+assert.ok(page.includes('id="practice-talks"'));
+assert.ok(page.includes('window.YANTRA_LEVEL !== "zazen"'));
 assert.strictEqual(page.includes("ramafoundation.org"), false);
 
 console.log("settings.test.js ok");

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "rain-light",
+    "file": "rain-light.mp3",
+    "title": "Rain",
+    "page": "https://commons.wikimedia.org/wiki/File:Rain.ogg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/3/3d/Rain.ogg",
+    "author": "ジダネ",
+    "license": "Public domain",
+    "note": "Own work, marked public domain on Wikimedia Commons. Used as light rain."
+  },
+  {
+    "id": "rain-steady",
+    "file": "rain-steady.mp3",
+    "title": "Raining cats and dogs",
+    "page": "https://commons.wikimedia.org/wiki/File:Rain_(1).ogg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Rain_%281%29.ogg",
+    "author": "ezwa",
+    "license": "Public domain",
+    "note": "PDSounds record 682, released into the public domain and mirrored on Wikimedia Commons. Used as steady rain."
+  },
+  {
+    "id": "rain-roof",
+    "file": "rain-roof.mp3",
+    "title": "Rain on a veranda and thunder",
+    "page": "https://commons.wikimedia.org/wiki/File:Rain_on_a_veranda_and_t.ogg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Rain_on_a_veranda_and_t.ogg",
+    "author": "ezwa",
+    "license": "Public domain",
+    "note": "PDSounds record 684, released into the public domain and mirrored on Wikimedia Commons. Used as rain on a roof."
+  },
+  {
+    "id": "rain-thunder",
+    "file": "rain-thunder.mp3",
+    "title": "Rain and thunder",
+    "page": "https://commons.wikimedia.org/wiki/File:Rain_and_thunder.ogg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/4/42/Rain_and_thunder.ogg",
+    "author": "Caesar",
+    "license": "Public domain",
+    "note": "Recorded in Sundbyberg, Stockholm, and marked public domain on Wikimedia Commons. Used as distant thunder."
+  }
+]
