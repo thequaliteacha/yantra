@@ -297,13 +297,13 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
           border-bottom: 1px solid rgba(230, 201, 138, 0.18); cursor: pointer; }
   .talk span:nth-child(2) { color: rgba(232, 204, 146, 0.55); font-size: 0.88rem; white-space: nowrap; }
   #practice-talks audio { width: 100%; margin-top: 0.6rem; }
-  #account-bell { margin-top: 1.6rem; text-align: left; display: flex; flex-direction: column; gap: 0.55rem; }
-  #account-bell h3 { margin: 0; font-weight: 500; color: #f7edd4; }
+  #account-bell, #account-glow { margin-top: 1.6rem; text-align: left; display: flex; flex-direction: column; gap: 0.55rem; }
+  #account-bell h3, #account-glow h3 { margin: 0; font-weight: 500; color: #f7edd4; }
   .account-field { display: flex; flex-direction: column; gap: 0.28rem; font-size: 0.82rem; color: rgba(232, 204, 146, 0.7); text-align: left; }
   .bell-tone { display: flex; align-items: flex-end; gap: 0.7rem; }
   .bell-tone .account-field { flex: 1; }
   .bell-tone .quiet { margin-bottom: 0.12rem; }
-  #account-bell input, #account-bell select {
+  #account-bell input, #account-bell select, #account-glow input {
     font: inherit; font-size: 1rem; color: #f7edd4; background: rgba(5, 4, 10, 0.6);
     border: 1px solid rgba(230, 201, 138, 0.35); padding: 0.55rem 0.55rem; width: 100%; box-sizing: border-box;
     color-scheme: dark;
@@ -515,6 +515,16 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <button class="quiet" type="button" id="practice-erase-yes">Erase</button>
       </div>
     </div>
+    <section id="account-glow">
+      <h3>Day and night</h3>
+      <p>The background keeps a slow glow and leans toward the song. Night stays dark. Day stays on warm paper, with a soft wash of that same color. Brightness is kept on this device, one level for night and one for day. A system setting for less motion holds the color still.</p>
+      <div class="links">
+        <button class="quiet" type="button" id="glow-theme" aria-pressed="false">Day</button>
+      </div>
+      <label class="account-field">Brightness
+        <input id="glow-level" type="range" min="35" max="125" step="1" value="100">
+      </label>
+    </section>
     <section id="account-bell">
       <h3>Meditation bell</h3>
       <p>Separate from the music. A struck bell rings over the start of a music sit, and a silent sit can also mark the middle and the end. Each place can be silent, or a single, double, triple, or quadruple bell. The next strike waits until that ring has decayed. The start bell, the end bell, and each midway bell have their own tone. They begin on the same tone.</p>
@@ -844,6 +854,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <button type="button" data-move="next" aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M18 5v14"/><path d="M6 6l9 6-9 6z"/></svg></button>
 </div>
 <script src="/web/series.js"></script>
+<script src="/web/field.js"></script>
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
@@ -1045,6 +1056,7 @@ function goldBlur(blur) {
   const shortSide = Math.min(innerWidth, innerHeight);
   // A full-screen iPad redraws this shadow on every gold line. Past here the
   // extra fringe costs a frame and does not read as a brighter line.
+  if (window.YantraField) return window.YantraField.goldBlur(blur, dpr, shortSide);
   if (dpr >= 2 && shortSide >= 744) return Math.min(blur, 16);
   return blur;
 }
@@ -1272,23 +1284,22 @@ function drawCircles(ctx, cx, cy, R, rings) {
 }
 
 const sittingNow = () => document.body.classList.contains("sitting");
+let fieldNow = null;
 function field(w, h, t) {
   const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h * 0.48, Math.max(w, h) * 0.72);
   const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const breath = reduce ? 0.5 : 0.5 + 0.5 * Math.sin(t * 0.00015);
-  if (isLight()) {
-    const mix = (paper, channel) => Math.round(paper * 0.84 + channel * (reduce ? 0 : 0.16));
-    const tint = hue.tint;
-    g.addColorStop(0, "rgb(" + mix(250 - breath * 3, tint[0]) + ", " + mix(243 - breath * 4, tint[1]) + ", " + mix(230 - breath * 3, tint[2]) + ")");
-    g.addColorStop(0.55, "#efe5d3");
-    g.addColorStop(1, "#e3d6c0");
-  } else {
-    const lean = sittingNow() ? 0.1 : 0;
-    const base = [22 + breath * 10, 12 + breath * 6, 36 + breath * 8];
-    g.addColorStop(0, rgba(base.map((c, i) => Math.round(c * (1 - lean) + hue.glow[i] * lean * 0.45)), 1));
-    g.addColorStop(0.45, "#0c0816");
-    g.addColorStop(1, "#05040a");
-  }
+  const colors = window.YantraField.stops({
+    light: isLight(),
+    sitting: sittingNow(),
+    reduce: reduce,
+    breath: breath,
+    glow: hue.glow,
+  });
+  fieldNow = colors;
+  g.addColorStop(0, rgba(colors.center, 1));
+  g.addColorStop(isLight() ? 0.55 : 0.45, rgba(colors.mid, 1));
+  g.addColorStop(1, rgba(colors.edge, 1));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 }
@@ -1505,13 +1516,8 @@ function frame(now) {
   // The gold leans toward the song's chakra over about eight seconds.
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   leanToward(lotus || GOLD, reduceMotion ? 0 : 0.0035);
-  if (isLight() && !reduceMotion) {
-    const tint = hue.tint;
-    const mix = (channel) => Math.round(239 * 0.86 + channel * 0.14);
-    document.body.style.backgroundColor = "rgb(" + mix(tint[0]) + ", " + mix(tint[1]) + ", " + mix(tint[2]) + ")";
-  } else {
-    document.body.style.backgroundColor = "";
-  }
+  if (isLight() && fieldNow) document.body.style.backgroundColor = rgba(fieldNow.center, 1);
+  else document.body.style.backgroundColor = "";
   if (sitting) {
     // Once the figure is whole it settles about 15% dimmer, so the eyes can rest.
     if (reveal < 0.99) window.wholeAt = 0;
@@ -2338,7 +2344,10 @@ function showRoom(name) {
     if (node && node.scrollIntoView) node.scrollIntoView({ block: "start" });
   }
   if (name !== "pick") document.getElementById("pick-tip").hidden = true;
-  if (name === "practice") paintPractice();
+  if (name === "practice") {
+    paintPractice();
+    if (window.paintGlowControls) window.paintGlowControls();
+  }
   if (name === "account" && window.paintAccount) window.paintAccount();
   if ((name === "home" || name === "done") && window.paintGreeting) window.paintGreeting();
 }
@@ -2671,9 +2680,28 @@ document.getElementById("end").addEventListener("click", endSitting);
   }
   const hour = new Date().getHours();
   const night = hour < 6 || hour >= 20;
+  const dayDefault = () => (window.YantraField ? window.YantraField.brightnessDefault(true, night) : 90);
+  const nightDefault = () => (window.YantraField ? window.YantraField.brightnessDefault(false, night) : (night ? 80 : 100));
+  const storedLevel = (light) => {
+    const themed = settings && settings.get(light ? "glow.levelLight" : "glow.levelDark");
+    if (themed != null && themed !== "") return themed;
+    if (saved.level != null && saved.level !== "") return saved.level;
+    return light ? dayDefault() : nightDefault();
+  };
   const apply = () => {
     document.documentElement.style.setProperty("--glow", (Number(slider.value) / 100).toFixed(2));
   };
+  const paintGlowControls = () => {
+    const light = document.body.classList.contains("light");
+    const account = document.getElementById("glow-level");
+    const theme = document.getElementById("glow-theme");
+    if (account) account.value = slider.value;
+    if (theme) {
+      theme.setAttribute("aria-pressed", String(light));
+      theme.textContent = light ? "Night" : "Day";
+    }
+  };
+  window.paintGlowControls = paintGlowControls;
   const keep = () => {
     const level = Number(slider.value);
     const light = document.body.classList.contains("light");
@@ -2687,19 +2715,34 @@ document.getElementById("end").addEventListener("click", endSitting);
       localStorage.setItem("yantra.glow", JSON.stringify({ level: level, light: light }));
     } catch (e) {}
   };
+  const chooseTheme = (light) => {
+    document.body.classList.toggle("light", light);
+    const themed = settings && settings.get(light ? "glow.levelLight" : "glow.levelDark");
+    if (themed != null && themed !== "") slider.value = themed;
+    else if (light) slider.value = dayDefault();
+    apply();
+    keep();
+    paintGlowControls();
+    rouse();
+  };
   if (settings ? settings.get("theme.light") : saved.light) document.body.classList.add("light");
-  const themed = settings && settings.get(document.body.classList.contains("light") ? "glow.levelLight" : "glow.levelDark");
-  slider.value = themed != null ? themed : (saved.level != null && saved.level !== "" ? saved.level : (document.body.classList.contains("light") ? 90 : (night ? 80 : 100)));
+  slider.value = storedLevel(document.body.classList.contains("light"));
   apply();
-  slider.addEventListener("input", () => { apply(); keep(); rouse(); });
+  paintGlowControls();
+  slider.addEventListener("input", () => { apply(); keep(); paintGlowControls(); rouse(); });
   document.getElementById("theme").addEventListener("click", () => {
-    document.body.classList.toggle("light");
-    const next = settings && settings.get(document.body.classList.contains("light") ? "glow.levelLight" : "glow.levelDark");
-    if (next != null) slider.value = next;
-    else if (document.body.classList.contains("light")) slider.value = 90;
+    chooseTheme(!document.body.classList.contains("light"));
+  });
+  const accountLevel = document.getElementById("glow-level");
+  const accountTheme = document.getElementById("glow-theme");
+  if (accountLevel) accountLevel.addEventListener("input", () => {
+    slider.value = accountLevel.value;
     apply();
     keep();
     rouse();
+  });
+  if (accountTheme) accountTheme.addEventListener("click", () => {
+    chooseTheme(!document.body.classList.contains("light"));
   });
 })();
 

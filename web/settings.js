@@ -116,7 +116,7 @@
       return Math.max(0, Math.min(1, level));
     }
     if (key === "theme.light" || key === "flags.accountSync" || key === "flags.accountSignOut") return !!value;
-    if (key === "glow.level") {
+    if (key === "glow.level" || key === "glow.levelLight" || key === "glow.levelDark") {
       if (value === null || value === undefined || value === "") return null;
       const level = Number(value);
       if (!Number.isFinite(level)) return null;
