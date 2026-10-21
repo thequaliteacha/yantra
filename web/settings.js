@@ -103,7 +103,7 @@
     }
     if (key === "sit.minutes") {
       const number = typeof value === "number" ? value : Number(value);
-      if (!Number.isInteger(number) || number < 1 || number > 240) return 15;
+      if (!Number.isInteger(number) || number < 1 || number > 90) return 15;
       return number;
     }
     if (key === "sit.background") {

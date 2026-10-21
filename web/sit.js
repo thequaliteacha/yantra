@@ -1,8 +1,8 @@
 /* Timed-sit choices. No audio here: just the minutes, the bell times, and the tone at each one. */
 (function (root) {
-  const PRESETS = [5, 10, 15, 20, 30, 45, 60];
+  const PRESETS = [5, 10, 15, 20, 30, 45, 60, 90];
   const DEFAULT_MINUTES = 15;
-  const MAX_MINUTES = 240;
+  const MAX_MINUTES = 90;
   const TONES = ["small", "medium", "deep"];
   const MIDWAY = ["none", "half", "two"];
   const BEDS = ["silent", "white", "pink", "brown", "rain-light", "rain-steady", "rain-roof", "rain-thunder", "drone", "bowl", "pad"];
