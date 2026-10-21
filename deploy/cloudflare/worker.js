@@ -346,8 +346,16 @@ async function ambient(request, env, url) {
 async function talk(request, env, url) {
   if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
   const key = "talks/" + decodeURIComponent(url.pathname.slice(TALK_PREFIX.length));
-  if (!/^talks\/[a-z0-9][a-z0-9./_-]{0,160}\.mp3$/.test(key) || key.includes("..")) {
+  // The audio, and each talk's timed words (.json) for the talk visualizer. Zazen only, like all of /talks/.
+  if (!/^talks\/[a-z0-9][a-z0-9./_-]{0,160}\.(?:mp3|json)$/.test(key) || key.includes("..")) {
     return new Response("Not found", { status: 404 });
+  }
+  if (key.endsWith(".json")) {
+    const words = await env.AUDIO.get(key);
+    if (words === null) return new Response("Not found", { status: 404 });
+    return new Response(words.body, {
+      headers: { "content-type": "application/json; charset=utf-8", "cache-control": "private, max-age=86400" },
+    });
   }
   const object = await env.AUDIO.get(key, { range: request.headers, onlyIf: request.headers });
   if (object === null) return new Response("Not found", { status: 404 });

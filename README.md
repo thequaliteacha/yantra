@@ -109,6 +109,17 @@ off, and its volume); each song count shows its minutes. A first visit on a
 device with no sits gets three welcome steps (the perfect day, reminders, Add
 to Home Screen), once. Talks remember where they were left, mark the ones
 heard, and show on the lock screen.
+
+Playing a talk opens *Watch*: the yantra draws itself across the talk, and the
+words being spoken embellish it. Words of light send soft rays out; heart,
+power, and awareness words lean the colour toward that chakra; stillness hushes
+the figure; enlightenment lets it bloom. Concepts (the sun, a mountain, the
+ocean, a lotus, a path, a door, the wheel of rebirth, and others in
+`web/sketches.js`) draw themselves as small line sketches beside the figure. The
+phrase being spoken can show below, each word brightening as it is said (Words
+on or off). The timed words are made locally with
+`tools/transcribe_talks.py` (faster-whisper) and kept in the private bucket
+next to each talk as `talks/<name>.json`, served only to the Zazen word.
 Name, reminder choices, theme, glow, and saved talks are in one store,
 `yantra.settings.v1`. The practice record stays separate, and its time, sits,
 and days in a row are shown on that page. An optional name can greet you on

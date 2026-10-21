@@ -1963,7 +1963,7 @@
 
   window.fetch = function (input, init) {
     const url = typeof input === "string" ? input : input && input.url;
-    if (typeof url === "string" && url.startsWith("/") && !url.startsWith("/push") && !url.startsWith("/ambient/")) {
+    if (typeof url === "string" && url.startsWith("/") && !url.startsWith("/push") && !url.startsWith("/ambient/") && !url.startsWith("/talks/")) {
       const path = url.split("?")[0];
       if (path === "/access" || path === "/access/sangha" || path === "/leave" || path === "/logout") return realFetch(input, init);
       const method = String((init && init.method) || "GET").toUpperCase();

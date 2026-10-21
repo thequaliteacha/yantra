@@ -210,7 +210,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     background: radial-gradient(ellipse at center, rgba(5, 4, 10, 0.35), rgba(5, 4, 10, 0.82) 70%);
     font-family: Palatino, "Iowan Old Style", "Times New Roman", serif;
   }
-  .room[hidden], body.sitting .room { display: none; }
+  .room[hidden], body.sitting .room, body.watching .room { display: none; }
   .room .inner { width: min(26rem, 100%); display: flex; flex-direction: column; gap: 0.9rem; }
   .room:not([hidden]) .inner { animation: settle 0.8s ease both; }
   .room h1 { font-size: clamp(2.2rem, 7vw, 3.1rem); margin: 0 0 0.2rem; }
@@ -374,7 +374,32 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 1px solid rgba(230, 201, 138, 0.5);
     background: rgba(5, 4, 10, 0.72); color: #f7edd4; font: inherit; font-size: 0.78rem; cursor: pointer;
   }
-  #account-corner[hidden], body.sitting #account-corner { display: none; }
+  #account-corner[hidden], body.sitting #account-corner, body.watching #account-corner, body.watching #glowbar { display: none; }
+  /* Watching a talk: the phrase being spoken rests low on the screen, each word brightening as it is said. */
+  #talk-watch { position: fixed; inset: 0; z-index: 4; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+    padding: 0 max(1.4rem, env(safe-area-inset-right)) max(1.6rem, env(safe-area-inset-bottom)) max(1.4rem, env(safe-area-inset-left));
+    font-family: Palatino, "Iowan Old Style", "Times New Roman", serif; cursor: default; }
+  #talk-watch[hidden] { display: none; }
+  #talk-words { max-width: 34rem; min-height: 4.6em; margin: 0 0 1.1rem; text-align: center; font-size: clamp(1.05rem, 3.6vw, 1.3rem); line-height: 1.55;
+    color: rgba(243, 230, 200, 0.3); opacity: 0; transition: opacity 1.2s ease; text-shadow: 0 0 18px rgba(5, 4, 10, 0.9); }
+  #talk-words.on { opacity: 1; }
+  #talk-watch.quiet #talk-words { opacity: 0; }
+  #talk-words span { transition: color 0.6s ease; }
+  #talk-words span.said { color: rgba(247, 237, 212, 0.92); }
+  #talk-words span.said.k-light { color: #ffe3a6; }
+  #talk-words span.said.k-awake { color: #fff6e0; }
+  #talk-words span.said.k-heart { color: #cfe6c4; }
+  #talk-words span.said.k-naval { color: #f6d98c; }
+  #talk-words span.said.k-eye { color: #cdc6f4; }
+  #talk-words span.said.k-still { color: rgba(247, 237, 212, 0.6); }
+  #talk-words span.said.k-sketch { color: #f2deb0; }
+  #talk-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 1.2rem; opacity: 0; transition: opacity 0.6s ease; pointer-events: none; }
+  #talk-watch.awake #talk-bar { opacity: 1; pointer-events: auto; }
+  #talk-bar button { background: transparent; border: 0; font: inherit; font-size: 0.95rem; color: rgba(232, 204, 146, 0.88); padding: 0.55rem 0.4rem; cursor: pointer; }
+  #talk-bar button[aria-pressed="false"] { color: rgba(232, 204, 146, 0.55); text-decoration: line-through; }
+  #talk-title { margin: 0.5rem 0 0; font-size: 0.85rem; letter-spacing: 0.08em; color: rgba(232, 204, 146, 0.7); opacity: 0; transition: opacity 0.6s ease; text-align: center; }
+  #talk-watch.awake #talk-title { opacity: 1; }
+  body.light #talk-watch { filter: invert(0.9) hue-rotate(180deg); }
   #reminders[hidden] { display: none; }
   /* The week: seven days, each a circle whose left half is the sunrise sit and right half the sunset sit. */
   .week { display: flex; justify-content: center; margin: 0.4rem 0 0; min-height: 1.9rem; }
@@ -784,6 +809,17 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       </div>
     </div>
   </div>
+</div>
+<div id="talk-watch" hidden>
+  <p id="talk-words"></p>
+  <div id="talk-bar">
+    <button type="button" id="talk-back" aria-label="Back 15 seconds">&#8634; 15</button>
+    <button type="button" id="talk-toggle">Pause</button>
+    <button type="button" id="talk-fwd" aria-label="Forward 30 seconds">30 &#8635;</button>
+    <button type="button" id="talk-words-toggle" aria-pressed="true">Words</button>
+    <button type="button" id="talk-close">Close</button>
+  </div>
+  <p id="talk-title"></p>
 </div>
 <div id="caption">
   <p id="cap-title"></p>
@@ -1288,6 +1324,99 @@ function emanate(ctx, cx, cy, R, now, strength) {
   ctx.globalCompositeOperation = op;
 }
 
+/* A talk's words, drawn: rays for light, a widening ring for each word that lands,
+   and a halo while enlightenment is being spoken of. All faint, at the edge of vision. */
+function talkMotifs(ctx, cx, cy, R, now, fx, reduce) {
+  if (!fx) return;
+  const op = ctx.globalCompositeOperation;
+  ctx.globalCompositeOperation = glowBlend();
+  ctx.shadowBlur = 0;
+  if (fx.light > 0.01) {
+    const n = 36;
+    const turn = reduce ? 0 : now * 0.00002;
+    ctx.strokeStyle = rgba(inkOf([255, 222, 150]), 0.16 * fx.light);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const a = turn + (i / n) * Math.PI * 2;
+      ctx.moveTo(cx + Math.cos(a) * R * 1.05, cy + Math.sin(a) * R * 1.05);
+      ctx.lineTo(cx + Math.cos(a) * R * (1.5 + 0.9 * fx.light), cy + Math.sin(a) * R * (1.5 + 0.9 * fx.light));
+    }
+    ctx.stroke();
+  }
+  for (const ripple of fx.ripples) {
+    const p = Math.min(1, ripple.age / 5);
+    const tone = ripple.kind === "light" ? [255, 226, 160] : ripple.kind === "awake" ? [247, 237, 212] : (CHAKRA[ripple.kind] || GOLD).glow;
+    ctx.strokeStyle = rgba(inkOf(tone), 0.16 * Math.pow(1 - p, 1.5));
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    circle(ctx, cx, cy, R * (0.3 + 2.4 * p));
+    ctx.stroke();
+  }
+  if (fx.awake > 0.01) {
+    ctx.strokeStyle = rgba(inkOf([247, 237, 212]), 0.12 * fx.awake);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    circle(ctx, cx, cy, R * 2.6);
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = op;
+}
+
+/* The sketches a talk calls up, drawn stroke by stroke in the yantra's ink at four
+   places around it, never over the bindu. Stroke lengths are measured once. */
+const sketchCache = {};
+function sketchStrokes(name) {
+  if (sketchCache[name]) return sketchCache[name];
+  if (!window.YantraSketches) return null;
+  const probe = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  const parts = window.YantraSketches.strokes(name).map((d) => {
+    probe.setAttribute("d", d);
+    let length = 100;
+    try { length = probe.getTotalLength() || 100; } catch (e) {}
+    return { path: new Path2D(d), length: length };
+  });
+  sketchCache[name] = { parts: parts, total: parts.reduce((sum, part) => sum + part.length, 0) };
+  return sketchCache[name];
+}
+const SKETCH_SLOTS = [-140, -40, 140, 40].map((deg) => (deg * Math.PI) / 180);
+function drawSketches(ctx, cx, cy, R, fx, reduce) {
+  if (!fx || !fx.sketches || !fx.sketches.length || !window.YantraTalkView) return;
+  const op = ctx.globalCompositeOperation;
+  ctx.globalCompositeOperation = glowBlend();
+  const size = R * 1.35;
+  const reach = R * 2.25;
+  for (const sk of fx.sketches) {
+    const drawn = sketchStrokes(sk.name);
+    if (!drawn) continue;
+    const phase = window.YantraTalkView.sketchPhase(sk.age);
+    const progress = reduce ? 1 : phase.drawn;
+    const a = SKETCH_SLOTS[sk.slot % SKETCH_SLOTS.length];
+    const x = cx + Math.cos(a) * reach;
+    const y = cy + Math.sin(a) * reach * 0.92;
+    ctx.save();
+    ctx.translate(x - size / 2, y - size / 2);
+    ctx.scale(size / 100, size / 100);
+    ctx.lineWidth = 1.5 / (size / 100);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = rgba(inkOf(hue.tint), 0.62 * phase.alpha);
+    ctx.shadowColor = rgba(inkOf(hue.glow), 0.5 * phase.alpha);
+    ctx.shadowBlur = 6;
+    let left = drawn.total * progress;
+    for (const part of drawn.parts) {
+      if (left <= 0) break;
+      const ink = Math.min(part.length, left);
+      ctx.setLineDash([ink, part.length + 1]);
+      ctx.lineDashOffset = 0;
+      ctx.stroke(part.path);
+      left -= part.length;
+    }
+    ctx.restore();
+  }
+  ctx.globalCompositeOperation = op;
+}
+
 const SCENES = [
   { name: "sri", hold: 150 },
   { name: "star", hold: 70 },
@@ -1396,7 +1525,9 @@ function frame(now) {
   const h = innerHeight;
   shown += (level - shown) * 0.08;
   field(w, h, now);
-  const sitting = document.body.classList.contains("sitting");
+  const watching = document.body.classList.contains("watching") && !!window.yantraWatch;
+  const sitting = document.body.classList.contains("sitting") || watching;
+  let talkFx = null;
   const spot = homeSpot(w, h, sitting);
   const cx = spot.cx;
   const cy = spot.cy;
@@ -1408,7 +1539,22 @@ function frame(now) {
   let nextName = "star";
   let bloom = 0;
   let lotus = null;
-  if (sitting) {
+  if (watching) {
+    // The talk draws the figure over its whole length; its words lean, bloom, and hush it.
+    const view = window.yantraWatch;
+    const audio = view.audio;
+    const t = audio.currentTime || 0;
+    const dt = Math.min(0.25, Math.max(0, (now - (view.at || now)) / 1000));
+    view.at = now;
+    if (window.YantraTalkView) {
+      window.YantraTalkView.step(view.state, view.segments, t, audio.paused ? 0 : dt);
+      if (view.words) window.YantraTalkView.paintWords(view.words, view.segments || [], window.YantraTalkView.segmentAt(view.segments, t), t);
+    }
+    reveal = stageReveal(audio.duration > 0 ? t / audio.duration : 0);
+    bloom = view.state.awake * 0.8;
+    lotus = CHAKRA[view.state.mood] || null;
+    talkFx = view.state;
+  } else if (sitting) {
     if (!window.ink) window.ink = { key: "", portion: 0 };
     if (!window.pace) window.pace = { key: "", pos: 0 };
     let live = window.series;
@@ -1473,10 +1619,14 @@ function frame(now) {
     // Once the figure is whole it settles about 15% dimmer, so the eyes can rest.
     if (reveal < 0.99) window.wholeAt = 0;
     else if (!window.wholeAt) window.wholeAt = now;
-    const rest = window.wholeAt ? 1 - 0.15 * ease((now - window.wholeAt) / 20000) : 1;
+    const rest = (window.wholeAt ? 1 - 0.15 * ease((now - window.wholeAt) / 20000) : 1) * (talkFx ? 1 - 0.3 * talkFx.still : 1);
     gold(ctx, 0.92 * rest, 14 + shown * 10, (0.48 + 0.22 * Math.min(1, shown)) * rest);
     drawSri(ctx, cx, cy, R, reveal, bloom, lotus || CHAKRA.heart);
     emanate(ctx, cx, cy, R, now, Math.min(1, reveal / 0.12) * rest);
+    if (talkFx) {
+      talkMotifs(ctx, cx, cy, R, now, talkFx, reduceMotion);
+      drawSketches(ctx, cx, cy, R, talkFx, reduceMotion);
+    }
   } else {
     gold(ctx, 0.9 * (1 - fade), 10 + shown * 16);
     ctx.globalAlpha = 1 - fade;
@@ -2645,6 +2795,106 @@ if (window.YANTRA_WEB) {
       window.YantraTalks.play(document.getElementById("talks-list"), src, title);
     });
   }
+  /* Watching a Dharma talk (Zazen only): the yantra with the talk, its words embellishing it. */
+  const talkWatch = document.getElementById("talk-watch");
+  const talkWords = document.getElementById("talk-words");
+  const talkToggle = document.getElementById("talk-toggle");
+  const wordsToggle = document.getElementById("talk-words-toggle");
+  let watchLock = null;
+  let watchHide = 0;
+  function wordsOn() {
+    try {
+      return localStorage.getItem("yantra.talkWords") !== "0";
+    } catch (e) {
+      return true;
+    }
+  }
+  function paintTalkBar() {
+    const view = window.yantraWatch;
+    const on = wordsOn();
+    wordsToggle.setAttribute("aria-pressed", String(on));
+    talkWatch.classList.toggle("quiet", !on);
+    if (view) view.words = on ? talkWords : null;
+    talkToggle.textContent = view && view.audio.paused ? "Play" : "Pause";
+  }
+  function showTalkBar() {
+    talkWatch.classList.add("awake");
+    clearTimeout(watchHide);
+    watchHide = setTimeout(() => talkWatch.classList.remove("awake"), 4000);
+  }
+  async function holdScreen() {
+    try {
+      if (navigator.wakeLock && document.visibilityState === "visible") watchLock = await navigator.wakeLock.request("screen");
+    } catch (e) {
+      watchLock = null;
+    }
+  }
+  async function openWatch(detail) {
+    if (window.YANTRA_LEVEL !== "zazen" || !window.YantraTalkView || !detail || !detail.src) return;
+    const audio = document.querySelector("#talks-list audio");
+    if (!audio) return;
+    const view = { audio: audio, src: detail.src, segments: null, state: window.YantraTalkView.createState(), words: null, at: 0 };
+    window.yantraWatch = view;
+    talkWords.replaceChildren();
+    delete talkWords.dataset.index;
+    talkWords.classList.remove("on");
+    document.getElementById("talk-title").textContent = detail.title || "";
+    talkWatch.hidden = false;
+    document.body.classList.add("watching");
+    paintTalkBar();
+    showTalkBar();
+    holdScreen();
+    const segments = await window.YantraTalkView.loadWords(detail.src);
+    if (window.yantraWatch === view) view.segments = segments;
+  }
+  function closeWatch() {
+    document.body.classList.remove("watching");
+    talkWatch.hidden = true;
+    window.yantraWatch = null;
+    if (watchLock) watchLock.release().catch(() => {});
+    watchLock = null;
+  }
+  addEventListener("yantra:talk", (event) => openWatch(event.detail));
+  talkWatch.addEventListener("click", (event) => {
+    if (!event.target.closest("button")) showTalkBar();
+  });
+  document.getElementById("talk-back").addEventListener("click", () => {
+    const view = window.yantraWatch;
+    if (view) view.audio.currentTime = Math.max(0, view.audio.currentTime - 15);
+    showTalkBar();
+  });
+  document.getElementById("talk-fwd").addEventListener("click", () => {
+    const view = window.yantraWatch;
+    if (view) view.audio.currentTime = Math.min(view.audio.duration || Infinity, view.audio.currentTime + 30);
+    showTalkBar();
+  });
+  talkToggle.addEventListener("click", () => {
+    const view = window.yantraWatch;
+    if (!view) return;
+    if (view.audio.paused) view.audio.play().catch(() => {});
+    else view.audio.pause();
+    showTalkBar();
+  });
+  wordsToggle.addEventListener("click", () => {
+    try {
+      localStorage.setItem("yantra.talkWords", wordsOn() ? "0" : "1");
+    } catch (e) {}
+    paintTalkBar();
+    showTalkBar();
+  });
+  document.getElementById("talk-close").addEventListener("click", closeWatch);
+  addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && document.body.classList.contains("watching")) closeWatch();
+  });
+  const watchedAudio = document.querySelector("#talks-list audio");
+  if (watchedAudio) {
+    watchedAudio.addEventListener("play", paintTalkBar);
+    watchedAudio.addEventListener("pause", paintTalkBar);
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.body.classList.contains("watching") && document.visibilityState === "visible") holdScreen();
+  });
+
   addEventListener("yantra:unplayed", (event) => {
     sessionLive = false;
     if (document.body.classList.contains("sitting")) endSitting();
