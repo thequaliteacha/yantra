@@ -115,14 +115,25 @@
   function collectionPayload() {
     const payload = Object.assign({}, collection);
     payload.circles = (collection.circles || []).filter((circle) => Playback.circleOpen(circle.id, window.YANTRA_LEVEL));
-    payload.discs = collection.discs.filter(playable).map((disc) => Object.assign({}, disc, {
-      tracks: disc.tracks.filter((track) => itemPlayable({ discId: disc.id, n: track.n })).map((track) => Object.assign({}, track, { chakra: chakraOf(disc, track.n), installed: false })),
-      onSpotify: !!disc.spotifyAlbum,
-      onApple: !!appleId(disc),
-      onRecordings: disc.tracks.filter((track) => itemPlayable({ discId: disc.id, n: track.n })).every((track) => recordingOf(disc.id, track.n)),
-      installed: 0,
-      installDir: "",
-    })).filter((disc) => disc.tracks.length > 0);
+    // Access-closed albums are already gone. Unplayable ones stay, with playable: false,
+    // so the shelf can shade them instead of hiding them.
+    payload.discs = collection.discs.filter((disc) => !closedDisc(disc)).map((disc) => {
+      const tracks = disc.tracks.map((track) => Object.assign({}, track, {
+        chakra: chakraOf(disc, track.n),
+        installed: false,
+        playable: itemPlayable({ discId: disc.id, n: track.n }),
+      }));
+      const liveTracks = tracks.filter((track) => track.playable);
+      return Object.assign({}, disc, {
+        tracks: tracks,
+        playable: playable(disc),
+        onSpotify: !!disc.spotifyAlbum,
+        onApple: !!appleId(disc),
+        onRecordings: liveTracks.length > 0 && liveTracks.every((track) => recordingOf(disc.id, track.n)),
+        installed: 0,
+        installDir: "",
+      });
+    });
     payload.installRoot = "";
     payload.chakras = [
       { id: "naval", name: "Navel", third: "first" },
@@ -1724,6 +1735,9 @@
     const name = String(payload.name || "Form");
     const prefer = payload.prefer === "apple" ? "apple" : "spotify";
     const items = orderedDraft(tracks);
+    if (items.some((item) => !itemPlayable(item))) {
+      return [{ ok: false, error: Playback.UNAVAILABLE }, 409];
+    }
     if (recordedAll(items) || prefer === "apple") {
       const ok = await liveStart(name, items, prefer, true, null, payload.id || "");
       return ok ? [{ ok: true, source: "playlist" }] : [{ ok: false, error: "The music did not start." }, 404];

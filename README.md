@@ -61,10 +61,13 @@ The link above opens the web edition on any computer or phone. For albums
 that aren't recorded, press *Connect* beside *Listen on Spotify* once. After that,
 *Begin sitting* and a form's *Sit* play every song right in the page, in order,
 and the caption follows the whole sit. There are no other windows and nothing
-to press until the sit ends. Spotify needs Premium. On a phone the in-page
-Spotify player cannot play, so a sit uses the hosted recordings. Spotify plays
-only when the Spotify app is already available. A song that never starts is
-skipped, and the next playable song begins.
+to press until the sit ends. Spotify needs Premium, and its in-page player only
+runs where that player is supported and the account is connected. On a phone or
+tablet the player does not run, so those albums and songs stay on the shelf,
+shaded, with a note that they are not available on this device yet. They cannot
+be chosen for a sit, a mix, or a form. A sit uses the hosted recordings. A song
+that never starts is skipped after a few seconds, and that song stays shaded
+for the rest of the visit.
 
 Each listener's forms are their own. On the web they are kept in that browser
 under the listener's Spotify account, and every saved form also becomes a

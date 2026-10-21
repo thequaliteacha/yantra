@@ -1,11 +1,15 @@
 /* What can actually play on this device, and when a sit should give up on a song.
-   Hosted mp3s play in the page. Spotify's in-page player does not play on phones,
-   and a Spotify device that never advances the playhead is not playing.
-   Lumikara is for the Zazen word only. */
+   Hosted mp3s play in the page. Spotify plays only where its in-page player is
+   supported and the account is connected. Anything else stays on the shelf, shaded.
+   A song that never starts is skipped, then shaded for the rest of the visit.
+   The Sangha word sees only Vayu. Lumikara is for the Zazen word only.
+   Hidden by access stays hidden: it is not shown shaded. */
 (function (root) {
   const LUMAKARA = "lumikara";
+  const VAYU = "vayu";
   const STALL_MS = 5000;
   const PROGRESS_EPS = 0.25;
+  const UNAVAILABLE = "Not available on this device yet";
 
   function spotifySdkSupported(env) {
     const ua = String((env && env.userAgent) || "");
@@ -15,12 +19,11 @@
     return true;
   }
 
-  /* Spotify is usable when this browser can run the in-page player, or when a
-     real Spotify app (not the silent in-page device) is already available. */
+  /* Spotify can be picked only when this browser runs the in-page player and
+     the account is connected. A phone or tablet does not run that player. */
   function spotifyUsable(session) {
-    if (!session || session.failed || session.blocked || !session.connected) return false;
-    if (session.sdk) return true;
-    return !!session.handset;
+    if (!session || session.failed || session.blocked || !session.connected || !session.sdk) return false;
+    return true;
   }
 
   function trackKey(track) {
@@ -30,6 +33,7 @@
   }
 
   function circleOpen(circle, level) {
+    if (level === "sangha") return circle === VAYU;
     return circle !== LUMAKARA || level === "zazen";
   }
 
@@ -57,6 +61,34 @@
       ));
       if (!tracks.length) continue;
       out.push(Object.assign({}, disc, { tracks: tracks }));
+    }
+    return out;
+  }
+
+  /* Albums the listener may see. Access-closed circles are left out entirely.
+     A track that cannot play stays in the list, marked so the shelf can shade it.
+     An album is unplayable when none of its tracks can play. */
+  function shelfDiscs(discs, session) {
+    const out = [];
+    for (const disc of discs || []) {
+      if (!disc || !circleOpen(disc.circle, session && session.level)) continue;
+      const tracks = (disc.tracks || []).map((track) => {
+        const row = Object.assign({}, track, { circle: disc.circle });
+        const playable = trackOffered(row, session);
+        return Object.assign({}, track, {
+          playable: playable,
+          unavailable: !playable,
+          note: playable ? "" : UNAVAILABLE,
+        });
+      });
+      if (!tracks.length) continue;
+      const playable = tracks.some((track) => track.playable);
+      out.push(Object.assign({}, disc, {
+        tracks: tracks,
+        playable: playable,
+        unavailable: !playable,
+        note: playable ? "" : UNAVAILABLE,
+      }));
     }
     return out;
   }
@@ -130,6 +162,7 @@
 
   const api = {
     LUMAKARA: LUMAKARA,
+    UNAVAILABLE: UNAVAILABLE,
     STALL_MS: STALL_MS,
     spotifySdkSupported: spotifySdkSupported,
     spotifyUsable: spotifyUsable,
@@ -137,6 +170,7 @@
     trackOffered: trackOffered,
     filterTracks: filterTracks,
     filterDiscs: filterDiscs,
+    shelfDiscs: shelfDiscs,
     createProgressWatch: createProgressWatch,
     classifyPlayback: classifyPlayback,
     presentState: presentState,
