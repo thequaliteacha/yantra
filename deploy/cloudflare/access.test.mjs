@@ -49,6 +49,7 @@ const env = {
   AUDIO: {
     async get(key, options) {
       gets.push(key);
+      if (key === "talks/balance.json") return { body: '{"v":1,"segments":[]}' };
       if (["talks/balance.mp3", "talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3", "samurai/01.mp3", "india-dream/03.mp3", "awake-in-anza-borrego/02.mp3", "ambient/rain-light.mp3", "ambient/rain-thunder.mp3"].includes(key)) {
         return audioObject(options.range ? { headers: options.range } : { headers: new Headers() });
       }
@@ -100,6 +101,17 @@ assert.strictEqual(zazenTalk.headers.get("content-type"), "audio/mpeg");
 assert.strictEqual(zazenTalk.headers.get("accept-ranges"), "bytes");
 assert.strictEqual(zazenTalk.headers.get("content-range"), "bytes 0-3/11");
 assert.ok(gets.includes("talks/balance.mp3"));
+
+// Each talk's timed words follow the same gate as its audio.
+gets.length = 0;
+const sanghaWords = await route(withCookie("https://yantramedi.app/talks/balance.json", sangha), env);
+assert.strictEqual(sanghaWords.status, 403);
+assert.deepStrictEqual(gets, []);
+const zazenWords = await route(withCookie("https://yantramedi.app/talks/balance.json", zazen), env);
+assert.strictEqual(zazenWords.status, 200);
+assert.ok(zazenWords.headers.get("content-type").startsWith("application/json"));
+assert.deepStrictEqual(await zazenWords.json(), { v: 1, segments: [] });
+assert.strictEqual((await route(withCookie("https://yantramedi.app/talks/balance.txt", zazen), env)).status, 404);
 
 const sanghaShelf = await (await route(withCookie("https://yantramedi.app/discs.json", sangha), env)).json();
 assert.ok(sanghaShelf.discs.every((disc) => disc.circle === "vayu"));

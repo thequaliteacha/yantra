@@ -96,6 +96,9 @@
     }
     const started = player.play();
     if (started && typeof started.catch === "function") started.catch(() => {});
+    if (root && typeof root.dispatchEvent === "function" && typeof CustomEvent === "function") {
+      root.dispatchEvent(new CustomEvent("yantra:talk", { detail: { src: src, title: title, setTitle: setTitle || "" } }));
+    }
   }
 
   /* Sets in their own order, each with its playable talks. Nothing unless zazen. */
