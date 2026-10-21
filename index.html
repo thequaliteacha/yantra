@@ -70,6 +70,28 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     scrollbar-width: thin; scrollbar-color: rgba(230, 201, 138, 0.35) transparent;
   }
   #discs button { font-size: 0.95rem; }
+  /* Unplayable on this device: still listed, shaded, and not a choice.
+     Light mode inverts the shelf, so the fade stays a fade in both. */
+  #discs button.unavailable {
+    color: rgba(232, 204, 146, 0.38);
+    padding-top: 0.4rem;
+    padding-bottom: 0.5rem;
+  }
+  #discs button.unavailable.on { color: rgba(243, 230, 200, 0.5); }
+  #discs button .why, #tracks li .why, #form-tracks li .why, .saved-row .why {
+    display: block; margin-top: 0.16rem;
+    font-size: 0.78rem; line-height: 1.35; letter-spacing: 0.01em;
+    text-transform: none; font-style: italic; font-weight: 400;
+    color: rgba(232, 204, 146, 0.62);
+  }
+  #tracks li.unavailable, #form-tracks li.unavailable, .saved-row .name.unavailable { color: rgba(232, 204, 146, 0.32); }
+  #tracks li.unavailable .chakra, #form-tracks li.unavailable .chakra { color: rgba(232, 204, 146, 0.28); }
+  #tracks li.unavailable .mini, #form-tracks li.unavailable .mini { opacity: 0.35; }
+  #play.unavailable {
+    text-transform: none; letter-spacing: 0.02em; font-size: 0.92rem;
+    opacity: 0.5; cursor: default;
+  }
+  #pick-album option:disabled { color: rgba(243, 230, 200, 0.4); }
   #now { min-height: 1.2rem; color: #e6c98a; margin: 0.35rem 0 0; }
   #note { min-height: 1.2rem; color: rgba(232, 204, 146, 0.7); font-size: 0.92rem; margin: 0.15rem 0 0.4rem; }
   .actions { display: flex; gap: 0.7rem; align-items: center; }
@@ -421,6 +443,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       flex: 1 1 40%; padding: 0.95rem 0.6rem; text-align: center; white-space: nowrap;
       font-size: 0.86rem; letter-spacing: 0.1em;
     }
+    #play.unavailable { white-space: normal; flex-basis: 100%; letter-spacing: 0.01em; }
     #playlist-name { width: 100%; }
     #end { top: max(1rem, env(safe-area-inset-top)); right: max(1rem, env(safe-area-inset-right)); padding: 0.6rem 0.9rem; }
     #caption { bottom: max(6vh, calc(env(safe-area-inset-bottom) + 2rem)); padding: 0 1.2rem; }
@@ -1612,6 +1635,11 @@ function sourceFor(disc) {
 async function sitAlbum() {
   if (window.YantraBell) window.YantraBell.unlock();
   const disc = selected();
+  if (disc && disc.playable === false) {
+    playNote = unavailableNote();
+    applyNow();
+    return;
+  }
   const source = sourceFor(disc);
   if (!source) {
     playNote = "This album isn't available here.";
@@ -1711,10 +1739,20 @@ function renderShelf() {
   for (const item of collection.discs.filter((item) => item.circle === circleId)) {
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = item.title;
     button.dataset.id = item.id;
+    const albumMuted = item.playable === false;
+    button.classList.toggle("unavailable", albumMuted);
     button.classList.toggle("on", item.id === selectedId);
     button.classList.toggle("hearing", item.id === heardId);
+    const albumName = document.createElement("span");
+    albumName.textContent = item.title;
+    button.append(albumName);
+    if (albumMuted) {
+      const why = document.createElement("span");
+      why.className = "why";
+      why.textContent = unavailableNote();
+      button.append(why);
+    }
     button.addEventListener("click", () => {
       selectedId = item.id;
       circleId = item.circle;
@@ -1725,26 +1763,37 @@ function renderShelf() {
     discs.append(button);
   }
   tracks.replaceChildren();
+  const albumMuted = disc.playable === false;
   for (const track of disc.tracks) {
     const li = document.createElement("li");
     li.dataset.n = String(track.n);
     li.dataset.title = fold(track.title);
+    const canPlay = track.playable !== false;
+    li.classList.toggle("unavailable", !canPlay);
     const num = document.createElement("span");
     num.textContent = String(track.n);
     const name = document.createElement("span");
     name.textContent = track.title;
+    if (!canPlay && !albumMuted) {
+      const why = document.createElement("span");
+      why.className = "why";
+      why.textContent = unavailableNote();
+      name.append(why);
+    }
     const len = document.createElement("span");
     len.textContent = track.length ? clock(track.length) : "";
     const tag = document.createElement("span");
     tag.className = "chakra";
     tag.textContent = chakraLabel(track.chakra);
-    const picked = draft.some((item) => item.discId === disc.id && item.n === track.n);
+    const picked = canPlay && draft.some((item) => item.discId === disc.id && item.n === track.n);
     li.classList.toggle("picked", picked);
     const add = document.createElement("button");
     add.type = "button";
     add.className = "mini";
+    add.disabled = !canPlay;
     add.textContent = picked ? "Added" : "Add";
     add.addEventListener("click", () => {
+      if (!canPlay) return;
       editForm({ op: "take", tracks: draft, discId: disc.id, n: track.n });
     });
     li.append(num, name, len, tag, add);
@@ -1773,13 +1822,17 @@ function paintActions() {
   const apple = document.getElementById("apple");
   const local = document.getElementById("local");
   const install = document.getElementById("install");
+  const begin = document.getElementById("begin");
+  const muted = !!(disc && disc.playable === false);
   const onSpotify = !!(disc && disc.onSpotify);
   const onApple = !!(disc && disc.onApple);
   const onRecordings = !!(disc && disc.onRecordings);
   const count = installedCount(disc);
-  play.hidden = !onSpotify && !onRecordings && onApple;
-  play.disabled = !onSpotify && !onRecordings;
-  play.textContent = onRecordings ? "Play" : onSpotify ? "Open in Spotify" : "Not on Spotify";
+  play.classList.toggle("unavailable", muted);
+  play.hidden = !muted && !onSpotify && !onRecordings && onApple;
+  play.disabled = muted || (!onSpotify && !onRecordings);
+  play.textContent = muted ? unavailableNote() : onRecordings ? "Play" : onSpotify ? "Open in Spotify" : "Not on Spotify";
+  if (begin) begin.disabled = muted;
   apple.hidden = !onApple;
   apple.disabled = false;
   local.hidden = onSpotify || onApple || onRecordings || count < 1;
@@ -1787,8 +1840,12 @@ function paintActions() {
   install.hidden = onSpotify || onApple || onRecordings;
 }
 
+function unavailableNote() {
+  return (window.YantraPlayback && window.YantraPlayback.UNAVAILABLE) || "Not available on this device yet";
+}
 function shelfHint(disc) {
   if (!disc) return "";
+  if (disc.playable === false) return unavailableNote();
   if (disc.onRecordings) return "";
   if (!disc.onSpotify && !disc.onApple && installedCount(disc) < 1) {
     return "Name each file with its track title, then install it in Music/yantra/" + disc.id + ".";
@@ -2029,7 +2086,15 @@ function renderForm() {
     out.textContent = "Out";
     out.addEventListener("click", () => editForm({ op: "take", tracks: draft, discId: track.discId, n: track.n }));
     tools.append(up, down, another, out);
-    li.classList.toggle("wait", track.playable === false);
+    const muted = track.playable === false;
+    li.classList.toggle("wait", muted);
+    li.classList.toggle("unavailable", muted);
+    if (muted) {
+      const why = document.createElement("span");
+      why.className = "why";
+      why.textContent = unavailableNote();
+      name.append(why);
+    }
     li.append(num, name, tag, tools);
     list.append(li);
   });
@@ -2055,7 +2120,15 @@ function renderForm() {
     open.type = "button";
     open.className = "name";
     open.classList.toggle("on", item.id === draftId);
+    const formMuted = Array.isArray(item.tracks) && item.tracks.some((track) => track.playable === false);
+    open.classList.toggle("unavailable", formMuted);
     open.textContent = item.name;
+    if (formMuted) {
+      const why = document.createElement("span");
+      why.className = "why";
+      why.textContent = unavailableNote();
+      open.append(why);
+    }
     open.addEventListener("click", () => {
       draft = item.tracks.slice();
       draftId = item.id;
@@ -2146,7 +2219,8 @@ async function editForm(body) {
 
 async function openDisc() {
   const disc = selected();
-  if (!disc || !(disc.onSpotify || disc.onRecordings)) return;
+  if (!disc || disc.playable === false) return;
+  if (!(disc.onSpotify || disc.onRecordings)) return;
   playNote = (disc.onRecordings ? "Playing " : "Opening ") + disc.title + ".";
   applyNow();
   try {
@@ -2418,12 +2492,18 @@ function paintPick(rebuild) {
       const group = document.createElement("optgroup");
       group.label = circle.name;
       for (const disc of discs.filter((item) => item.circle === circle.id)) {
-        group.appendChild(new Option(disc.title, disc.id));
+        const option = new Option(disc.title, disc.id);
+        if (disc.playable === false) {
+          option.disabled = true;
+          option.textContent = disc.title + " \u2014 " + unavailableNote();
+        }
+        group.appendChild(option);
       }
       if (group.children.length) select.appendChild(group);
     }
   }
   if (pickAlbum && discs.length && !discs.some((disc) => disc.id === pickAlbum)) pickAlbum = "";
+  if (pickAlbum && discs.some((disc) => disc.id === pickAlbum && disc.playable === false)) pickAlbum = "";
   select.value = pickAlbum;
   select.disabled = sitMix;
   const mixButton = document.getElementById("pick-mix");
@@ -2432,7 +2512,7 @@ function paintPick(rebuild) {
   mixButton.setAttribute("aria-pressed", face.pressed);
   const chosen = discs.find((disc) => disc.id === pickAlbum);
   document.querySelectorAll("#pick [data-count]").forEach((button) => {
-    button.disabled = !sitMix && !!chosen && !fitsCount(chosen, Number(button.dataset.count));
+    button.disabled = (!sitMix && !!chosen && chosen.playable === false) || (!sitMix && !!chosen && !fitsCount(chosen, Number(button.dataset.count)));
   });
   document.getElementById("pick-note").textContent = sitMix ? "Songs from across the albums" : "";
 }
@@ -2450,6 +2530,11 @@ async function playSession(theme, count, choice) {
   const album = choice ? choice.album || "" : pickAlbum;
   const label = (theme === "morning" ? "Morning" : "Evening") + " · " + count + (count === 1 ? " song" : " songs");
   const note = document.getElementById("pick-note");
+  const asked = !mix && album ? (collection && collection.discs || []).find((item) => item.id === album) : null;
+  if (asked && asked.playable === false) {
+    note.textContent = unavailableNote();
+    return;
+  }
   note.textContent = "";
   if (document.body.classList.contains("sitting")) endSitting();
   if (window.yantraHold) window.yantraHold();
@@ -2510,7 +2595,13 @@ if (window.YANTRA_WEB) {
     button.addEventListener("click", () => playSession(sessionTheme, Number(button.dataset.count)));
   });
   document.getElementById("pick-album").addEventListener("change", (event) => {
-    pickAlbum = event.target.value;
+    const next = event.target.value;
+    const disc = (collection && collection.discs || []).find((item) => item.id === next);
+    if (disc && disc.playable === false) {
+      event.target.value = pickAlbum;
+      return;
+    }
+    pickAlbum = next;
     keepPick();
   });
   document.getElementById("pick-mix").addEventListener("click", () => {
