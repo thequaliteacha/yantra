@@ -96,8 +96,9 @@ day is the device's own date.
 Morning and evening reminders are on that same page, each one on or off by
 itself. A reminder can follow sunrise or sunset (a few minutes before or after,
 if you like) or a time you set. The sun is calculated on the device. A place
-stays there too: typed as a city or rounded coordinates, or read only when you
-ask. What leaves the device is an anonymous id, the push subscription, and
+stays there too: a city chosen from the app's own list of about four hundred
+(typed as "Austin", "austin tx" or "Texas"; the list is in the app, so nothing
+typed leaves the device), rounded coordinates, or read only when you ask. What leaves the device is an anonymous id, the push subscription, and
 either a clock time or coordinates rounded to a tenth of a degree. Delete my
 reminder data removes that record. On iPhone and iPad the note arrives only
 from the Home Screen app.

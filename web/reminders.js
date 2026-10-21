@@ -128,6 +128,10 @@ function placeLabel(place) {
   return "";
 }
 
+function cityPlace(match) {
+  return { name: match.label, lat: match.lat, lon: match.lon, tz: match.tz, source: "city" };
+}
+
 function readPlace(record) {
   const field = document.getElementById("remind-place");
   const typed = field.value.trim();
@@ -136,8 +140,12 @@ function readPlace(record) {
     return { name: coords.name, lat: coords.lat, lon: coords.lon, tz: deviceZone(), source: "coords" };
   }
   const matches = findPlaces(typed);
-  const exact = matches.find((place) => place.name.toLowerCase() === typed.toLowerCase()) || (matches.length === 1 ? matches[0] : null);
-  if (exact) return { name: exact.name, lat: exact.lat, lon: exact.lon, tz: exact.tz, source: "city" };
+  const lower = typed.toLowerCase();
+  // A chosen suggestion, a city typed in full, or the only city that fits.
+  const exact = matches.find((place) => place.label.toLowerCase() === lower)
+    || matches.find((place) => place.name.toLowerCase() === lower)
+    || (matches.length === 1 ? matches[0] : null);
+  if (exact) return cityPlace(exact);
   if (record.place && placeLabel(record.place) === typed) return record.place;
   return null;
 }
@@ -284,14 +292,29 @@ async function deleteReminders(record) {
   return fresh;
 }
 
-function paintSuggestions(query) {
+/* The suggestions are drawn as buttons under the field. A <datalist> shows
+   nothing on iPhone, iPad and most Android browsers, so the list is our own. */
+function paintSuggestions(query, onPick) {
   const list = document.getElementById("remind-places");
   list.replaceChildren();
-  for (const place of findPlaces(query)) {
-    const option = document.createElement("option");
-    option.value = place.name;
-    list.append(option);
+  const typed = String(query || "").trim();
+  const matches = findPlaces(typed);
+  for (const place of matches) {
+    if (place.label.toLowerCase() === typed.toLowerCase()) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "remind-suggest";
+    button.textContent = place.label;
+    button.addEventListener("click", () => onPick(place));
+    list.append(button);
   }
+  if (!matches.length && typed.length >= 3 && !parseCoords(typed)) {
+    const note = document.createElement("span");
+    note.className = "remind-none";
+    note.textContent = "Not in the list. Try the nearest city, or coordinates like 30.3, -97.7.";
+    list.append(note);
+  }
+  list.hidden = !list.childElementCount;
 }
 
 function boot() {
@@ -320,9 +343,25 @@ function boot() {
     button.textContent = pressed ? "On" : "Off";
     preview(record);
   });
-  document.getElementById("remind-place").addEventListener("input", (event) => {
-    paintSuggestions(event.target.value);
+  const placeField = document.getElementById("remind-place");
+  const pick = (place) => {
+    placeField.value = place.label;
+    paintSuggestions(place.label, pick);
     preview(record);
+  };
+  placeField.addEventListener("input", (event) => {
+    paintSuggestions(event.target.value, pick);
+    preview(record);
+  });
+  placeField.addEventListener("keydown", (event) => {
+    // Enter takes the first suggestion, so a phone keyboard's Done can choose.
+    if (event.key !== "Enter") return;
+    const first = findPlaces(placeField.value)[0];
+    if (first && !parseCoords(placeField.value)) {
+      event.preventDefault();
+      pick(first);
+      placeField.blur();
+    }
   });
   document.getElementById("remind-here").addEventListener("click", () => {
     if (!navigator.geolocation) {
