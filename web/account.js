@@ -193,21 +193,17 @@
     if (note) note.hidden = !saved.length;
   }
 
+  /* Learns the access level quietly. The page never names it: a different word
+     means logging out and entering it. */
   async function paintAccess() {
-    const node = document.getElementById("account-access");
-    const zazen = document.getElementById("account-zazen");
-    if (!node) return;
     let level = "";
     try {
       const response = await fetch("/access", { cache: "no-store" });
       if (!response.ok) throw new Error("closed");
       const data = await response.json();
       level = data.level === "zazen" || data.level === "sangha" ? data.level : "";
-      if (level === "zazen") node.textContent = "Zazen: the full shelf is open.";
-      else if (level === "sangha") node.textContent = "Sangha: the Vayu recordings are open.";
-      else node.textContent = "The word gate is not open in this copy.";
     } catch (e) {
-      node.textContent = "The word gate is not open in this copy.";
+      level = "";
     }
     if (settings() && level) settings().set("access.level", level);
     if (level) {
@@ -218,11 +214,6 @@
         window.yantraTalks = null;
         if (window.paintTalks) window.paintTalks();
       }
-    }
-    if (zazen) {
-      zazen.hidden = !level;
-      zazen.setAttribute("aria-checked", String(level === "zazen"));
-      zazen.textContent = level === "zazen" ? "Switch to Sangha" : "Switch to Zazen";
     }
   }
 
@@ -265,18 +256,6 @@
   function showConfirm(id, open) {
     const panel = document.getElementById(id);
     if (panel) panel.hidden = !open;
-  }
-
-  async function dropZazen() {
-    const response = await fetch("/access/sangha", { method: "POST" });
-    if (!response.ok) {
-      const status = document.getElementById("account-access");
-      if (status) status.textContent = "Zazen access stayed on. The word gate did not change.";
-      return;
-    }
-    if (settings()) settings().set("access.level", "sangha");
-    showConfirm("account-zazen-drop", false);
-    await paintAccess();
   }
 
   async function forgetPush() {
@@ -333,21 +312,6 @@
       const note = document.getElementById("account-saved");
       if (note) note.textContent = "Saved on this device.";
       paintGreeting();
-    });
-    const zazen = document.getElementById("account-zazen");
-    if (zazen) {
-      zazen.addEventListener("click", () => {
-        if (zazen.getAttribute("aria-checked") === "true") showConfirm("account-zazen-drop", true);
-        else showConfirm("account-zazen-ask", true);
-      });
-    }
-    document.getElementById("account-zazen-cancel").addEventListener("click", () => showConfirm("account-zazen-ask", false));
-    document.getElementById("account-zazen-drop-keep").addEventListener("click", () => showConfirm("account-zazen-drop", false));
-    document.getElementById("account-zazen-drop-yes").addEventListener("click", () => {
-      dropZazen().catch(() => {
-        const status = document.getElementById("account-access");
-        if (status) status.textContent = "Zazen access stayed on. The word gate did not change.";
-      });
     });
     const openPractice = document.getElementById("account-practice-open");
     if (openPractice) {

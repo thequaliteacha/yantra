@@ -309,6 +309,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #practice-confirm[hidden] { display: none; }
   #talks-list[hidden], #talks-list audio[hidden] { display: none; }
   #talks-list { text-align: left; }
+  #talks-list h2 { text-align: center; padding: 0 2.6rem; }
+  input[type=range] { accent-color: #e6c98a; }
   #talks-list h4 { margin: 1.1rem 0 0.4rem; font-weight: 500; color: #f7edd4; letter-spacing: 0.04em; }
   .talk-note, .talk-now { font-size: 0.92rem; color: rgba(243, 230, 200, 0.62); }
   .talk { display: flex; justify-content: space-between; gap: 1rem; width: 100%; padding: 0.55rem 0.2rem;
@@ -593,8 +595,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 <div class="room" id="talks" hidden>
   <button class="back" type="button" data-room="back" aria-label="Back">&#8592;</button>
   <div class="inner">
-    <h2>Dharma Talks</h2>
     <div id="talks-list" hidden>
+      <h2 data-talk-head></h2>
       <p class="talk-note" data-talk-note></p>
       <div data-talk-list></div>
       <p class="talk-now" data-talk-now></p>
@@ -639,28 +641,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <p id="account-saved" role="status"></p>
     </section>
     <section class="account-block">
-      <h3>Access</h3>
-      <p id="account-access">Access level: checking the word gate…</p>
-      <button class="choice" type="button" id="account-zazen" hidden role="switch" aria-checked="false">Switch to Zazen</button>
-      <div id="account-zazen-ask" hidden>
-        <p>Enter the Zazen word.</p>
-        <form method="post" action="/enter">
-          <label class="account-field">Zazen word
-            <input name="word" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Zazen word" required>
-          </label>
-          <div class="links">
-            <button class="quiet" type="button" id="account-zazen-cancel">Cancel</button>
-            <button class="quiet" type="submit">Open Zazen</button>
-          </div>
-        </form>
-      </div>
-      <div id="account-zazen-drop" hidden>
-        <p>Return to the sangha shelf? You will need the Zazen word again.</p>
-        <div class="links">
-          <button class="quiet" type="button" id="account-zazen-drop-keep">Keep Zazen</button>
-          <button class="quiet" type="button" id="account-zazen-drop-yes">Switch to Sangha</button>
-        </div>
-      </div>
+      <h3>Log out</h3>
+      <p>To use a different word, log out and enter it.</p>
       <button class="choice" type="button" id="account-leave">Log out</button>
       <div id="account-leave-confirm" hidden>
         <p>Log out? The word will be asked for again. Practice and settings stay.</p>
@@ -671,7 +653,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       </div>
       <div id="account-signout-block" hidden>
         <div class="links"><button class="quiet" type="button" id="account-signout">Sign out</button></div>
-        <p>Sign out is reserved for a later account. It does not clear the word gate.</p>
       </div>
     </section>
     <section class="account-block" id="account-glow">
@@ -733,8 +714,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <div id="discs"></div>
     </div>
     <div class="face" id="album-face">
-      <h1 id="disc-title">Samurai</h1>
-      <p class="year" id="disc-meta">Zazen · 1993</p>
+      <h1 id="disc-title"></h1>
+      <p class="year" id="disc-meta"></p>
       <p class="line" id="disc-line"></p>
       <p id="now"></p>
       <p id="note"></p>

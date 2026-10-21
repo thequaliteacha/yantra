@@ -107,9 +107,9 @@ and days in a row are shown on that page. An optional name can greet you on
 the home screen and when a sit ends. It is not uploaded. **Log out** posts to
 `/logout`, which clears the word-gate cookie and returns the word prompt,
 including from an iPhone or iPad home-screen app. **Sign out** is reserved for
-a later account and stays hidden. The access switch shows Sangha or Zazen.
-Switching to Zazen asks for the Zazen word through the existing gate and does
-not keep the word in the app. Switching back signs a sangha cookie. The Linux
+a later account and stays hidden. The page never names the access level, so new
+students are not shown what lies past their word; to use a different word,
+log out and enter it. The Linux
 desktop app does not ask for a word and does not store one. Export and erase
 cover the practice record, every setting, and saved talks. Erase everything on
 this device also clears Spotify and the cookie.
