@@ -1023,25 +1023,32 @@ function bhupura(ctx, cx, cy, R, grow) {
 
 /* Each chakra's lotus, after the tradition: Manipura's ten petals around a downward
    triangle of fire, Anahata's twelve around the interlaced triangles of air, Ajna's
-   open circle of the mind, its wings left undrawn. The gold leans gently toward each
-   chakra's light, never saturated, so the night stays dark. */
+   open circle of the mind, its wings left undrawn. Each wheel has its own light:
+   Manipura the yellow-gold of the sun, Anahata the living green of the heart, Ajna
+   the violet of the mind's eye. The lines carry the tint, the halo and field carry
+   the glow, and in cream the same hue deepens into its ink. The gold leans toward
+   the song's chakra over a few breaths, and the night stays dark. */
 const CHAKRA = {
-  naval: { petals: 10, figure: "fire", tint: [242, 210, 124], glow: [228, 170, 50] },
-  heart: { petals: 12, figure: "air", tint: [196, 218, 182], glow: [104, 162, 116] },
-  eye: { petals: 2, figure: "mind", tint: [186, 180, 232], glow: [108, 96, 200] },
+  naval: { petals: 10, figure: "fire", tint: [248, 208, 96], glow: [232, 160, 28], ink: [146, 94, 18] },
+  heart: { petals: 12, figure: "air", tint: [140, 206, 150], glow: [44, 150, 92], ink: [34, 104, 60] },
+  eye: { petals: 2, figure: "mind", tint: [200, 172, 244], glow: [140, 92, 224], ink: [94, 56, 156] },
 };
-const GOLD = { tint: [232, 204, 146], glow: [214, 164, 72] };
-const hue = { tint: GOLD.tint.slice(), glow: GOLD.glow.slice() };
+const GOLD = { tint: [232, 204, 146], glow: [214, 164, 72], ink: [128, 88, 44] };
+const hue = { tint: GOLD.tint.slice(), glow: GOLD.glow.slice(), ink: GOLD.ink.slice() };
 function leanToward(target, amount) {
-  for (const part of ["tint", "glow"]) {
+  for (const part of ["tint", "glow", "ink"]) {
     for (let i = 0; i < 3; i++) hue[part][i] += (target[part][i] - hue[part][i]) * amount;
   }
 }
 const isLight = () => document.body.classList.contains("light");
-// In cream the lines are a soft brown-gold ink on eggshell: the same hue, gently deepened.
+// In cream the lines are ink on eggshell: the chakra's own hue, gently deepened.
 function inkOf(rgb) {
-  const brown = [128, 88, 44];
-  return isLight() ? rgb.map((c, i) => Math.round(c * 0.45 + brown[i] * 0.55)) : rgb.map(Math.round);
+  return isLight() ? rgb.map((c, i) => Math.round(c * 0.45 + hue.ink[i] * 0.55)) : rgb.map(Math.round);
+}
+// The chakra's glow pulled toward warm white, for washes that must stay pale.
+function paleOf(rgb, amount) {
+  const wash = [255, 246, 226];
+  return rgb.map((c, i) => Math.round(c * (1 - amount) + wash[i] * amount));
 }
 function rgba(rgb, alpha) {
   return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
@@ -1127,8 +1134,24 @@ function chakraFigure(ctx, cx, cy, r, figure) {
   if (figure === "mind") circle(ctx, cx, cy, r * 0.94);
 }
 
-function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
+/* The wheel's quiver. A chakra is a wheel of light turning faster than the eye can
+   follow, so once its petals open the outer figure trembles: a few thousandths of R,
+   at two speeds that never line up, each petal a little out of step with its
+   neighbours. It swells as the song comes to its close, when the wheel is fullest. */
+function quiverAt(now, i, strength) {
+  if (strength <= 0) return { r: 0, a: 0, light: 0 };
+  const fast = Math.sin(now * 0.047 + i * 1.7) * 0.6 + Math.sin(now * 0.079 + i * 2.9) * 0.4;
+  const slow = Math.sin(now * 0.0021 + i * 0.8);
+  return {
+    r: fast * strength * (0.5 + 0.5 * slow),
+    a: Math.sin(now * 0.061 + i * 2.3) * strength,
+    light: 1 + 0.1 * fast * strength,
+  };
+}
+
+function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver) {
   bloom = bloom || 0;
+  quiver = quiver || 0;
   const tris = RAW.map((raw) => triangle(raw, cx, cy, R));
   tris.sort((a, b) => span(a.map((p) => [p[0] - cx, p[1] - cy])) - span(b.map((p) => [p[0] - cx, p[1] - cy])));
   const now = performance.now();
@@ -1137,9 +1160,9 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
   if (reveal > 0.005) {
     const reach = R * (0.2 + 2.2 * ease(reveal));
     const light = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
-    const wash = isLight() ? [244, 214, 170] : [Math.min(255, hue.glow[0] + 41), Math.min(255, hue.glow[1] + 50), Math.min(255, hue.glow[2] + 68)];
+    const wash = isLight() ? paleOf(hue.glow, 0.55) : [Math.min(255, hue.glow[0] + 41), Math.min(255, hue.glow[1] + 50), Math.min(255, hue.glow[2] + 68)];
     light.addColorStop(0, rgba(wash, 0.16 + 0.1 * reveal));
-    light.addColorStop(0.55, rgba(isLight() ? [236, 206, 160] : hue.glow, 0.05 + 0.05 * reveal));
+    light.addColorStop(0.55, rgba(isLight() ? paleOf(hue.glow, 0.4) : hue.glow, 0.05 + 0.05 * reveal));
     light.addColorStop(1, rgba(hue.glow, 0));
     const op = ctx.globalCompositeOperation;
     ctx.globalCompositeOperation = glowBlend();
@@ -1181,9 +1204,12 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
     }
   });
   const mid = stage(reveal, 0.74, 0.8);
-  layer(ctx, mid, () => ring(ctx, cx, cy, R * 1.5, mid));
+  // The wheel's tremor: the outer figure only, so the bindu and the triangles stay still.
+  const shake = quiverAt(now, 0, quiver);
+  const wheel = swell * (1 + 0.004 * shake.r);
+  layer(ctx, mid, () => ring(ctx, cx, cy, R * 1.5 * (1 + 0.003 * shake.r), mid));
   // The chakra's own figure rests faintly behind the petals, inscribed in that ring.
-  if (lotus) layer(ctx, mid * 0.32, () => chakraFigure(ctx, cx, cy, R * 1.5 * swell, lotus.figure));
+  if (lotus) layer(ctx, mid * 0.32 * shake.light, () => chakraFigure(ctx, cx, cy, R * 1.5 * wheel, lotus.figure));
 
   // The outer lotus: sixteen petals, or in a sitting the petals of the song's chakra.
   const outerPetals = stage(reveal, 0.78, 0.9);
@@ -1192,14 +1218,18 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
     // Ajna's ring stays open: no wings, so nothing draws the eye away from the bindu.
     if (count === 2) return;
     for (let i = 0; i < count; i++) {
-      const a = -Math.PI / 2 + turn + (i * Math.PI * 2) / count;
-      bud(ctx, cx, cy, a, R * 1.54 * swell, R * 1.9 * swell, (Math.PI / count) * 0.7, outerPetals);
+      const q = quiverAt(now, i + 1, quiver);
+      const a = -Math.PI / 2 + turn + (i * Math.PI * 2) / count + 0.004 * q.a;
+      const k = swell * (1 + 0.008 * q.r);
+      bud(ctx, cx, cy, a, R * 1.54 * k, R * 1.9 * k, (Math.PI / count) * 0.7, outerPetals);
     }
   });
+  // Ajna has no petals to tremble, so its open ring carries the quiver instead.
   const outer = stage(reveal, 0.88, 0.92);
-  layer(ctx, outer, () => {
-    ring(ctx, cx, cy, R * 1.94, outer);
-    ring(ctx, cx, cy, R * 2.0, outer);
+  const ringShake = count === 2 ? 1 + 0.006 * quiverAt(now, 3, quiver).r : 1 + 0.002 * shake.r;
+  layer(ctx, outer * (count === 2 ? shake.light : 1), () => {
+    ring(ctx, cx, cy, R * 1.94 * ringShake, outer);
+    ring(ctx, cx, cy, R * 2.0 * ringShake, outer);
   });
 
   // The square enclosure settles in last, whole, from just inside its place.
@@ -1229,10 +1259,11 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus) {
     const core = isLight() ? [176, 84, 16] : [255, 253, 246];
     g.addColorStop(0, rgba(core, glow));
     const mix = (a, k) => a.map((c, i) => Math.round(c * (1 - k) + hue.glow[i] * k));
+    // The halo's outer reach takes the chakra's colour, so the point of light sits in its wheel.
     g.addColorStop(0.1, rgba(isLight() ? [214, 124, 36] : [255, 238, 200], hot));
-    g.addColorStop(0.28, rgba(isLight() ? [226, 150, 60] : mix([255, 206, 120], 0.25), 0.6 * hot));
-    g.addColorStop(0.6, rgba(isLight() ? [236, 170, 80] : mix([240, 180, 70], 0.5), 0.14 * hot));
-    g.addColorStop(1, "rgba(255, 170, 50, 0)");
+    g.addColorStop(0.28, rgba(isLight() ? mix([226, 150, 60], 0.3) : mix([255, 206, 120], 0.45), 0.6 * hot));
+    g.addColorStop(0.6, rgba(isLight() ? mix([236, 170, 80], 0.55) : mix([240, 180, 70], 0.75), 0.14 * hot));
+    g.addColorStop(1, rgba(hue.glow, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(cx, cy, halo, 0, Math.PI * 2);
@@ -1625,9 +1656,12 @@ function frame(now) {
   ctx.translate(cx, cy);
   ctx.scale(breath, breath);
   ctx.translate(-cx, -cy);
-  // The gold leans toward the song's chakra over about eight seconds.
+  // The gold leans toward the song's chakra over a few breaths, by the clock rather
+  // than by the frame, so a slow screen still arrives at the colour.
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  leanToward(lotus || GOLD, reduceMotion ? 0 : 0.0035);
+  const leanDt = Math.min(0.5, Math.max(0, (now - (window.leanAt || now)) / 1000));
+  window.leanAt = now;
+  leanToward(lotus || GOLD, reduceMotion ? 1 : 1 - Math.exp(-leanDt / 3));
   if (isLight() && fieldNow) document.body.style.backgroundColor = rgba(fieldNow.center, 1);
   else document.body.style.backgroundColor = "";
   if (sitting) {
@@ -1637,7 +1671,10 @@ function frame(now) {
     const rest = (window.wholeAt ? 1 - 0.15 * ease((now - window.wholeAt) / 20000) : 1) * (talkFx ? 1 - 0.3 * talkFx.still : 1);
     const talkGlow = talkFx ? 1.25 : 1;
     gold(ctx, 0.92 * rest, (14 + shown * 10) * talkGlow, Math.min(1, (0.48 + 0.22 * Math.min(1, shown)) * rest * talkGlow));
-    drawSri(ctx, cx, cy, R, reveal, bloom, lotus || CHAKRA.heart);
+    // In a sit the wheel starts to quiver as its petals open, in the song's last third,
+    // and is fullest at the close. Talks and reduced motion hold the figure still.
+    const quiver = talkFx || reduceMotion ? 0 : stage(reveal, 0.78, 1);
+    drawSri(ctx, cx, cy, R, reveal, bloom, lotus || CHAKRA.heart, quiver);
     emanate(ctx, cx, cy, R, now, Math.min(1, reveal / 0.12) * rest);
     if (talkFx) {
       talkMotifs(ctx, cx, cy, R, now, talkFx, reduceMotion);
