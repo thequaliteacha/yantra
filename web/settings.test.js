@@ -120,7 +120,6 @@ const account = fs.readFileSync(path.join(__dirname, "account.js"), "utf8");
 const worker = fs.readFileSync(path.join(__dirname, "../deploy/cloudflare/worker.js"), "utf8");
 assert.ok(page.includes(">Log out<"));
 assert.ok(page.includes('method="post" action="/logout"'));
-assert.ok(page.includes("Access level"));
 assert.ok(page.includes('id="account-practice-block"'));
 assert.ok(page.includes('id="account-practice-rows"'));
 assert.ok(page.includes('role="switch"'));
@@ -128,18 +127,13 @@ assert.ok(page.includes('id="account-sync"'));
 assert.ok(page.includes('id="account-corner"'));
 assert.ok(page.includes('aria-label="Account"'));
 assert.ok(page.includes('id="account-zazen"'));
-assert.ok(page.includes('id="account-talks"'));
-assert.ok(page.includes('id="account-talks-audio"'));
 assert.ok(page.includes(">Edit reminders<"));
 const order = [
+  'id="account-practice-block"',
   "<h3>Name</h3>",
   "<h3>Access</h3>",
-  'id="account-practice-block"',
-  'id="account-bell"',
   'id="account-glow"',
   'id="account-reminders-block"',
-  'id="account-talks-block"',
-  "<h3>Resources</h3>",
   "<h3>Spotify</h3>",
   "<h3>Privacy</h3>",
 ];
@@ -161,14 +155,9 @@ assert.ok(account.includes("flags.accountSignOut"));
 assert.ok(worker.includes('pathname === "/logout"'));
 assert.ok(fs.readFileSync(path.join(__dirname, "sw.js"), "utf8").includes('pathname === "/logout"'));
 assert.ok(worker.includes('pathname === "/access/sangha"'));
-assert.ok(page.includes(">Meditation bell<"));
-assert.ok(page.includes('id="account-bell"'));
-assert.ok(page.includes('id="practice-bell"'));
-assert.ok(page.includes('data-focus="account-bell"'));
-assert.ok(page.includes('id="bell-start-strikes"'));
-assert.ok(page.includes("Quadruple bell"));
-assert.ok(page.includes("Use same tone for all"));
-assert.ok(page.includes('id="practice-talks"'));
+assert.strictEqual(page.includes('id="account-bell"'), false, "no bell settings");
+assert.strictEqual(page.includes('id="account-resources"'), false, "no resource links for now");
+assert.ok(page.includes('id="talks-list"'));
 assert.ok(page.includes('window.YANTRA_LEVEL !== "zazen"'));
 assert.strictEqual(page.includes("ramafoundation.org"), false);
 

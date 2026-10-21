@@ -203,8 +203,8 @@
       if (!response.ok) throw new Error("closed");
       const data = await response.json();
       level = data.level === "zazen" || data.level === "sangha" ? data.level : "";
-      if (level === "zazen") node.textContent = "Access level: Zazen. The full shelf is open.";
-      else if (level === "sangha") node.textContent = "Access level: Sangha. The Vayu recordings are open.";
+      if (level === "zazen") node.textContent = "Zazen: the full shelf is open.";
+      else if (level === "sangha") node.textContent = "Sangha: the Vayu recordings are open.";
       else node.textContent = "The word gate is not open in this copy.";
     } catch (e) {
       node.textContent = "The word gate is not open in this copy.";

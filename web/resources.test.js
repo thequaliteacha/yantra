@@ -27,10 +27,8 @@ assert.strictEqual(R.list.length, 5);
 
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 const account = fs.readFileSync(path.join(__dirname, "account.js"), "utf8");
-const practiceAt = page.indexOf("<h3>Practice</h3>");
-const resourcesAt = page.indexOf("<h3>Resources</h3>");
-assert.ok(practiceAt > 0 && resourcesAt > practiceAt);
-assert.ok(page.includes('id="account-resources"'));
+// The links are kept for later but not shown on the page for now.
+assert.strictEqual(page.includes('id="account-resources"'), false);
 assert.ok(account.includes('rel = "noopener noreferrer"'));
 assert.ok(account.includes('target = "_blank"'));
 assert.ok(account.includes("group.heading"));

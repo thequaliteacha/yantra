@@ -67,7 +67,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #circles button.on, #discs button.on, #discs button.on.hearing { color: #f7edd4; }
   #discs, #saved {
     max-height: 68vh; overflow: auto; display: flex; flex-direction: column;
-    scrollbar-width: thin; scrollbar-color: rgba(230, 201, 138, 0.35) transparent;
+    scrollbar-width: thin; scrollbar-color: rgba(230, 201, 138, 0.16) transparent;
   }
   #discs button { font-size: 0.95rem; }
   #now { min-height: 1.2rem; color: #e6c98a; margin: 0.35rem 0 0; }
@@ -77,10 +77,10 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     list-style: none; margin: 0.5rem 0 0.9rem; padding: 0;
     max-height: 52vh; overflow: auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(230, 201, 138, 0.35) transparent;
+    scrollbar-color: rgba(230, 201, 138, 0.16) transparent;
   }
-  ol::-webkit-scrollbar { width: 4px; }
-  ol::-webkit-scrollbar-thumb { background: rgba(230, 201, 138, 0.35); }
+  ol::-webkit-scrollbar { width: 3px; }
+  ol::-webkit-scrollbar-thumb { background: rgba(230, 201, 138, 0.16); border-radius: 3px; }
   li {
     display: grid; grid-template-columns: 1.6rem 1fr auto auto; gap: 0.55rem 0.7rem;
     padding: 0.16rem 0; color: rgba(232, 204, 146, 0.45); font-size: 0.92rem;
@@ -275,8 +275,20 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #pick-mix[aria-pressed="true"], #bell-same[aria-pressed="true"] { color: #f7edd4; text-decoration-color: rgba(230, 201, 138, 0.9); }
   #pick .choice:disabled { opacity: 0.35; cursor: default; }
   #home-note { min-height: 1.3rem; color: rgba(232, 204, 146, 0.75); font-size: 0.92rem; text-align: center; }
-  #practice { justify-content: flex-start; overflow: auto; -webkit-overflow-scrolling: touch; }
-  #practice .inner { margin-top: auto; margin-bottom: auto; }
+  #practice, #guide, #about, #talks { justify-content: flex-start; overflow: auto; -webkit-overflow-scrolling: touch; }
+  /* Scrolling stays as quiet as the sit: a faint gold thread instead of a bar, no bounce
+     spilling into the page behind, and a slow glide when a link moves the view. */
+  * { scrollbar-width: thin; scrollbar-color: rgba(230, 201, 138, 0.16) transparent; }
+  *::-webkit-scrollbar { width: 3px; height: 3px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: rgba(230, 201, 138, 0.16); border-radius: 3px; }
+  .room, #gate, #discs, #saved, ol { overscroll-behavior: contain; }
+  @media (prefers-reduced-motion: no-preference) { .room, #gate, #discs, #saved, ol { scroll-behavior: smooth; } }
+  .room .practice-time {
+    font-family: Palatino, "Iowan Old Style", "Times New Roman", serif;
+    font-size: clamp(1.8rem, 6vw, 2.5rem); color: #f7edd4; text-align: center; margin: 0.35rem 0 0.1rem;
+  }
+  #practice .inner, #guide .inner, #about .inner, #talks .inner { margin-top: auto; margin-bottom: auto; }
   .practice-time {
     font-family: Palatino, "Iowan Old Style", "Times New Roman", serif;
     font-size: clamp(1.8rem, 6vw, 2.5rem); color: #f7edd4; text-align: center; margin: 0.35rem 0 0.1rem;
@@ -292,17 +304,18 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .practice-row span:nth-child(3) { text-align: right; color: rgba(232, 204, 146, 0.55); font-size: 0.88rem; }
   .practice-row.dawn { box-shadow: inset 2px 0 0 rgba(233, 162, 90, 0.8); }
   .practice-row.dusk { box-shadow: inset 2px 0 0 rgba(120, 170, 165, 0.8); }
+  .practice-row.perfect { box-shadow: inset 2px 0 0 rgba(233, 162, 90, 0.8), inset 4px 0 0 rgba(120, 170, 165, 0.8); color: #f7edd4; }
   #practice-note { font-size: 0.92rem; color: rgba(243, 230, 200, 0.62); }
   #practice-confirm[hidden] { display: none; }
-  #practice-talks[hidden], #practice-talks audio[hidden] { display: none; }
-  #practice-talks { margin-top: 1.6rem; text-align: left; }
-  #practice-talks h4 { margin: 1.1rem 0 0.4rem; font-weight: 500; color: #f7edd4; letter-spacing: 0.04em; }
+  #talks-list[hidden], #talks-list audio[hidden] { display: none; }
+  #talks-list { text-align: left; }
+  #talks-list h4 { margin: 1.1rem 0 0.4rem; font-weight: 500; color: #f7edd4; letter-spacing: 0.04em; }
   .talk-note, .talk-now { font-size: 0.92rem; color: rgba(243, 230, 200, 0.62); }
   .talk { display: flex; justify-content: space-between; gap: 1rem; width: 100%; padding: 0.55rem 0.2rem;
           font: inherit; text-align: left; color: inherit; background: transparent; border: 0;
           border-bottom: 1px solid rgba(230, 201, 138, 0.18); cursor: pointer; }
   .talk span:nth-child(2) { color: rgba(232, 204, 146, 0.55); font-size: 0.88rem; white-space: nowrap; }
-  #practice-talks audio { width: 100%; margin-top: 0.6rem; }
+  #talks-list audio { width: 100%; margin-top: 0.6rem; }
   #account-bell, #account-glow { text-align: left; }
   #account-bell h3, #account-glow h3 { margin: 0; font-weight: 500; color: #f7edd4; }
   .account-field { display: flex; flex-direction: column; gap: 0.28rem; font-size: 0.82rem; color: rgba(232, 204, 146, 0.7); text-align: left; }
@@ -440,6 +453,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <div class="links">
       <button class="quiet" type="button" data-room="guide">Getting Started</button>
       <button class="quiet" type="button" data-room="account" data-focus="account-practice-block">Your practice</button>
+      <button class="quiet" type="button" id="open-talks" data-room="talks" hidden>Dharma Talks</button>
       <button class="quiet" type="button" data-room="account">Settings</button>
       <button class="quiet" type="button" id="open-shelf">Albums and forms</button>
       <button class="quiet" type="button" id="install-app" hidden>Install Yantra</button>
@@ -469,22 +483,21 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <button class="back" type="button" data-room="back" aria-label="Back">&#8592;</button>
   <div class="inner">
     <h2>Getting Started</h2>
-    <p>Sit with three songs each morning and three each evening, about four minutes apiece, all from one album. Each album moves from navel songs through heart songs to third eye songs, so the first song is for the navel chakra, the second for the heart, the third for the third eye.</p>
-    <p>With time for only one song, meditate on the heart. If you need more grounding, take the navel instead.</p>
-    <p><b>Six songs:</b> two for the navel, then two for the heart, then two for the third eye.</p>
-    <p><b>Twelve songs:</b> four for each, in the same order.</p>
-    <p><b>Choose an album</b> above the song counts, or let each sit bring a new one. <b>Mix It Up</b> draws the songs from across the albums instead.</p>
-    <p>The yantra draws itself once with each song. Tap the screen to show <b>End sitting</b>.</p>
-    <p><b>Keep it on your phone:</b> on Android, open the menu and choose <b>Install app</b> or <b>Add to Home screen</b>. On iPhone, tap <b>Share</b>, then <b>Add to Home Screen</b>.</p>
-    <p>Your sits are remembered on this device, on the account page under <b>Practice</b>. They are not sent anywhere. The mark at the top right opens that page: name, access level, Log out, practice, reminders, saved talks, and the other settings.</p>
+    <p>Sit with three songs each morning and evening, all from one album: navel, then heart, then third eye.</p>
+    <p><b>One song:</b> the heart, or the navel for grounding.</p>
+    <p><b>Six songs:</b> two of each. <b>Twelve:</b> four of each.</p>
+    <p>Pick an album, or let each sit bring a new one. <b>Mix It Up</b> draws from all of them.</p>
+    <p>Tap the screen to end a sit.</p>
+    <p><b>Install:</b> on Android, menu, then <b>Install app</b>. On iPhone, <b>Share</b>, then <b>Add to Home Screen</b>.</p>
+    <p>Your practice stays on this device.</p>
   </div>
 </div>
 <div class="room" id="about" hidden>
   <button class="back" type="button" data-room="back" aria-label="Back">&#8592;</button>
   <div class="inner">
     <h2>About the Music</h2>
-    <p>The music is by Vayu Meditation. The sangha's recordings play right here; albums not yet recorded play from your own Spotify account (Premium).</p>
-    <p>A sit keeps to one album. Mix It Up follows the morning and evening sets of the Heart School meditation app, made for the lineage's students.</p>
+    <p>Music by Vayu Meditation. The sangha's recordings play here; the rest play from your Spotify Premium.</p>
+    <p>Mix It Up follows the Heart School app's morning and evening sets.</p>
     <p style="text-align:center"><a href="https://open.spotify.com/artist/3ScOP7YdhKlvEvlydSl2F1" target="_blank" rel="noopener">Vayu Meditation on Spotify</a></p>
   </div>
 </div>
@@ -516,25 +529,15 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <button class="quiet" type="button" id="practice-erase">Erase my data</button>
     </div>
     <div id="practice-confirm" hidden>
-      <p>Erase the practice record and the settings on this device? Time, sits, saved talks, the name, reminders, and the glow will be removed. Spotify stays. This cannot be undone.</p>
+      <p>Erase your practice and settings on this device? Spotify stays. This cannot be undone.</p>
       <div class="links">
         <button class="quiet" type="button" id="practice-keep">Keep</button>
         <button class="quiet" type="button" id="practice-erase-yes">Erase</button>
       </div>
     </div>
-    <div class="links">
-      <button class="quiet" type="button" id="practice-bell" data-room="account" data-focus="account-bell">Bell and timed sit</button>
-    </div>
-    <div id="practice-talks" hidden>
-      <h3 data-talk-head></h3>
-      <p class="talk-note" data-talk-note></p>
-      <div data-talk-list></div>
-      <p class="talk-now" data-talk-now></p>
-      <audio controls preload="none" hidden></audio>
-    </div>
     <div id="reminders" hidden>
       <h3>Reminders</h3>
-      <p>A quiet note in the morning and again in the evening. Each one can follow the sun, or a time you choose. The place stays on this device.</p>
+      <p>A quiet note morning and evening, at sunrise and sunset or a time you choose.</p>
       <div class="remind-block" data-theme="morning">
         <div class="remind-head"><span>Morning</span><button type="button" data-on aria-pressed="false">Off</button></div>
         <div class="remind-modes">
@@ -587,16 +590,39 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     </div>
   </div>
 </div>
+<div class="room" id="talks" hidden>
+  <button class="back" type="button" data-room="back" aria-label="Back">&#8592;</button>
+  <div class="inner">
+    <h2>Dharma Talks</h2>
+    <div id="talks-list" hidden>
+      <p class="talk-note" data-talk-note></p>
+      <div data-talk-list></div>
+      <p class="talk-now" data-talk-now></p>
+      <audio controls preload="none" hidden></audio>
+    </div>
+  </div>
+</div>
 <div class="room" id="account" hidden>
   <button class="back" type="button" data-room="home" aria-label="Back">&#8592;</button>
   <div class="inner">
-    <h2>Your account</h2>
+    <h2>Settings</h2>
     <section id="account-sync" class="account-sync" hidden>
       <h3>Sign in</h3>
       <p>A later sign-in can keep these choices with you. Nothing leaves this device yet.</p>
       <p id="account-sync-method"></p>
     </section>
-    <p>There is no account on a server. This page is this device: a name if you want one, the word that opened the shelf, and the choices already kept here.</p>
+    <section class="account-block" id="account-practice-block">
+      <h3>Your practice</h3>
+      <p id="account-practice"></p>
+      <p id="account-practice-time" class="practice-time"></p>
+      <p id="account-practice-sits" class="kicker"></p>
+      <div id="account-practice-rows" hidden></div>
+      <div class="links">
+        <button class="quiet" type="button" id="account-practice-open">Open the practice record</button>
+        <button class="quiet" type="button" id="account-export">Export</button>
+        <button class="quiet" type="button" id="account-erase">Erase</button>
+      </div>
+    </section>
     <section class="account-block">
       <h3>Name</h3>
       <label class="account-field">Display name
@@ -609,7 +635,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
           <option value="time">By time of day</option>
         </select>
       </label>
-      <p>The name stays on this device. It is never sent.</p>
       <button class="choice" type="button" id="account-save">Save</button>
       <p id="account-saved" role="status"></p>
     </section>
@@ -618,7 +643,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <p id="account-access">Access level: checking the word gate…</p>
       <button class="choice" type="button" id="account-zazen" hidden role="switch" aria-checked="false">Switch to Zazen</button>
       <div id="account-zazen-ask" hidden>
-        <p>Enter the Zazen word. It is checked by the site and not saved here.</p>
+        <p>Enter the Zazen word.</p>
         <form method="post" action="/enter">
           <label class="account-field">Zazen word
             <input name="word" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Zazen word" required>
@@ -630,16 +655,15 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         </form>
       </div>
       <div id="account-zazen-drop" hidden>
-        <p>Return to the sangha shelf? The Zazen word will be needed again to open the rest.</p>
+        <p>Return to the sangha shelf? You will need the Zazen word again.</p>
         <div class="links">
           <button class="quiet" type="button" id="account-zazen-drop-keep">Keep Zazen</button>
           <button class="quiet" type="button" id="account-zazen-drop-yes">Switch to Sangha</button>
         </div>
       </div>
-      <p>Log out clears the word on this device and asks for it again. Practice and settings stay here. The word is not saved in the app.</p>
       <button class="choice" type="button" id="account-leave">Log out</button>
       <div id="account-leave-confirm" hidden>
-        <p>Log out on this device? The word will be asked for again. Your practice and settings stay here.</p>
+        <p>Log out? The word will be asked for again. Practice and settings stay.</p>
         <div class="links">
           <button class="quiet" type="button" id="account-leave-keep">Stay</button>
           <form method="post" action="/logout"><button class="choice" type="submit">Log out</button></form>
@@ -650,98 +674,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <p>Sign out is reserved for a later account. It does not clear the word gate.</p>
       </div>
     </section>
-    <section class="account-block" id="account-practice-block">
-      <h3>Practice</h3>
-      <p id="account-practice"></p>
-      <p id="account-practice-time" class="practice-time"></p>
-      <p id="account-practice-sits" class="kicker"></p>
-      <div id="account-practice-rows" hidden></div>
-      <div class="links">
-        <button class="quiet" type="button" id="account-practice-open">Open the practice record</button>
-        <button class="quiet" type="button" id="account-export">Export</button>
-        <button class="quiet" type="button" id="account-erase">Erase</button>
-      </div>
-      <p>Export and erase cover practice, every setting, and saved talks. Spotify stays until you disconnect, or until Erase everything.</p>
-    </section>
-    <section class="account-block" id="account-bell">
-      <h3>Meditation bell</h3>
-      <p>Separate from the music. A struck bell rings over the start of a music sit, and a silent sit can also mark the middle and the end. Each place can be silent, or a single, double, triple, or quadruple bell. The next strike waits until that ring has decayed. The start bell, the end bell, and each midway bell have their own tone. They begin on the same tone.</p>
-      <label class="account-field">Starting bell
-        <select id="bell-start-strikes">
-          <option value="0">Silent</option>
-          <option value="1">Single bell</option>
-          <option value="2">Double bell</option>
-          <option value="3">Triple bell</option>
-          <option value="4">Quadruple bell</option>
-        </select>
-      </label>
-      <label class="account-field">Midway bell
-        <select id="bell-mid-strikes">
-          <option value="0">Silent</option>
-          <option value="1">Single bell</option>
-          <option value="2">Double bell</option>
-          <option value="3">Triple bell</option>
-          <option value="4">Quadruple bell</option>
-        </select>
-      </label>
-      <label class="account-field">Ending bell
-        <select id="bell-end-strikes">
-          <option value="0">Silent</option>
-          <option value="1">Single bell</option>
-          <option value="2">Double bell</option>
-          <option value="3">Triple bell</option>
-          <option value="4">Quadruple bell</option>
-        </select>
-      </label>
-      <div class="links">
-        <button class="quiet" type="button" id="bell-preview-start">Preview start</button>
-        <button class="quiet" type="button" id="bell-preview-mid">Preview midway</button>
-        <button class="quiet" type="button" id="bell-preview-end">Preview end</button>
-      </div>
-      <label class="account-field">Bell volume
-        <input id="bell-volume" type="range" min="0" max="100" value="70">
-      </label>
-      <div class="links" id="bell-preview"></div>
-      <label class="account-field">Midway times
-        <select id="sit-midway">
-          <option value="none">None</option>
-          <option value="half">Halfway (one bell at 50%)</option>
-          <option value="two">Two midway bells (at 25% and 75%)</option>
-        </select>
-      </label>
-      <div class="links">
-        <button class="quiet" type="button" id="bell-same" aria-pressed="true">Use same tone for all</button>
-      </div>
-      <div id="bell-positions"></div>
-      <div class="links" id="sit-presets"></div>
-      <label class="account-field">Minutes
-        <input id="sit-minutes" type="number" min="1" max="90" step="1" inputmode="numeric" value="15">
-      </label>
-      <p id="sit-minutes-note"></p>
-      <label class="account-field">Background
-        <select id="sit-bed">
-          <option value="silent">Silent</option>
-          <option value="white">White noise</option>
-          <option value="pink">Pink noise</option>
-          <option value="brown">Brown noise</option>
-          <option value="rain-light">Light rain</option>
-          <option value="rain-steady">Steady rain</option>
-          <option value="rain-roof">Rain on a roof</option>
-          <option value="rain-thunder">Distant thunder</option>
-          <option value="drone">Soft drone</option>
-          <option value="bowl">Singing bowl</option>
-          <option value="pad">Warm pad</option>
-        </select>
-      </label>
-      <label class="account-field">Background volume
-        <input id="sit-bed-volume" type="range" min="0" max="100" value="35">
-      </label>
-      <p>The bells are set on the audio clock when the sit starts, so a dim screen does not move them. If iOS suspends Yantra completely, they wait, and the ones still ahead play from the original start time when the app opens again.</p>
-      <button class="choice" type="button" id="sit-silent">Begin a silent sit</button>
-    </section>
     <section class="account-block" id="account-glow">
       <h3>Day and night</h3>
-      <p>The background keeps a slow glow and leans toward the song. Night stays dark. Day stays on warm paper, with a soft wash of that same color. Brightness is kept on this device, one level for night and one for day. A system setting for less motion holds the color still.</p>
       <div class="links">
         <button class="quiet" type="button" id="glow-theme" aria-pressed="false">Day</button>
       </div>
@@ -756,18 +690,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <p id="account-reminders-push">Notifications: checking…</p>
       <div class="links"><button class="quiet" type="button" id="account-reminders">Edit reminders</button></div>
     </section>
-    <section class="account-block" id="account-talks-block">
-      <h3>Saved talks</h3>
-      <p id="account-talks-note">Each saved talk plays in the app. The list stays on this device.</p>
-      <ul id="account-talks" hidden></ul>
-      <p id="account-talks-empty">Save a talk in Dharma Talks and it is listed here, on this device.</p>
-      <audio id="account-talks-audio" playsinline preload="none" controls hidden></audio>
-    </section>
-    <section class="account-block">
-      <h3>Resources</h3>
-      <p>The Dharma Talks section on the Rama Meditation Society site. It holds the talks, the meditations, and the quotes from the end of the sits. Each link opens in a new tab.</p>
-      <div id="account-resources"></div>
-    </section>
     <section class="account-block">
       <h3>Spotify</h3>
       <p id="account-spotify"></p>
@@ -780,10 +702,10 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     </section>
     <section class="account-block">
       <h3>Privacy</h3>
-      <p>Your name, practice, glow, saved talks, and reminder choices stay in this browser. Spotify's sign-in stays here until you disconnect. The sangha site keeps only the word-gate cookie, and, if reminders are on, an anonymous id with a push subscription and either a clock time or a place rounded to about a tenth of a degree. There is no account and no tracking.</p>
+      <p>Everything stays in this browser. The site keeps only the word cookie and, if reminders are on, an anonymous push id with a time or a rough place. No tracking.</p>
       <div class="links"><button class="quiet" type="button" id="account-wipe">Erase everything on this device</button></div>
       <div id="account-wipe-confirm" hidden>
-        <p>Erase everything on this device? The name, practice, settings, saved talks, reminders, Spotify sign-in, and the sangha word will be removed. This cannot be undone.</p>
+        <p>Erase everything on this device, including Spotify and the sangha word? This cannot be undone.</p>
         <div class="links">
           <button class="quiet" type="button" id="account-wipe-keep">Keep</button>
           <button class="quiet" type="button" id="account-wipe-yes">Erase everything</button>
@@ -2295,7 +2217,7 @@ document.getElementById("form-play").addEventListener("click", () => {
 });
 
 /* ---- Morning and evening sits (web edition) ---- */
-const rooms = ["home", "pick", "guide", "about", "done", "practice", "account"];
+const rooms = ["home", "pick", "guide", "about", "done", "practice", "talks", "account"];
 let roomTrail = [];
 let roomFocus = "";
 let sessionTheme = "morning";
@@ -2328,9 +2250,9 @@ function paintPractice() {
     rows.append(row);
   };
   if (has) {
-    add("Morning", summary.streaks.morning, "dawn");
-    add("Evening", summary.streaks.evening, "dusk");
-    add("Every day", summary.streaks.daily, "");
+    add("Perfect days", summary.streaks.perfect, "perfect");
+    add("Sunrise", summary.streaks.morning, "dawn");
+    add("Sunset", summary.streaks.evening, "dusk");
     const today = document.createElement("div");
     today.className = "practice-row";
     const name = document.createElement("span");
@@ -2363,11 +2285,14 @@ function paintPractice() {
   paintTalks();
 }
 window.paintPractice = paintPractice;
-/* Talks: shown for the Zazen word only, filled by talks.js from talks.json. */
+/* Dharma Talks: the room and its home link show for the Zazen word only, filled by talks.js from talks.json. */
 function paintTalks() {
-  const section = document.getElementById("practice-talks");
+  const section = document.getElementById("talks-list");
   if (!section) return;
-  if (!window.YantraTalks || window.YANTRA_LEVEL !== "zazen") {
+  const open = document.getElementById("open-talks");
+  const shown = !!(window.YantraTalks && window.YANTRA_LEVEL === "zazen" && window.yantraTalks);
+  if (open) open.hidden = !shown;
+  if (!shown) {
     const player = section.querySelector("audio");
     if (player) {
       player.pause();
@@ -2684,12 +2609,8 @@ if (window.YANTRA_WEB) {
       const src = doneFrom.dataset.src || "";
       const title = doneFrom.dataset.title || "";
       if (!src.startsWith("/talks/") || src.includes("..") || !window.YantraTalks) return;
-      const practice = document.getElementById("practice");
-      if (practice) practice.dataset.from = "done";
-      showRoom("practice");
-      const section = document.getElementById("practice-talks");
-      window.YantraTalks.play(section, src, title);
-      if (section && section.scrollIntoView) section.scrollIntoView({ block: "start" });
+      showRoom("talks");
+      window.YantraTalks.play(document.getElementById("talks-list"), src, title);
     });
   }
   addEventListener("yantra:unplayed", (event) => {

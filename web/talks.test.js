@@ -78,7 +78,8 @@ assert.strictEqual(forSangha.root.hidden, true, "the talks section stays hidden 
 assert.strictEqual(forSangha.list.children.length, 0);
 
 // The page carries the section, loads talks.js, and checks the level itself.
-assert.ok(page.includes('id="practice-talks" hidden'));
+assert.ok(page.includes('id="talks-list" hidden'));
+assert.ok(page.includes('id="open-talks" data-room="talks" hidden'));
 assert.ok(!/Rama talks|Frederick Lenz/.test(page), "the shared page carries no Rama text for the Sangha word");
 assert.ok(page.includes('window.YANTRA_LEVEL !== "zazen"'));
 assert.ok(loader.includes('src="talks.js"'));

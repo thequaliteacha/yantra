@@ -145,25 +145,10 @@ const kept = S.fromSettings((key) => ({
 assert.deepStrictEqual(kept.events.map((event) => [event.position, event.strikes]), [["end", 2]]);
 
 const page = require("fs").readFileSync(require("path").join(__dirname, "../index.html"), "utf8");
-["bell-start-strikes", "bell-mid-strikes", "bell-end-strikes", "bell-preview-start", "bell-preview-mid", "bell-preview-end"].forEach((id) => {
-  assert.ok(page.includes('id="' + id + '"'), id);
-});
-assert.ok(page.includes("Quadruple bell"));
-assert.ok(page.includes("Single bell"));
-assert.ok(page.includes("Halfway (one bell at 50%)"));
-assert.ok(page.includes("Two midway bells (at 25% and 75%)"));
-assert.ok(page.includes('max="90"'));
-assert.ok(page.includes("Light rain"));
-assert.ok(page.includes("Steady rain"));
-assert.ok(page.includes("Rain on a roof"));
-assert.ok(page.includes("Distant thunder"));
 assert.deepStrictEqual(S.BEDS, ["silent", "white", "pink", "brown", "rain-light", "rain-steady", "rain-roof", "rain-thunder", "drone", "bowl", "pad"]);
 const bell = require("fs").readFileSync(require("path").join(__dirname, "bell.js"), "utf8");
 assert.ok(bell.includes("from 1 to \" + root.YantraSit.MAX_MINUTES"));
 assert.strictEqual(bell.includes("1 to 90"), false);
-assert.ok(page.includes("Use same tone for all"));
-assert.ok(page.includes('id="bell-positions"'));
-assert.ok(page.includes('id="bell-same"'));
 
 function marks(minutes, midway) {
   return S.bellTimes(minutes, midway).marks.map((mark) => [mark.position, mark.at]);

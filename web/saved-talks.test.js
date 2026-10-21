@@ -68,7 +68,6 @@ assert.ok(account.includes("yantraOpenTalk"));
 assert.ok(account.includes('fetch("talks.json"'));
 assert.ok(page.includes('id="practice-erase-yes"'));
 assert.ok(page.includes("YantraSettings.erase()"));
-assert.ok(page.includes('id="account-talks-audio"'));
 assert.strictEqual(account.includes("fileUrl"), false);
 assert.strictEqual(account.includes("http://"), false);
 assert.strictEqual(account.includes("https://"), false);
