@@ -297,7 +297,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
           border-bottom: 1px solid rgba(230, 201, 138, 0.18); cursor: pointer; }
   .talk span:nth-child(2) { color: rgba(232, 204, 146, 0.55); font-size: 0.88rem; white-space: nowrap; }
   #practice-talks audio { width: 100%; margin-top: 0.6rem; }
-  #account-bell, #account-glow { margin-top: 1.6rem; text-align: left; display: flex; flex-direction: column; gap: 0.55rem; }
+  #account-bell, #account-glow { text-align: left; }
   #account-bell h3, #account-glow h3 { margin: 0; font-weight: 500; color: #f7edd4; }
   .account-field { display: flex; flex-direction: column; gap: 0.28rem; font-size: 0.82rem; color: rgba(232, 204, 146, 0.7); text-align: left; }
   .bell-tone { display: flex; align-items: flex-end; gap: 0.7rem; }
@@ -515,92 +515,9 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <button class="quiet" type="button" id="practice-erase-yes">Erase</button>
       </div>
     </div>
-    <section id="account-glow">
-      <h3>Day and night</h3>
-      <p>The background keeps a slow glow and leans toward the song. Night stays dark. Day stays on warm paper, with a soft wash of that same color. Brightness is kept on this device, one level for night and one for day. A system setting for less motion holds the color still.</p>
-      <div class="links">
-        <button class="quiet" type="button" id="glow-theme" aria-pressed="false">Day</button>
-      </div>
-      <label class="account-field">Brightness
-        <input id="glow-level" type="range" min="35" max="125" step="1" value="100">
-      </label>
-    </section>
-    <section id="account-bell">
-      <h3>Meditation bell</h3>
-      <p>Separate from the music. A struck bell rings over the start of a music sit, and a silent sit can also mark the middle and the end. Each place can be silent, or a single, double, triple, or quadruple bell. The next strike waits until that ring has decayed. The start bell, the end bell, and each midway bell have their own tone. They begin on the same tone.</p>
-      <label class="account-field">Starting bell
-        <select id="bell-start-strikes">
-          <option value="0">Silent</option>
-          <option value="1">Single bell</option>
-          <option value="2">Double bell</option>
-          <option value="3">Triple bell</option>
-          <option value="4">Quadruple bell</option>
-        </select>
-      </label>
-      <label class="account-field">Midway bell
-        <select id="bell-mid-strikes">
-          <option value="0">Silent</option>
-          <option value="1">Single bell</option>
-          <option value="2">Double bell</option>
-          <option value="3">Triple bell</option>
-          <option value="4">Quadruple bell</option>
-        </select>
-      </label>
-      <label class="account-field">Ending bell
-        <select id="bell-end-strikes">
-          <option value="0">Silent</option>
-          <option value="1">Single bell</option>
-          <option value="2">Double bell</option>
-          <option value="3">Triple bell</option>
-          <option value="4">Quadruple bell</option>
-        </select>
-      </label>
-      <div class="links">
-        <button class="quiet" type="button" id="bell-preview-start">Preview start</button>
-        <button class="quiet" type="button" id="bell-preview-mid">Preview midway</button>
-        <button class="quiet" type="button" id="bell-preview-end">Preview end</button>
-      </div>
-      <label class="account-field">Bell volume
-        <input id="bell-volume" type="range" min="0" max="100" value="70">
-      </label>
-      <div class="links" id="bell-preview"></div>
-      <label class="account-field">Midway times
-        <select id="sit-midway">
-          <option value="none">None</option>
-          <option value="half">Halfway (one bell at 50%)</option>
-          <option value="two">Two midway bells (at 25% and 75%)</option>
-        </select>
-      </label>
-      <div class="links">
-        <button class="quiet" type="button" id="bell-same" aria-pressed="true">Use same tone for all</button>
-      </div>
-      <div id="bell-positions"></div>
-      <div class="links" id="sit-presets"></div>
-      <label class="account-field">Minutes
-        <input id="sit-minutes" type="number" min="1" max="90" step="1" inputmode="numeric" value="15">
-      </label>
-      <p id="sit-minutes-note"></p>
-      <label class="account-field">Background
-        <select id="sit-bed">
-          <option value="silent">Silent</option>
-          <option value="white">White noise</option>
-          <option value="pink">Pink noise</option>
-          <option value="brown">Brown noise</option>
-          <option value="rain-light">Light rain</option>
-          <option value="rain-steady">Steady rain</option>
-          <option value="rain-roof">Rain on a roof</option>
-          <option value="rain-thunder">Distant thunder</option>
-          <option value="drone">Soft drone</option>
-          <option value="bowl">Singing bowl</option>
-          <option value="pad">Warm pad</option>
-        </select>
-      </label>
-      <label class="account-field">Background volume
-        <input id="sit-bed-volume" type="range" min="0" max="100" value="35">
-      </label>
-      <p>The bells are set on the audio clock when the sit starts, so a dim screen does not move them. If iOS suspends Yantra completely, they wait, and the ones still ahead play from the original start time when the app opens again.</p>
-      <button class="choice" type="button" id="sit-silent">Begin a silent sit</button>
-    </section>
+    <div class="links">
+      <button class="quiet" type="button" id="practice-bell" data-room="account" data-focus="account-bell">Bell and timed sit</button>
+    </div>
     <div id="practice-talks" hidden>
       <h3 data-talk-head></h3>
       <p class="talk-note" data-talk-note></p>
@@ -738,6 +655,92 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <button class="quiet" type="button" id="account-erase">Erase</button>
       </div>
       <p>Export and erase cover practice, every setting, and saved talks. Spotify stays until you disconnect, or until Erase everything.</p>
+    </section>
+    <section class="account-block" id="account-bell">
+      <h3>Meditation bell</h3>
+      <p>Separate from the music. A struck bell rings over the start of a music sit, and a silent sit can also mark the middle and the end. Each place can be silent, or a single, double, triple, or quadruple bell. The next strike waits until that ring has decayed. The start bell, the end bell, and each midway bell have their own tone. They begin on the same tone.</p>
+      <label class="account-field">Starting bell
+        <select id="bell-start-strikes">
+          <option value="0">Silent</option>
+          <option value="1">Single bell</option>
+          <option value="2">Double bell</option>
+          <option value="3">Triple bell</option>
+          <option value="4">Quadruple bell</option>
+        </select>
+      </label>
+      <label class="account-field">Midway bell
+        <select id="bell-mid-strikes">
+          <option value="0">Silent</option>
+          <option value="1">Single bell</option>
+          <option value="2">Double bell</option>
+          <option value="3">Triple bell</option>
+          <option value="4">Quadruple bell</option>
+        </select>
+      </label>
+      <label class="account-field">Ending bell
+        <select id="bell-end-strikes">
+          <option value="0">Silent</option>
+          <option value="1">Single bell</option>
+          <option value="2">Double bell</option>
+          <option value="3">Triple bell</option>
+          <option value="4">Quadruple bell</option>
+        </select>
+      </label>
+      <div class="links">
+        <button class="quiet" type="button" id="bell-preview-start">Preview start</button>
+        <button class="quiet" type="button" id="bell-preview-mid">Preview midway</button>
+        <button class="quiet" type="button" id="bell-preview-end">Preview end</button>
+      </div>
+      <label class="account-field">Bell volume
+        <input id="bell-volume" type="range" min="0" max="100" value="70">
+      </label>
+      <div class="links" id="bell-preview"></div>
+      <label class="account-field">Midway times
+        <select id="sit-midway">
+          <option value="none">None</option>
+          <option value="half">Halfway (one bell at 50%)</option>
+          <option value="two">Two midway bells (at 25% and 75%)</option>
+        </select>
+      </label>
+      <div class="links">
+        <button class="quiet" type="button" id="bell-same" aria-pressed="true">Use same tone for all</button>
+      </div>
+      <div id="bell-positions"></div>
+      <div class="links" id="sit-presets"></div>
+      <label class="account-field">Minutes
+        <input id="sit-minutes" type="number" min="1" max="90" step="1" inputmode="numeric" value="15">
+      </label>
+      <p id="sit-minutes-note"></p>
+      <label class="account-field">Background
+        <select id="sit-bed">
+          <option value="silent">Silent</option>
+          <option value="white">White noise</option>
+          <option value="pink">Pink noise</option>
+          <option value="brown">Brown noise</option>
+          <option value="rain-light">Light rain</option>
+          <option value="rain-steady">Steady rain</option>
+          <option value="rain-roof">Rain on a roof</option>
+          <option value="rain-thunder">Distant thunder</option>
+          <option value="drone">Soft drone</option>
+          <option value="bowl">Singing bowl</option>
+          <option value="pad">Warm pad</option>
+        </select>
+      </label>
+      <label class="account-field">Background volume
+        <input id="sit-bed-volume" type="range" min="0" max="100" value="35">
+      </label>
+      <p>The bells are set on the audio clock when the sit starts, so a dim screen does not move them. If iOS suspends Yantra completely, they wait, and the ones still ahead play from the original start time when the app opens again.</p>
+      <button class="choice" type="button" id="sit-silent">Begin a silent sit</button>
+    </section>
+    <section class="account-block" id="account-glow">
+      <h3>Day and night</h3>
+      <p>The background keeps a slow glow and leans toward the song. Night stays dark. Day stays on warm paper, with a soft wash of that same color. Brightness is kept on this device, one level for night and one for day. A system setting for less motion holds the color still.</p>
+      <div class="links">
+        <button class="quiet" type="button" id="glow-theme" aria-pressed="false">Day</button>
+      </div>
+      <label class="account-field">Brightness
+        <input id="glow-level" type="range" min="35" max="125" step="1" value="100">
+      </label>
     </section>
     <section class="account-block" id="account-reminders-block">
       <h3>Reminders</h3>
@@ -2344,11 +2347,11 @@ function showRoom(name) {
     if (node && node.scrollIntoView) node.scrollIntoView({ block: "start" });
   }
   if (name !== "pick") document.getElementById("pick-tip").hidden = true;
-  if (name === "practice") {
-    paintPractice();
+  if (name === "practice") paintPractice();
+  if (name === "account") {
+    if (window.paintAccount) window.paintAccount();
     if (window.paintGlowControls) window.paintGlowControls();
   }
-  if (name === "account" && window.paintAccount) window.paintAccount();
   if ((name === "home" || name === "done") && window.paintGreeting) window.paintGreeting();
 }
 window.showRoom = showRoom;

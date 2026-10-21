@@ -135,6 +135,8 @@ const order = [
   "<h3>Name</h3>",
   "<h3>Access</h3>",
   'id="account-practice-block"',
+  'id="account-bell"',
+  'id="account-glow"',
   'id="account-reminders-block"',
   'id="account-talks-block"',
   "<h3>Resources</h3>",
@@ -161,6 +163,8 @@ assert.ok(fs.readFileSync(path.join(__dirname, "sw.js"), "utf8").includes('pathn
 assert.ok(worker.includes('pathname === "/access/sangha"'));
 assert.ok(page.includes(">Meditation bell<"));
 assert.ok(page.includes('id="account-bell"'));
+assert.ok(page.includes('id="practice-bell"'));
+assert.ok(page.includes('data-focus="account-bell"'));
 assert.ok(page.includes('id="bell-start-strikes"'));
 assert.ok(page.includes("Quadruple bell"));
 assert.ok(page.includes("Use same tone for all"));
