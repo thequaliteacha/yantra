@@ -13,6 +13,8 @@
     "talks.saved": [],
     "talks.progress": {},
     "welcome.seen": false,
+    "altar.photos": [],
+    "altar.show": true,
     "reminders": {},
     "theme.light": false,
     "glow.level": null,
@@ -140,6 +142,14 @@
       return out;
     }
     if (key === "welcome.seen") return value === true;
+    if (key === "altar.show") return value !== false;
+    if (key === "altar.photos") {
+      // Up to three small photos for the altar, kept only on this device as JPEG data.
+      const list = Array.isArray(value) ? value : [];
+      return list
+        .filter((src) => typeof src === "string" && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(src) && src.length < 240000)
+        .slice(0, 3);
+    }
     if (key === "reminders") {
       return value && typeof value === "object" && !Array.isArray(value) ? clone(value) : {};
     }

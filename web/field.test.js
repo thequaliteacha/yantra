@@ -21,7 +21,7 @@ const dayRest = F.stops({ light: true, sitting: false, breath: 0.5, glow: naval 
 [dayNaval, dayEye, dayRest].forEach((row) => {
   [row.center, row.mid, row.edge].forEach((rgb) => {
     rgb.forEach((channel) => {
-      assert.ok(channel >= 190 && channel <= 255, "day stays a soft light color, got " + channel);
+      assert.ok(channel >= 190 && channel <= 255, "cream stays a soft light color, got " + channel);
     });
   });
 });
@@ -57,9 +57,8 @@ assert.ok(page.includes('src="/web/field.js"'));
 assert.ok(page.includes("YantraField.stops"));
 assert.ok(page.includes("YantraField.goldBlur"));
 assert.ok(page.includes("YantraSeries.holdSeries"), "a playback blip still does not restart the figure");
-assert.ok(page.includes('id="account-glow"'));
-assert.ok(page.includes('id="glow-level"'));
-assert.ok(page.includes('id="glow-theme"'));
+assert.strictEqual(page.includes('id="account-glow"'), false, "dark and cream live only on the home toggle");
+assert.ok(page.includes('aria-label="Switch between dark and cream"'));
 assert.ok(page.includes("prefers-reduced-motion"));
 assert.ok(page.includes('min="35"'));
 assert.ok(page.includes('max="125"'));

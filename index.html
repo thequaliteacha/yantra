@@ -193,11 +193,14 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #glowbar .sun, body.light #glowbar .moon { display: none; }
   body.light #glowbar .sun { display: inline; }
   /* Day: the canvas draws on warm paper; the panels turn to match. */
-  body.light, html:has(body.light) { background: #efe5d3; }
+  /* Cream: a warm eggshell field with brown-gold ink, never stark. The panels are the dark
+     design turned over, warmed and softened, on a clear background so the field shows through. */
+  body.light, html:has(body.light) { background: #efe4cc; }
+  body.light .room { background: transparent; }
   body { transition: background-color 1.6s linear; }
   @media (prefers-reduced-motion: reduce) { body { transition: none; } }
-  body.light .room, body.light #gate, body.light #glowbar { filter: invert(0.9) hue-rotate(180deg); }
-  body.light #caption, body.light #transport, body.light #end { filter: invert(0.9) hue-rotate(180deg) brightness(var(--glow)); }
+  body.light .room, body.light #gate, body.light #glowbar, body.light #account-corner { filter: invert(0.92) hue-rotate(180deg) sepia(0.32) contrast(0.8); }
+  body.light #caption, body.light #transport, body.light #end { filter: invert(0.92) hue-rotate(180deg) sepia(0.32) contrast(0.8) brightness(var(--glow)); }
   #transport svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
 
 
@@ -399,7 +402,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #talk-bar button[aria-pressed="false"] { color: rgba(232, 204, 146, 0.55); text-decoration: line-through; }
   #talk-title { margin: 0.5rem 0 0; font-size: 0.85rem; letter-spacing: 0.08em; color: rgba(232, 204, 146, 0.7); opacity: 0; transition: opacity 0.6s ease; text-align: center; }
   #talk-watch.awake #talk-title { opacity: 1; }
-  body.light #talk-watch { filter: invert(0.9) hue-rotate(180deg); }
+  body.light #talk-watch { filter: invert(0.92) hue-rotate(180deg) sepia(0.32) contrast(0.8); }
   #reminders[hidden] { display: none; }
   /* The week: seven days, each a circle whose left half is the sunrise sit and right half the sunset sit. */
   .week { display: flex; justify-content: center; margin: 0.4rem 0 0; min-height: 1.9rem; }
@@ -423,7 +426,21 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #welcome .dots { display: flex; justify-content: center; gap: 0.55rem; margin-top: 1.8rem; }
   #welcome .dots span { width: 0.42rem; height: 0.42rem; border-radius: 50%; background: rgba(230, 201, 138, 0.28); }
   #welcome .dots span.on { background: rgba(230, 201, 138, 0.9); }
-  #account-places .links { margin-top: 0.2rem; }
+  #account-places .links { margin: -0.4rem 0 0.4rem; }
+  /* The altar: up to three small round photos resting above the yantra during sits and talks. */
+  #altar { position: fixed; z-index: 2; left: 50%; top: max(1rem, env(safe-area-inset-top)); transform: translateX(-50%);
+    display: flex; gap: 0.9rem; opacity: 0; pointer-events: none; transition: opacity 2.4s ease; }
+  body.sitting #altar.on, body.watching #altar.on { opacity: 0.62; }
+  #altar img, #altar-list img { width: clamp(2.8rem, 7vh, 4.4rem); height: clamp(2.8rem, 7vh, 4.4rem); border-radius: 50%; object-fit: cover;
+    border: 1px solid rgba(230, 201, 138, 0.55); box-shadow: 0 0 18px rgba(214, 164, 72, 0.25); filter: saturate(0.8) sepia(0.15); }
+  #altar-list { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+  #altar-list:empty { display: none; }
+  #altar-list figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+  #altar-list img { width: 4.6rem; height: 4.6rem; }
+  #altar-show[aria-pressed="false"] { text-decoration: line-through; }
+  #altar-note:empty { display: none; }
+  /* The room is inverted for day; turn the photos back so faces keep their colour. */
+  body.light #altar-list img { filter: invert(1) hue-rotate(180deg) saturate(0.8) sepia(0.15); }
   .talk.heard span:first-child { color: rgba(243, 230, 200, 0.84); }
   #reminders { text-align: left; display: flex; flex-direction: column; gap: 0.55rem; }
   #account input[type="radio"] { width: auto; padding: 0; margin: 0 0.15rem 0 0; accent-color: #e6c98a; }
@@ -606,11 +623,19 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 <div class="room" id="account" hidden>
   <button class="back" type="button" data-room="home" aria-label="Back">&#8592;</button>
   <div class="inner">
-    <h2>You</h2>
+    <h2 id="account-title">You</h2>
     <section id="account-sync" class="account-sync" hidden>
       <h3>Sign in</h3>
       <p>A later sign-in can keep these choices with you. Nothing leaves this device yet.</p>
       <p id="account-sync-method"></p>
+    </section>
+    <section class="account-places" id="account-places">
+      <div class="links">
+        <button class="quiet" type="button" id="open-talks" data-room="talks" hidden>Dharma Talks</button>
+        <button class="quiet" type="button" id="open-shelf">Albums and forms</button>
+        <button class="quiet" type="button" data-room="guide">How to sit</button>
+        <button class="quiet" type="button" id="install-app" hidden>Install Yantra</button>
+      </div>
     </section>
     <section class="account-block" id="account-practice-block">
       <h3>Practice</h3>
@@ -632,13 +657,16 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       </div>
     </div>
     </section>
-    <section class="account-block" id="account-places">
+    <section class="account-block" id="account-altar">
+      <h3>Altar</h3>
+      <p>A photo of your teacher, or of your amakua, rests above the yantra while you sit. Up to three. They stay on this device.</p>
+      <div id="altar-list"></div>
       <div class="links">
-        <button class="quiet" type="button" id="open-talks" data-room="talks" hidden>Dharma Talks</button>
-        <button class="quiet" type="button" id="open-shelf">Albums and forms</button>
-        <button class="quiet" type="button" data-room="guide">How to sit</button>
-        <button class="quiet" type="button" id="install-app" hidden>Install Yantra</button>
+        <button class="quiet" type="button" id="altar-add">Add a photo</button>
+        <button class="quiet" type="button" id="altar-show" aria-pressed="true">Shown during sits</button>
       </div>
+      <input id="altar-file" type="file" accept="image/*" hidden>
+      <p id="altar-note" role="status"></p>
     </section>
     <section class="account-block" id="account-reminders-block">
       <h3>Reminders</h3>
@@ -696,15 +724,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     </div>
       <p id="account-reminders-push"></p>
     </section>
-    <section class="account-block" id="account-glow">
-      <h3>Appearance</h3>
-      <div class="links">
-        <button class="quiet" type="button" id="glow-theme" aria-pressed="false">Day</button>
-      </div>
-      <label class="account-field">Brightness
-        <input id="glow-level" type="range" min="35" max="125" step="1" value="100">
-      </label>
-    </section>
     <section class="account-block">
       <h3>Name</h3>
       <label class="account-field">Display name
@@ -732,7 +751,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     </section>
     <section class="account-block">
       <h3>Privacy</h3>
-      <p>Everything stays in this browser. The site keeps only the word cookie and, if reminders are on, an anonymous push id with a time or a rough place. No tracking.</p>
+      <p>Your practice, photos, and choices stay on this device. Reminders, if you turn them on, keep only what they need to reach you. Nothing is tracked.</p>
       <div class="links"><button class="quiet" type="button" id="account-wipe">Erase everything on this device</button></div>
       <div id="account-wipe-confirm" hidden>
         <p>Erase everything on this device, including Spotify and the sangha word? This cannot be undone.</p>
@@ -742,9 +761,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         </div>
       </div>
     </section>
-    <section class="account-block">
-      <h3>Log out</h3>
-      <p>To use a different word, log out and enter it.</p>
+    <section class="account-block" id="account-logout">
       <button class="choice" type="button" id="account-leave">Log out</button>
       <div id="account-leave-confirm" hidden>
         <p>Log out? The word will be asked for again. Practice and settings stay.</p>
@@ -821,6 +838,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   </div>
   <p id="talk-title"></p>
 </div>
+<div id="altar" aria-hidden="true"></div>
 <div id="caption">
   <p id="cap-title"></p>
   <p id="cap-place"></p>
@@ -829,7 +847,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 </div>
 <button id="end" type="button">End sitting</button>
 <div id="glowbar">
-  <button type="button" id="theme" aria-label="Switch between night and day">
+  <button type="button" id="theme" aria-label="Switch between dark and cream">
     <svg class="moon" viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg>
     <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>
   </button>
@@ -1025,10 +1043,10 @@ function leanToward(target, amount) {
   }
 }
 const isLight = () => document.body.classList.contains("light");
-// In light mode the lines are ink on warm paper: the same hue, deepened.
+// In cream the lines are a soft brown-gold ink on eggshell: the same hue, gently deepened.
 function inkOf(rgb) {
-  const brown = [118, 76, 34];
-  return isLight() ? rgb.map((c, i) => Math.round(c * 0.3 + brown[i] * 0.7)) : rgb.map(Math.round);
+  const brown = [128, 88, 44];
+  return isLight() ? rgb.map((c, i) => Math.round(c * 0.45 + brown[i] * 0.55)) : rgb.map(Math.round);
 }
 function rgba(rgb, alpha) {
   return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
@@ -1550,9 +1568,11 @@ function frame(now) {
       window.YantraTalkView.step(view.state, view.segments, t, audio.paused ? 0 : dt);
       if (view.words) window.YantraTalkView.paintWords(view.words, view.segments || [], window.YantraTalkView.segmentAt(view.segments, t), t);
     }
-    reveal = stageReveal(audio.duration > 0 ? t / audio.duration : 0);
+    // The figure forms over the opening minutes of a talk, then rests whole and glowing,
+    // the navel lotus's ten petals around it.
+    reveal = stageReveal(Math.min(1, t / 200));
     bloom = view.state.awake * 0.8;
-    lotus = CHAKRA[view.state.mood] || null;
+    lotus = CHAKRA.naval;
     talkFx = view.state;
   } else if (sitting) {
     if (!window.ink) window.ink = { key: "", portion: 0 };
@@ -1620,7 +1640,8 @@ function frame(now) {
     if (reveal < 0.99) window.wholeAt = 0;
     else if (!window.wholeAt) window.wholeAt = now;
     const rest = (window.wholeAt ? 1 - 0.15 * ease((now - window.wholeAt) / 20000) : 1) * (talkFx ? 1 - 0.3 * talkFx.still : 1);
-    gold(ctx, 0.92 * rest, 14 + shown * 10, (0.48 + 0.22 * Math.min(1, shown)) * rest);
+    const talkGlow = talkFx ? 1.25 : 1;
+    gold(ctx, 0.92 * rest, (14 + shown * 10) * talkGlow, Math.min(1, (0.48 + 0.22 * Math.min(1, shown)) * rest * talkGlow));
     drawSri(ctx, cx, cy, R, reveal, bloom, lotus || CHAKRA.heart);
     emanate(ctx, cx, cy, R, now, Math.min(1, reveal / 0.12) * rest);
     if (talkFx) {
@@ -2854,7 +2875,22 @@ if (window.YANTRA_WEB) {
     if (watchLock) watchLock.release().catch(() => {});
     watchLock = null;
   }
-  addEventListener("yantra:talk", (event) => openWatch(event.detail));
+  addEventListener("yantra:talk", (event) => {
+    lastTalk = event.detail;
+    openWatch(event.detail);
+  });
+  // While a talk plays on another screen, the yantra returns after half a minute untouched.
+  let lastTalk = null;
+  let touchedAt = Date.now();
+  ["pointerdown", "keydown", "wheel", "touchstart"].forEach((name) => addEventListener(name, () => { touchedAt = Date.now(); }, { passive: true }));
+  setInterval(() => {
+    const audio = document.querySelector("#talks-list audio");
+    if (!lastTalk || !audio || audio.paused || audio.ended) return;
+    if (document.body.classList.contains("watching") || document.body.classList.contains("sitting")) return;
+    if (Date.now() - touchedAt < 30000) return;
+    if (audio.getAttribute("src") !== lastTalk.src) return;
+    openWatch(lastTalk);
+  }, 5000);
   talkWatch.addEventListener("click", (event) => {
     if (!event.target.closest("button")) showTalkBar();
   });
@@ -3068,7 +3104,7 @@ document.getElementById("end").addEventListener("click", endSitting);
     if (account) account.value = slider.value;
     if (theme) {
       theme.setAttribute("aria-pressed", String(light));
-      theme.textContent = light ? "Night" : "Day";
+      theme.textContent = light ? "Dark" : "Cream";
     }
   };
   window.paintGlowControls = paintGlowControls;

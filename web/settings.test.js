@@ -133,14 +133,14 @@ assert.strictEqual(page.includes('id="account-access"'), false);
 assert.strictEqual(/Zazen|Rama/.test(account.replace(/"zazen"/g, "")), false, "account.js names neither");
 assert.ok(page.includes('id="reminders"'));
 const order = [
-  'id="account-practice-block"',
   'id="account-places"',
+  'id="account-practice-block"',
+  'id="account-altar"',
   'id="account-reminders-block"',
-  'id="account-glow"',
   "<h3>Name</h3>",
   "<h3>Spotify</h3>",
   "<h3>Privacy</h3>",
-  "<h3>Log out</h3>",
+  'id="account-logout"',
 ];
 let cursor = -1;
 order.forEach((mark) => {
@@ -167,3 +167,4 @@ assert.ok(page.includes('window.YANTRA_LEVEL !== "zazen"'));
 assert.strictEqual(page.includes("ramafoundation.org"), false);
 
 console.log("settings.test.js ok");
+assert.strictEqual(require('fs').readFileSync(require('path').join(__dirname, '../index.html'), 'utf8').includes('id="account-glow"'), false, 'the theme lives only on the home toggle');

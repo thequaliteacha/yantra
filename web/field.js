@@ -1,11 +1,12 @@
 /* The background field behind the yantra.
    Night stays dark and takes a little of the song's color while a sit is playing.
-   Day stays on warm paper and takes a soft wash of that same color.
+   Cream stays on warm eggshell and takes a soft wash of that same color.
    A reduced-motion setting holds either field still. */
 (function (root) {
+  // Eggshell cream, golden at the edges.
   const PAPER = {
-    mid: [239, 229, 211],
-    edge: [227, 214, 192],
+    mid: [238, 226, 202],
+    edge: [229, 214, 190],
   };
   const NIGHT = {
     mid: [12, 8, 22],
@@ -49,7 +50,7 @@
     const glow = source.glow && source.glow.length === 3 ? source.glow : [214, 164, 72];
     const sitting = !!source.sitting;
     if (source.light) {
-      const paper = [252 - breath * 10, 246 - breath * 8, 234 - breath * 6];
+      const paper = [247 - breath * 8, 239 - breath * 7, 221 - breath * 6];
       const wash = pastel(glow);
       const lean = reduce ? 0 : (sitting ? 0.34 : 0.12);
       const midLean = reduce ? 0 : (sitting ? 0.28 : 0.08);
