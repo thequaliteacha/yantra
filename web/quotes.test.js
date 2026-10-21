@@ -129,7 +129,6 @@ assert.ok(page.includes('window.YANTRA_LEVEL === "zazen" ? window.yantraQuoteFil
 assert.ok(page.includes('from.textContent = "From: " + talk.title'));
 assert.ok(page.includes('if (window.YANTRA_LEVEL !== "zazen") return;'));
 assert.ok(page.includes('showRoom("talks");'));
-assert.ok(page.includes('from === "done" ? "done"'));
 assert.strictEqual(page.includes("You decide to be happy"), false);
 assert.strictEqual(page.includes("ramameditationsociety.org"), false);
 

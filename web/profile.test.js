@@ -40,7 +40,7 @@ assert.strictEqual(store.length, 1);
 const page = require("fs").readFileSync(require("path").join(__dirname, "../index.html"), "utf8");
 assert.ok(page.includes('id="account"'));
 assert.ok(page.includes("Erase everything on this device"));
-assert.ok(page.includes('data-room="account"'));
+assert.ok(page.includes('id="account-corner"'), "the You mark opens the account page");
 assert.ok(page.includes('id="home-greeting"'));
 
 console.log("profile.test.js ok");

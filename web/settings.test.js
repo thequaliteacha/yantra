@@ -121,7 +121,9 @@ const worker = fs.readFileSync(path.join(__dirname, "../deploy/cloudflare/worker
 assert.ok(page.includes(">Log out<"));
 assert.ok(page.includes('method="post" action="/logout"'));
 assert.ok(page.includes('id="account-practice-block"'));
-assert.ok(page.includes('id="account-practice-rows"'));
+assert.ok(page.includes('id="practice-rows"'));
+assert.strictEqual(page.includes('id="practice" '), false, "one practice page: You");
+assert.ok(page.includes('id="account-week"') && page.includes('id="home-week"'));
 assert.ok(page.includes('id="account-sync"'));
 assert.ok(page.includes('id="account-corner"'));
 assert.ok(page.includes('aria-label="Account"'));
@@ -129,15 +131,16 @@ assert.ok(page.includes('aria-label="Account"'));
 assert.strictEqual(page.includes('id="account-zazen"'), false);
 assert.strictEqual(page.includes('id="account-access"'), false);
 assert.strictEqual(/Zazen|Rama/.test(account.replace(/"zazen"/g, "")), false, "account.js names neither");
-assert.ok(page.includes(">Edit reminders<"));
+assert.ok(page.includes('id="reminders"'));
 const order = [
   'id="account-practice-block"',
-  "<h3>Name</h3>",
-  "<h3>Log out</h3>",
-  'id="account-glow"',
+  'id="account-places"',
   'id="account-reminders-block"',
+  'id="account-glow"',
+  "<h3>Name</h3>",
   "<h3>Spotify</h3>",
   "<h3>Privacy</h3>",
+  "<h3>Log out</h3>",
 ];
 let cursor = -1;
 order.forEach((mark) => {
