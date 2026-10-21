@@ -23,6 +23,81 @@
     return hours + " hr" + (rest ? " " + rest + " min" : "");
   }
 
+  /* Where a talk was left, kept with the other settings on this device. */
+  function progressAll() {
+    const S = root && root.YantraSettings;
+    return S ? S.get("talks.progress") || {} : {};
+  }
+
+  function keepProgress(src, at, done) {
+    const S = root && root.YantraSettings;
+    if (!S) return;
+    const all = progressAll();
+    all[src] = { at: done ? 0 : Math.max(0, Math.round(at)), done: !!done || !!(all[src] && all[src].done) };
+    S.set("talks.progress", all);
+  }
+
+  /* The right-hand note on a talk: its length, how far in, or a mark once heard. */
+  function stateLabel(length, seconds, entry) {
+    if (entry && entry.done) return "\u2713 " + length;
+    if (entry && entry.at >= 60) return formatLength(entry.at) + " of " + length;
+    return length;
+  }
+
+  /* Lock-screen title and play/pause/skip for a talk. */
+  function lockScreen(player, title, setTitle) {
+    const nav = typeof navigator !== "undefined" ? navigator : null;
+    if (!nav || !nav.mediaSession || typeof MediaMetadata === "undefined") return;
+    nav.mediaSession.metadata = new MediaMetadata({ title: title, artist: "Rama", album: setTitle || "Dharma Talks" });
+    const skip = (by) => () => { player.currentTime = Math.max(0, player.currentTime + by); };
+    try {
+      nav.mediaSession.setActionHandler("play", () => player.play());
+      nav.mediaSession.setActionHandler("pause", () => player.pause());
+      nav.mediaSession.setActionHandler("seekbackward", skip(-15));
+      nav.mediaSession.setActionHandler("seekforward", skip(30));
+    } catch (e) {}
+  }
+
+  const keeping = typeof WeakSet === "function" ? new WeakSet() : null;
+
+  /* Starts a talk where it was left, and keeps its place as it plays. */
+  function start(player, src, title, setTitle, now) {
+    if (player.getAttribute("src") !== src) {
+      player.setAttribute("src", src);
+      const entry = progressAll()[src];
+      if (entry && !entry.done && entry.at > 0 && typeof player.addEventListener === "function") {
+        player.addEventListener("loadedmetadata", function resume() {
+          player.removeEventListener("loadedmetadata", resume);
+          if (!player.duration || entry.at < player.duration - 15) player.currentTime = entry.at;
+        });
+      }
+    }
+    player.hidden = false;
+    if (now) now.textContent = (setTitle ? setTitle + " \u00b7 " : "") + title;
+    lockScreen(player, title, setTitle);
+    if (keeping && !keeping.has(player) && typeof player.addEventListener === "function") {
+      keeping.add(player);
+      let last = 0;
+      player.addEventListener("timeupdate", () => {
+        const at = player.currentTime;
+        if (Math.abs(at - last) < 10) return;
+        last = at;
+        const here = player.getAttribute("src") || "";
+        if (here) keepProgress(here, at, player.duration && at >= player.duration - 30);
+      });
+      player.addEventListener("pause", () => {
+        const here = player.getAttribute("src") || "";
+        if (here && player.currentTime > 0) keepProgress(here, player.currentTime, false);
+      });
+      player.addEventListener("ended", () => {
+        const here = player.getAttribute("src") || "";
+        if (here) keepProgress(here, 0, true);
+      });
+    }
+    const started = player.play();
+    if (started && typeof started.catch === "function") started.catch(() => {});
+  }
+
   /* Sets in their own order, each with its playable talks. Nothing unless zazen. */
   function talkSections(data, level) {
     if (level !== "zazen" || !data || !Array.isArray(data.sets)) return [];
@@ -56,12 +131,7 @@
     if (!section || typeof src !== "string" || !src.startsWith("/talks/") || src.includes("..")) return false;
     const player = section.querySelector("audio");
     if (!player) return false;
-    if (player.getAttribute("src") !== src) player.setAttribute("src", src);
-    player.hidden = false;
-    const now = section.querySelector("[data-talk-now]");
-    if (now) now.textContent = title || "";
-    const started = player.play();
-    if (started && typeof started.catch === "function") started.catch(() => {});
+    start(player, src, title || "", "", section.querySelector("[data-talk-now]"));
     return true;
   }
 
@@ -100,15 +170,13 @@
         const name = d.createElement("span");
         name.textContent = talk.title;
         const length = d.createElement("span");
-        length.textContent = talk.length;
+        const entry = progressAll()[talk.src];
+        length.textContent = stateLabel(talk.length, 0, entry);
+        if (entry && entry.done) button.classList.add("heard");
         button.append(name, length);
         button.addEventListener("click", () => {
           if (!player) return;
-          if (player.getAttribute("src") !== talk.src) player.setAttribute("src", talk.src);
-          player.hidden = false;
-          if (now) now.textContent = set.title + " \u00b7 " + talk.title;
-          const started = player.play();
-          if (started && typeof started.catch === "function") started.catch(() => {});
+          start(player, talk.src, talk.title, set.title, now);
         });
         group.append(button);
       }
@@ -118,7 +186,7 @@
     return true;
   }
 
-  const api = { talkSrc, formatLength, talkSections, findTalk, play, render };
+  const api = { talkSrc, formatLength, stateLabel, talkSections, findTalk, play, render };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.YantraTalks = api;
 })(typeof window !== "undefined" ? window : globalThis);

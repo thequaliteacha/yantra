@@ -11,6 +11,8 @@
     "profile.greeting": "none",
     "access.level": "",
     "talks.saved": [],
+    "talks.progress": {},
+    "welcome.seen": false,
     "reminders": {},
     "theme.light": false,
     "glow.level": null,
@@ -126,6 +128,18 @@
       const method = String(value || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
       return method || "telegram";
     }
+    if (key === "talks.progress") {
+      // Where each talk was left: { "/talks/x.mp3": { at: seconds, done: bool } }.
+      const out = {};
+      const src = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+      Object.keys(src).slice(0, 200).forEach((path) => {
+        if (!/^\/talks\/[a-z0-9][a-z0-9./_-]{0,160}\.mp3$/.test(path) || path.includes("..")) return;
+        const entry = src[path] || {};
+        out[path] = { at: Math.max(0, Math.round(Number(entry.at) || 0)), done: entry.done === true };
+      });
+      return out;
+    }
+    if (key === "welcome.seen") return value === true;
     if (key === "reminders") {
       return value && typeof value === "object" && !Array.isArray(value) ? clone(value) : {};
     }

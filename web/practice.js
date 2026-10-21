@@ -149,6 +149,17 @@
     return { store: next, counted: true };
   }
 
+  /* The last seven days, oldest first, each with its sunrise and sunset halves. */
+  function weekOf(store, today) {
+    const out = [];
+    for (let back = 6; back >= 0; back -= 1) {
+      const date = addDays(today, -back);
+      const day = normalizeDay(store.days[date]);
+      out.push({ date: date, morning: day.morning > 0, evening: day.evening > 0, today: back === 0 });
+    }
+    return out;
+  }
+
   function summarize(store, now) {
     const clean = normalize(store);
     const todayKey = localDate(now instanceof Date ? now : new Date());
@@ -157,6 +168,7 @@
       totals: { ms: clean.totals.ms, sits: clean.totals.sits },
       today: { ms: today.ms, sits: today.sits, morning: today.morning, evening: today.evening },
       streaks: streaks(clean, todayKey),
+      week: weekOf(clean, todayKey),
       milestones: clean.milestones.slice(),
       reminders: clean.reminders,
     };

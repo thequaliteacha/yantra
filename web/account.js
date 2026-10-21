@@ -313,14 +313,6 @@
       if (note) note.textContent = "Saved on this device.";
       paintGreeting();
     });
-    const openPractice = document.getElementById("account-practice-open");
-    if (openPractice) {
-      openPractice.addEventListener("click", () => {
-        const practice = document.getElementById("practice");
-        if (practice) practice.dataset.from = "account";
-        if (typeof window.showRoom === "function") window.showRoom("practice");
-      });
-    }
     document.getElementById("account-leave").addEventListener("click", () => showConfirm("account-leave-confirm", true));
     document.getElementById("account-leave-keep").addEventListener("click", () => showConfirm("account-leave-confirm", false));
     document.getElementById("account-spotify-connect").addEventListener("click", () => {
@@ -333,24 +325,6 @@
     document.getElementById("account-spotify-clear").addEventListener("click", () => {
       if (window.yantraSpotify) window.yantraSpotify.clearUnlisted();
       paintSpotify();
-    });
-    document.getElementById("account-export").addEventListener("click", () => {
-      const button = document.getElementById("practice-export");
-      if (button) button.click();
-    });
-    document.getElementById("account-erase").addEventListener("click", () => {
-      const practice = document.getElementById("practice");
-      if (practice) practice.dataset.from = "account";
-      if (typeof window.showRoom === "function") window.showRoom("practice");
-      const button = document.getElementById("practice-erase");
-      if (button) button.click();
-    });
-    document.getElementById("account-reminders").addEventListener("click", () => {
-      const practice = document.getElementById("practice");
-      if (practice) practice.dataset.from = "account";
-      if (typeof window.showRoom === "function") window.showRoom("practice");
-      const reminders = document.getElementById("reminders");
-      if (reminders && reminders.scrollIntoView) reminders.scrollIntoView({ block: "start" });
     });
     document.getElementById("account-wipe").addEventListener("click", () => showConfirm("account-wipe-confirm", true));
     document.getElementById("account-wipe-keep").addEventListener("click", () => showConfirm("account-wipe-confirm", false));

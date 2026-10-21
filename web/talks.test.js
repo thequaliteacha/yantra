@@ -87,3 +87,42 @@ assert.ok(sw.includes('"/talks.json"'), "the service worker never caches the tal
 assert.ok(page.includes("z-index: 6"), "the back arrow stays above the room");
 
 console.log("talks.test.js ok");
+
+// A talk keeps its place: pausing saves where it was, finishing marks it heard, and the
+// next start picks up there. Stored with the other settings on this device.
+{
+  const store = {};
+  globalThis.YantraSettings = {
+    get: (key) => (key === "talks.progress" ? JSON.parse(JSON.stringify(store.progress || {})) : undefined),
+    set: (key, value) => { if (key === "talks.progress") store.progress = value; },
+  };
+  const handlers = {};
+  const player = {
+    attrs: {}, currentTime: 0, duration: 1800, hidden: true,
+    getAttribute(name) { return this.attrs[name] || null; },
+    setAttribute(name, value) { this.attrs[name] = value; },
+    removeAttribute(name) { delete this.attrs[name]; },
+    addEventListener(name, fn) { (handlers[name] = handlers[name] || []).push(fn); },
+    removeEventListener(name, fn) { handlers[name] = (handlers[name] || []).filter((f) => f !== fn); },
+    play() { return Promise.resolve(); },
+    pause() {},
+  };
+  const fire = (name) => (handlers[name] || []).slice().forEach((fn) => fn());
+  const section = { querySelector: (sel) => (sel === "audio" ? player : null) };
+  assert.ok(T.play(section, "/talks/meditation.mp3", "Meditation"));
+  player.currentTime = 640;
+  fire("pause");
+  assert.deepStrictEqual(store.progress["/talks/meditation.mp3"], { at: 640, done: false });
+  assert.strictEqual(T.stateLabel("30 min", 0, store.progress["/talks/meditation.mp3"]), "11 min of 30 min");
+  // A fresh start resumes there.
+  player.attrs = {};
+  player.currentTime = 0;
+  T.play(section, "/talks/meditation.mp3", "Meditation");
+  fire("loadedmetadata");
+  assert.strictEqual(player.currentTime, 640);
+  fire("ended");
+  assert.deepStrictEqual(store.progress["/talks/meditation.mp3"], { at: 0, done: true });
+  assert.strictEqual(T.stateLabel("30 min", 0, store.progress["/talks/meditation.mp3"]), "✓ 30 min");
+  delete globalThis.YantraSettings;
+}
+console.log("talks progress ok");

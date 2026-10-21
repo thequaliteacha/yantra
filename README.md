@@ -98,9 +98,17 @@ either a clock time or coordinates rounded to a tenth of a degree. Delete my
 reminder data removes that record. On iPhone and iPad the note arrives only
 from the Home Screen app.
 
-*Settings*, from the small mark at the top right, is this device only. The practice
-record (total time, sits, perfect days) is first, then name, Log
-out, glow, reminders, and Spotify. The bell has no settings for now.
+The home screen holds only the two sits and the week: seven circles whose left
+half fills with the sunrise sit and right half with the sunset sit, and one line
+toward the next perfect day. Everything else is under *You*, the mark at the top
+right, which is this device only: practice (the week, total time, sits, perfect
+days, export, erase), Dharma Talks for the Zazen word, albums and forms, How to
+sit, reminders, appearance, name, Spotify, privacy, and Log out. *Before you
+sit*, on the song-count screen, holds the album, Mix It Up, and the bell (on or
+off, and its volume); each song count shows its minutes. A first visit on a
+device with no sits gets three welcome steps (the perfect day, reminders, Add
+to Home Screen), once. Talks remember where they were left, mark the ones
+heard, and show on the lock screen.
 Name, reminder choices, theme, glow, and saved talks are in one store,
 `yantra.settings.v1`. The practice record stays separate, and its time, sits,
 and days in a row are shown on that page. An optional name can greet you on
