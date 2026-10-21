@@ -27,6 +27,8 @@
     const name = api ? api.load().name : "";
     button.textContent = name ? name.slice(0, 1).toUpperCase() : "You";
     button.hidden = false;
+    const title = document.getElementById("account-title");
+    if (title) title.textContent = name || "You";
   }
 
   function reminderRecord() {
