@@ -1780,11 +1780,11 @@ function fold(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-// A new song shows its name, chakra and place in the sitting for a few seconds, then fades.
+// Every new song shows its name, chakra and place in the sitting for eight seconds, then fades.
 function settle() {
   clearTimeout(quietTimer);
   caption.classList.add("fresh");
-  quietTimer = setTimeout(() => caption.classList.remove("fresh"), 6000);
+  quietTimer = setTimeout(() => caption.classList.remove("fresh"), 8000);
 }
 
 function clock(seconds) {
@@ -2893,6 +2893,10 @@ if (window.YANTRA_WEB) {
   }, 5000);
   talkWatch.addEventListener("click", (event) => {
     if (!event.target.closest("button")) showTalkBar();
+  });
+  // A moving mouse brings the controls up too, as a tap does on a touch screen.
+  addEventListener("pointermove", (event) => {
+    if (event.pointerType === "mouse" && document.body.classList.contains("watching")) showTalkBar();
   });
   document.getElementById("talk-back").addEventListener("click", () => {
     const view = window.yantraWatch;
