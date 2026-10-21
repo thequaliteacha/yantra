@@ -5,6 +5,7 @@
   const KEY_RE = /^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*){0,4}$/;
   const GREETINGS = ["none", "hello", "time"];
   const LEVELS = ["", "sangha", "zazen"];
+  const BEDS = ["silent", "white", "pink", "brown", "rain-light", "rain-steady", "rain-roof", "rain-thunder", "drone", "bowl", "pad"];
   const DEFAULTS = {
     "profile.name": "",
     "profile.greeting": "none",
@@ -99,6 +100,20 @@
     }
     if (key === "bell.startTone" || key === "bell.endTone" || key === "bell.halfTone" || key === "bell.quarterTone" || key === "bell.threeQuarterTone") {
       return value === "small" || value === "medium" || value === "deep" ? value : "medium";
+    }
+    if (key === "sit.minutes") {
+      const number = typeof value === "number" ? value : Number(value);
+      if (!Number.isInteger(number) || number < 1 || number > 240) return 15;
+      return number;
+    }
+    if (key === "sit.background") {
+      if (value === "rain") return "rain-steady";
+      return BEDS.indexOf(value) >= 0 ? value : "silent";
+    }
+    if (key === "sit.bedVolume") {
+      const level = Number(value);
+      if (!Number.isFinite(level)) return 0.35;
+      return Math.max(0, Math.min(1, level));
     }
     if (key === "theme.light" || key === "flags.accountSync" || key === "flags.accountSignOut") return !!value;
     if (key === "glow.level") {

@@ -100,77 +100,250 @@
     return nodes;
   }
 
-  function noiseBuffer(audio, kind) {
-    const length = audio.sampleRate * 2;
-    const buffer = audio.createBuffer(1, length, audio.sampleRate);
+  /* Public-domain rain, listed in web/ambient/SOURCES.md. An older "rain" choice plays the steady bed. */
+  const RAIN = {
+    "rain-light": "/ambient/rain-light.mp3",
+    "rain-steady": "/ambient/rain-steady.mp3",
+    "rain-roof": "/ambient/rain-roof.mp3",
+    "rain-thunder": "/ambient/rain-thunder.mp3",
+  };
+  const rainCache = new Map();
+  const rainPending = new Map();
+
+  function bedKind(kind) {
+    if (kind === "rain") return "rain-steady";
+    return kind || "silent";
+  }
+
+  /* Fade in and out. The edge stays inside the sit, and the ramp never targets zero. */
+  function bedEnvelope(duration) {
+    const span = Math.max(0.2, Number(duration) || 0);
+    const fade = Math.min(3, span / 2, Math.max(0.35, span / 4));
+    return { fade: fade, end: span };
+  }
+
+  function shapeBed(amp, when, duration, level) {
+    const peak = Math.max(0.0001, level);
+    const edge = bedEnvelope(duration);
+    const end = when + edge.end;
+    amp.gain.cancelScheduledValues(when);
+    amp.gain.setValueAtTime(0.0001, when);
+    amp.gain.exponentialRampToValueAtTime(peak, when + edge.fade);
+    const hold = end - edge.fade;
+    if (hold > when + edge.fade + 0.02) amp.gain.setValueAtTime(peak, hold);
+    amp.gain.exponentialRampToValueAtTime(0.0001, end);
+  }
+
+  /* Drop the duplicate tail so the first sample continues the one before it. */
+  function seamSamples(data, n) {
+    const fade = Math.min(n, Math.floor(data.length / 3));
+    if (fade < 8) return data;
+    const out = new Float32Array(data.length - fade);
+    for (let i = 0; i < fade; i += 1) {
+      const mix = i / fade;
+      out[i] = data[i] * mix + data[data.length - fade + i] * (1 - mix);
+    }
+    out.set(data.subarray(fade, data.length - fade), fade);
+    return out;
+  }
+
+  function seamBuffer(audio, buffer, seconds) {
     const data = buffer.getChannelData(0);
-    let hold = 0;
+    const seamed = seamSamples(data, Math.floor(buffer.sampleRate * seconds));
+    if (seamed === data) return buffer;
+    const next = audio.createBuffer(1, seamed.length, buffer.sampleRate);
+    next.getChannelData(0).set(seamed);
+    return next;
+  }
+
+  function noiseBuffer(audio, kind) {
+    const rate = audio.sampleRate;
+    const length = rate * 2;
+    const data = new Float32Array(length);
     let brown = 0;
+    let b0 = 0;
+    let b1 = 0;
+    let b2 = 0;
+    let b3 = 0;
+    let b4 = 0;
+    let b5 = 0;
+    let b6 = 0;
     for (let i = 0; i < length; i += 1) {
       const white = Math.random() * 2 - 1;
       if (kind === "brown") {
-        brown = (brown + 0.02 * white) / 1.02;
-        data[i] = brown * 3.5;
+        brown = (brown + 0.02 * white) * 0.996;
+        data[i] = brown * 3.2;
       } else if (kind === "pink") {
-        hold = 0.98 * hold + 0.02 * white;
-        data[i] = hold * 2;
-      } else if (kind === "rain") {
-        const drop = Math.random() < 0.004 ? (Math.random() * 2 - 1) : 0;
-        hold = 0.96 * hold + 0.04 * white;
-        data[i] = hold * 0.8 + drop * 0.7;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.969 * b2 + white * 0.153852;
+        b3 = 0.8665 * b3 + white * 0.3104856;
+        b4 = 0.55 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.016898;
+        data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+        b6 = white * 0.115926;
       } else {
-        data[i] = white * 0.4;
+        data[i] = white * 0.18;
       }
     }
+    let mean = 0;
+    for (let i = 0; i < length; i += 1) mean += data[i];
+    mean /= length;
+    for (let i = 0; i < length; i += 1) data[i] -= mean;
+    const seamed = seamSamples(data, Math.floor(rate * 0.08));
+    const buffer = audio.createBuffer(1, seamed.length, rate);
+    buffer.getChannelData(0).set(seamed);
     return buffer;
   }
 
-  function startBed(audio, when, kind) {
-    if (!kind || kind === "silent") return null;
+  function moveFilter(audio, when, filter, base, depth, rate) {
+    filter.frequency.value = base;
+    const lfo = audio.createOscillator();
+    const amount = audio.createGain();
+    lfo.frequency.value = rate;
+    amount.gain.value = depth;
+    lfo.connect(amount);
+    amount.connect(filter.frequency);
+    lfo.start(when);
+    return lfo;
+  }
+
+  function loopSource(audio, buffer, when) {
+    const source = audio.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.loopStart = 0;
+    source.loopEnd = buffer.duration;
+    source.start(Math.max(when, audio.currentTime));
+    return source;
+  }
+
+  function loadRain(name) {
+    if (!RAIN[name] || !ctx) return Promise.resolve(null);
+    if (rainCache.has(name)) return Promise.resolve(rainCache.get(name));
+    if (rainPending.has(name)) return rainPending.get(name);
+    const audio = ctx;
+    const job = fetch(RAIN[name]).then((response) => {
+      if (!response.ok) throw new Error("missing");
+      return response.arrayBuffer();
+    }).then((bytes) => audio.decodeAudioData(bytes.slice(0))).then((decoded) => {
+      const seamed = seamBuffer(audio, decoded, 0.35);
+      rainCache.set(name, seamed);
+      rainPending.delete(name);
+      return seamed;
+    }).catch(() => {
+      rainPending.delete(name);
+      return null;
+    });
+    rainPending.set(name, job);
+    return job;
+  }
+
+  function attachRain(audio, bed, into, name, when) {
+    const start = (buffer) => {
+      if (!buffer || bed.closed) return;
+      const source = loopSource(audio, buffer, when);
+      const filter = audio.createBiquadFilter();
+      filter.type = "highpass";
+      filter.frequency.value = 180;
+      filter.Q.value = 0.7;
+      source.connect(filter);
+      filter.connect(into);
+      bed.nodes.push(source);
+    };
+    const cached = rainCache.get(name);
+    if (cached) {
+      start(cached);
+      return;
+    }
+    loadRain(name).then(start);
+  }
+
+  /* Noise and harmonics are synthesized here. Rain is a public-domain recording. */
+  function startBed(audio, when, kind, duration) {
+    const name = bedKind(kind);
+    const noise = name === "white" || name === "pink" || name === "brown";
+    const harmonic = name === "drone" || name === "bowl" || name === "pad";
+    if (!noise && !harmonic && !RAIN[name]) return null;
     const level = Number(read("sit.bedVolume"));
     const gainValue = Number.isFinite(level) ? Math.max(0, Math.min(1, level)) : 0.35;
     const amp = audio.createGain();
     const nodes = [];
-    amp.gain.setValueAtTime(0.0001, when);
-    amp.gain.exponentialRampToValueAtTime(Math.max(0.0001, gainValue), when + 1.5);
+    const bed = { amp: amp, nodes: nodes, closed: false };
+    shapeBed(amp, when, Number.isFinite(duration) && duration > 0 ? duration : 15 * 60, gainValue);
     amp.connect(audio.destination);
-    if (kind === "drone" || kind === "bowl" || kind === "pad") {
-      const tones = kind === "bowl" ? [174, 261] : kind === "pad" ? [196, 246, 293] : [196, 294];
-      tones.forEach((hz, index) => {
+    if (RAIN[name]) {
+      const trim = audio.createGain();
+      trim.gain.value = 0.42;
+      trim.connect(amp);
+      attachRain(audio, bed, trim, name, when);
+      return bed;
+    }
+    const filter = audio.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.Q.value = 0.6;
+    if (name === "brown") nodes.push(moveFilter(audio, when, filter, 500, 70, 0.05));
+    else if (name === "pink") nodes.push(moveFilter(audio, when, filter, 1400, 180, 0.06));
+    else if (name === "white") nodes.push(moveFilter(audio, when, filter, 4000, 360, 0.07));
+    else if (name === "bowl") nodes.push(moveFilter(audio, when, filter, 1400, 160, 0.06));
+    else if (name === "pad") nodes.push(moveFilter(audio, when, filter, 900, 110, 0.07));
+    else nodes.push(moveFilter(audio, when, filter, 480, 40, 0.05));
+    filter.connect(amp);
+    if (harmonic) {
+      const voices = name === "bowl"
+        ? [[174, 0.07], [287.4, 0.04], [349.2, 0.03], [521.5, 0.02]]
+        : name === "pad"
+          ? [[196, 0.05], [246.94, 0.045], [293.66, 0.04], [392, 0.03]]
+          : [[110, 0.09], [164.7, 0.06]];
+      voices.forEach((voice) => {
         const osc = audio.createOscillator();
-        const voice = audio.createGain();
-        osc.type = kind === "pad" ? "triangle" : "sine";
-        osc.frequency.value = hz;
-        voice.gain.value = kind === "pad" ? 0.08 : 0.12 / (index + 1);
-        osc.connect(voice);
-        voice.connect(amp);
+        const gain = audio.createGain();
+        osc.type = name === "pad" ? "triangle" : "sine";
+        osc.frequency.value = voice[0];
+        gain.gain.value = voice[1];
+        osc.connect(gain);
+        gain.connect(filter);
         osc.start(when);
         nodes.push(osc);
       });
-      return { amp: amp, nodes: nodes };
+      return bed;
     }
-    const source = audio.createBufferSource();
-    source.buffer = noiseBuffer(audio, kind === "rain" ? "rain" : kind);
-    source.loop = true;
-    const filter = audio.createBiquadFilter();
-    filter.type = kind === "rain" ? "bandpass" : "lowpass";
-    filter.frequency.value = kind === "brown" ? 400 : kind === "rain" ? 1800 : 1200;
+    const source = loopSource(audio, noiseBuffer(audio, name), when);
     source.connect(filter);
-    filter.connect(amp);
-    source.start(when);
     nodes.push(source);
-    return { amp: amp, nodes: nodes };
+    return bed;
   }
 
-  function stopBed(bed, audio) {
-    const amp = bed && bed.amp ? bed.amp : bed;
-    if (!amp || !audio || !amp.gain) return;
+  function stopBed(bed, audio, fadeSeconds) {
+    if (!bed || !audio || !bed.amp || !bed.amp.gain) return;
+    bed.closed = true;
     const now = audio.currentTime;
+    const fade = fadeSeconds === 0 ? 0 : (Number(fadeSeconds) > 0 ? Number(fadeSeconds) : 1.5);
+    if (fade === 0) {
+      stopNodes(bed.nodes, audio);
+      try {
+        bed.amp.gain.cancelScheduledValues(now);
+        bed.amp.gain.setValueAtTime(0.0001, now);
+      } catch (e) {}
+      return;
+    }
     try {
-      amp.gain.cancelScheduledValues(now);
-      amp.gain.setValueAtTime(Math.max(0.0001, amp.gain.value), now);
-      amp.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+      bed.amp.gain.cancelScheduledValues(now);
+      bed.amp.gain.setValueAtTime(Math.max(0.0001, bed.amp.gain.value || 0.0001), now);
+      bed.amp.gain.exponentialRampToValueAtTime(0.0001, now + fade);
     } catch (e) {}
+    (bed.nodes || []).forEach((node) => {
+      try { node.stop(now + fade + 0.05); } catch (e) {}
+    });
+  }
+
+  /* The change is a gesture, so the context is resumed before the rain file is fetched. */
+  function prepareBed(kind) {
+    const name = bedKind(kind);
+    if (!RAIN[name] || !root) return;
+    unlock();
+    const pending = loadRain(name);
+    if (pending && pending.catch) pending.catch(() => {});
   }
 
   function stopNodes(nodes, audio) {
@@ -211,8 +384,7 @@
     events.forEach((event) => {
       ring(audio, startAudio + event.at, event.tone, event.strikes, event.gain * volume()).forEach((node) => nodes.push(node));
     });
-    const bed = timed ? startBed(audio, startAudio, read("sit.background")) : null;
-    if (bed) bed.nodes.forEach((node) => nodes.push(node));
+    const bed = timed ? startBed(audio, startAudio, read("sit.background"), plan.duration) : null;
     const marker = timed ? armEnd(audio, startAudio + closeAt(events, plan.duration)) : null;
     session = { plan: plan, timed: !!timed, startWall: Date.now(), startAudio: startAudio, bed: bed, nodes: nodes, marker: marker };
   }
@@ -254,7 +426,7 @@
     const plan = session.plan;
     const startWall = session.startWall;
     stopNodes(session.nodes, ctx);
-    stopBed(session.bed, ctx);
+    stopBed(session.bed, ctx, 0);
     if (session.marker) {
       session.marker.onended = null;
       try { session.marker.stop(ctx.currentTime); } catch (e) {}
@@ -278,8 +450,7 @@
         strike(audio, startAudio + (at - wall), event.tone, event.gain * volume()).forEach((node) => nodes.push(node));
       });
     });
-    const bed = startBed(audio, startAudio, read("sit.background"));
-    if (bed) bed.nodes.forEach((node) => nodes.push(node));
+    const bed = startBed(audio, startAudio, read("sit.background"), Math.max(0.2, plan.duration - wall));
     const marker = armEnd(audio, startAudio + Math.max(0, closeAt(plan.events, plan.duration) - wall));
     session = { plan: plan, timed: true, startWall: startWall, startAudio: startAudio - wall, bed: bed, nodes: nodes, marker: marker };
   }
@@ -294,7 +465,21 @@
     root.addEventListener("pageshow", onWake);
   }
 
-  const api = { beginSit: beginSit, endSit: endSit, unlock: unlock, preview: preview, PARTIALS: PARTIALS, strikeGap: strikeGap, onsets: onsets };
+  const api = {
+    beginSit: beginSit,
+    endSit: endSit,
+    unlock: unlock,
+    preview: preview,
+    prepareBed: prepareBed,
+    PARTIALS: PARTIALS,
+    strikeGap: strikeGap,
+    onsets: onsets,
+    bedKind: bedKind,
+    bedEnvelope: bedEnvelope,
+    seamSamples: seamSamples,
+    shapeBed: shapeBed,
+    RAIN: RAIN,
+  };
 
   function paintBell() {
     const sit = root.YantraSit;
@@ -322,7 +507,8 @@
     minutesInput.value = String(length == null ? sit.DEFAULT_MINUTES : length);
     note.textContent = "";
     midway.value = settings.get("sit.midway") || "none";
-    bed.value = settings.get("sit.background") || "silent";
+    const storedBed = settings.get("sit.background") || "silent";
+    bed.value = storedBed === "rain" ? "rain-steady" : storedBed;
     const bedVol = Number(settings.get("sit.bedVolume"));
     bedVolume.value = String(Math.round((Number.isFinite(bedVol) ? bedVol : 0.35) * 100));
     const previewRow = root.document.getElementById("bell-preview");
@@ -452,7 +638,10 @@
       settings.set("sit.midway", event.target.value);
       paintBell();
     });
-    root.document.getElementById("sit-bed").addEventListener("change", (event) => settings.set("sit.background", event.target.value));
+    root.document.getElementById("sit-bed").addEventListener("change", (event) => {
+      settings.set("sit.background", event.target.value);
+      prepareBed(event.target.value);
+    });
     root.document.getElementById("sit-bed-volume").addEventListener("input", (event) => {
       settings.set("sit.bedVolume", Number(event.target.value) / 100);
     });
@@ -460,7 +649,7 @@
       const length = root.YantraSit.minutes(event.target.value);
       const note = root.document.getElementById("sit-minutes-note");
       if (length == null) {
-        note.textContent = "Use a whole number of minutes, from 1 to 90.";
+        note.textContent = "Use a whole number of minutes, from 1 to " + root.YantraSit.MAX_MINUTES + ".";
         event.target.value = String(settings.get("sit.minutes") || 15);
         return;
       }

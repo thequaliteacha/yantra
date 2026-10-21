@@ -74,7 +74,7 @@ FakeAudio.prototype.createBufferSource = function () {
   return { buffer: null, connect() {}, start() {}, stop() {} };
 };
 FakeAudio.prototype.createBiquadFilter = function () {
-  return { frequency: { value: 0 }, connect() {} };
+  return { type: "lowpass", frequency: { value: 0 }, Q: { value: 0 }, connect() {} };
 };
 
 function fundamentals(audio) {
@@ -142,5 +142,71 @@ assert.strictEqual(Math.min.apply(null, FakeAudio.latest.starts.map((hit) => hit
 FakeAudio.latest.starts = [];
 live.preview("small", 1);
 assert.strictEqual(Math.min.apply(null, FakeAudio.latest.starts.map((hit) => hit.hz)), 880);
+
+assert.strictEqual(B.bedKind("rain"), "rain-steady");
+assert.strictEqual(B.bedKind("rain-light"), "rain-light");
+assert.strictEqual(B.bedEnvelope(900).fade, 3);
+assert.strictEqual(B.bedEnvelope(60).fade, 3);
+assert.strictEqual(B.bedEnvelope(60).end, 60);
+const ramp = [];
+B.shapeBed({
+  gain: {
+    cancelScheduledValues(t) { ramp.push(["cancel", t]); },
+    setValueAtTime(v, t) { ramp.push(["set", v, t]); },
+    exponentialRampToValueAtTime(v, t) { ramp.push(["ramp", v, t]); },
+  },
+}, 10, 900, 0.35);
+assert.deepStrictEqual(ramp, [
+  ["cancel", 10],
+  ["set", 0.0001, 10],
+  ["ramp", 0.35, 13],
+  ["set", 0.35, 907],
+  ["ramp", 0.0001, 910],
+]);
+const seamData = new Float32Array(24);
+for (let i = 0; i < seamData.length; i += 1) seamData[i] = i;
+const seamed = B.seamSamples(seamData, 8);
+assert.strictEqual(seamed.length, 16);
+assert.strictEqual(seamed[0], 16);
+assert.strictEqual(seamed[15], 15);
+assert.deepStrictEqual(Object.keys(B.RAIN).sort(), ["rain-light", "rain-roof", "rain-steady", "rain-thunder"]);
+Object.keys(B.RAIN).forEach((name) => assert.strictEqual(B.RAIN[name], "/ambient/" + name + ".mp3"));
+
+store["sit.background"] = "drone";
+store["sit.bedVolume"] = 0.35;
+FakeAudio.latest.starts = [];
+live.beginSit(true);
+const droneHz = FakeAudio.latest.starts.map((hit) => hit.hz);
+assert.ok(droneHz.some((hz) => hz === 110), "the drone includes the root");
+assert.ok(droneHz.some((hz) => hz === 164.7), "the drone includes the fifth");
+
+store["sit.background"] = "white";
+FakeAudio.prototype.createBuffer = function (channels, length, rate) {
+  const data = new Float32Array(length || 1);
+  return {
+    sampleRate: rate || 44100,
+    length: data.length,
+    duration: data.length / (rate || 44100),
+    getChannelData() { return data; },
+  };
+};
+const looped = [];
+FakeAudio.prototype.createBufferSource = function () {
+  const node = { buffer: null, loop: false, loopStart: 0, loopEnd: 0, connect() {}, start() { if (node.loop) looped.push(node); }, stop() {} };
+  return node;
+};
+FakeAudio.prototype.createBiquadFilter = function () {
+  return { type: "lowpass", frequency: { value: 0 }, Q: { value: 0.7 }, connect() {} };
+};
+FakeAudio.latest.starts = [];
+live.beginSit(true);
+assert.ok(looped.length >= 1, "white noise loops");
+assert.ok(looped.every((node) => node.loopStart === 0 && node.loopEnd > 0));
+
+store["sit.background"] = "silent";
+live.beginSit(false);
+assert.ok(bell.includes("decodeAudioData"));
+assert.ok(bell.includes("bed.closed"));
+assert.ok(bell.includes("prepareBed(event.target.value)"));
 
 console.log("bell.test.js ok");

@@ -15,7 +15,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   // Recordings stream straight from the network: they are large and arrive in ranges.
   if (request.method !== "GET" || url.origin !== self.location.origin || url.pathname.includes("/audio/") || url.pathname.startsWith("/push") || url.pathname === "/logout") return;
-  if (url.pathname === "/access" || url.pathname.endsWith("/quotes.json") || url.pathname.endsWith("/talks.json") || url.pathname.startsWith("/talks")) return;
+  if (url.pathname === "/access" || url.pathname.endsWith("/quotes.json") || url.pathname.endsWith("/talks.json") || url.pathname.startsWith("/talks") || url.pathname.startsWith("/ambient")) return;
   event.respondWith(
     fetch(request)
       .then((response) => {

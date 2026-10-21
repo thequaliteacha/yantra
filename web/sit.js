@@ -1,15 +1,16 @@
 /* Timed-sit choices. No audio here: just the minutes, the bell times, and the tone at each one. */
 (function (root) {
-  const PRESETS = [5, 10, 15, 20, 30, 45, 60, 90];
+  const PRESETS = [5, 10, 15, 20, 30, 45, 60];
   const DEFAULT_MINUTES = 15;
+  const MAX_MINUTES = 240;
   const TONES = ["small", "medium", "deep"];
   const MIDWAY = ["none", "half", "two"];
-  const BEDS = ["silent", "white", "pink", "brown", "drone", "bowl", "pad", "rain"];
+  const BEDS = ["silent", "white", "pink", "brown", "rain-light", "rain-steady", "rain-roof", "rain-thunder", "drone", "bowl", "pad"];
 
   function minutes(value) {
     if (typeof value === "string" && value.trim() === "") return null;
     const number = typeof value === "number" ? value : Number(value);
-    if (!Number.isInteger(number) || number < 1 || number > 90) return null;
+    if (!Number.isInteger(number) || number < 1 || number > MAX_MINUTES) return null;
     return number;
   }
 
@@ -105,6 +106,7 @@
   const api = {
     PRESETS: PRESETS,
     DEFAULT_MINUTES: DEFAULT_MINUTES,
+    MAX_MINUTES: MAX_MINUTES,
     TONES: TONES,
     BEDS: BEDS,
     minutes: minutes,

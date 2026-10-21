@@ -49,7 +49,7 @@ const env = {
   AUDIO: {
     async get(key, options) {
       gets.push(key);
-      if (["talks/balance.mp3", "talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3", "samurai/01.mp3", "india-dream/03.mp3", "awake-in-anza-borrego/02.mp3"].includes(key)) {
+      if (["talks/balance.mp3", "talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3", "samurai/01.mp3", "india-dream/03.mp3", "awake-in-anza-borrego/02.mp3", "ambient/rain-light.mp3", "ambient/rain-thunder.mp3"].includes(key)) {
         return audioObject(options.range ? { headers: options.range } : { headers: new Headers() });
       }
       return null;
@@ -68,6 +68,8 @@ assert.strictEqual(ramaDenied("sangha", "/web/quotes.json"), true);
 assert.strictEqual(ramaDenied("sangha", "/talks/balance.mp3"), true);
 assert.strictEqual(ramaDenied("zazen", "/web/quotes.json"), false);
 assert.strictEqual(ramaDenied("zazen", "/talks/balance.mp3"), false);
+assert.strictEqual(ramaDenied("sangha", "/ambient/rain-light.mp3"), false);
+assert.strictEqual(ramaDenied("zazen", "/ambient/rain-light.mp3"), false);
 
 const anon = await route(new Request("https://yantramedi.app/web/quotes.json"), env);
 assert.strictEqual(anon.status, 401);
@@ -163,6 +165,25 @@ assert.strictEqual(hosted.status, 206);
 assert.strictEqual(hosted.headers.get("content-type"), "audio/mpeg");
 assert.strictEqual(hosted.headers.get("content-range"), "bytes 0-3/11");
 assert.ok(gets.includes("samurai/01.mp3"));
+
+gets.length = 0;
+const sanghaRain = await route(withCookie("https://yantramedi.app/ambient/rain-light.mp3", sangha), env);
+assert.strictEqual(sanghaRain.status, 200);
+assert.strictEqual(sanghaRain.headers.get("content-type"), "audio/mpeg");
+assert.ok(gets.includes("ambient/rain-light.mp3"));
+const zazenRain = await route(withCookie("https://yantramedi.app/ambient/rain-thunder.mp3", zazen), env);
+assert.strictEqual(zazenRain.status, 200);
+const rainPost = await route(new Request("https://yantramedi.app/ambient/rain-light.mp3", {
+  method: "POST",
+  headers: { cookie: "yantra=" + sangha },
+}), env);
+assert.strictEqual(rainPost.status, 405);
+gets.length = 0;
+const slipped = await route(new Request("https://yantramedi.app/ambient/%2e%2e%2Ftalks%2Fbalance.mp3", { headers: { cookie: "yantra=" + sangha } }), env);
+assert.strictEqual(slipped.status, 404);
+assert.deepStrictEqual(gets, []);
+const oddName = await route(withCookie("https://yantramedi.app/ambient/Rain.mp3", sangha), env);
+assert.strictEqual(oddName.status, 404);
 
 const access = await (await route(withCookie("https://yantramedi.app/access", sangha), env)).json();
 assert.strictEqual(access.level, "sangha");

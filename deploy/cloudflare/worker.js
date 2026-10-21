@@ -16,6 +16,7 @@ import { sanitizeSchedule } from "../../web/schedule.js";
  */
 const PREFIX = "/web/audio/";
 const TALK_PREFIX = "/talks/";
+const AMBIENT_PREFIX = "/ambient/";
 // The Sangha word opens only Vayu. The Zazen word opens every circle:
 // Vayu, Zazen, the lineage, and Lumikara.
 const OPEN_CIRCLE = "vayu";
@@ -117,6 +118,7 @@ export async function route(request, env) {
     if (url.pathname === "/discs.json") return shelf(request, env, level);
     if (url.pathname === "/web/tracks.json" || url.pathname === "/web/audio.json") return trackLinks(request, env, level);
     if (url.pathname === "/web/quotes.json" || url.pathname === "/web/talks.json") return quotes(request, env);
+    if (url.pathname.startsWith(AMBIENT_PREFIX)) return ambient(request, env, url);
     if (url.pathname.startsWith(TALK_PREFIX)) return talk(request, env, url);
     if (url.pathname.startsWith(PREFIX)) return recording(request, env, url, level);
     // The web loader fetches ../index.html. Assets would redirect that to "/", which
@@ -328,6 +330,15 @@ async function recording(request, env, url, level) {
     });
   }
   const object = await env.AUDIO.get(key, { range: request.headers, onlyIf: request.headers });
+  if (object === null) return new Response("Not found", { status: 404 });
+  return streamObject(request, object);
+}
+
+async function ambient(request, env, url) {
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
+  const name = decodeURIComponent(url.pathname.slice(AMBIENT_PREFIX.length));
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*\.mp3$/.test(name)) return new Response("Not found", { status: 404 });
+  const object = await env.AUDIO.get("ambient/" + name, { range: request.headers, onlyIf: request.headers });
   if (object === null) return new Response("Not found", { status: 404 });
   return streamObject(request, object);
 }

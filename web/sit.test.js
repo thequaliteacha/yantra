@@ -3,12 +3,16 @@ const assert = require("assert");
 const S = require("./sit.js");
 
 assert.strictEqual(S.DEFAULT_MINUTES, 15);
-assert.deepStrictEqual(S.PRESETS, [5, 10, 15, 20, 30, 45, 60, 90]);
-assert.ok(S.PRESETS.every((n) => n <= 90));
+assert.deepStrictEqual(S.PRESETS, [5, 10, 15, 20, 30, 45, 60]);
+assert.ok(S.PRESETS.every((n) => n <= 60));
+assert.strictEqual(S.MAX_MINUTES, 240);
 assert.strictEqual(S.minutes(15), 15);
+assert.strictEqual(S.minutes(60), 60);
 assert.strictEqual(S.minutes(90), 90);
+assert.strictEqual(S.minutes(240), 240);
 assert.strictEqual(S.minutes(1), 1);
-assert.strictEqual(S.minutes(91), null);
+assert.strictEqual(S.minutes(91), 91);
+assert.strictEqual(S.minutes(241), null);
 assert.strictEqual(S.minutes(0), null);
 assert.strictEqual(S.minutes(15.5), null);
 assert.strictEqual(S.minutes("20"), 20);
@@ -61,7 +65,7 @@ assert.deepStrictEqual(halfwayTone.events.map((event) => [event.position, event.
 ]);
 
 const fromStore = S.fromSettings((key) => ({
-  "sit.minutes": 91,
+  "sit.minutes": 241,
   "sit.midway": "half",
   "bell.on": true,
   "bell.ending": true,
@@ -70,7 +74,7 @@ const fromStore = S.fromSettings((key) => ({
   "bell.halfTone": "medium",
   "bell.endTone": "deep",
 }[key]));
-assert.strictEqual(fromStore.minutes, 15, "91 falls back to the default");
+assert.strictEqual(fromStore.minutes, 15, "241 falls back to the default");
 assert.strictEqual(fromStore.events[1].tone, "medium");
 assert.strictEqual(fromStore.events[2].tone, "deep");
 assert.strictEqual(fromStore.events[0].strikes, 1);
@@ -149,6 +153,15 @@ assert.ok(page.includes("Quadruple bell"));
 assert.ok(page.includes("Single bell"));
 assert.ok(page.includes("Halfway (one bell at 50%)"));
 assert.ok(page.includes("Two midway bells (at 25% and 75%)"));
+assert.ok(page.includes('max="240"'));
+assert.ok(page.includes("Light rain"));
+assert.ok(page.includes("Steady rain"));
+assert.ok(page.includes("Rain on a roof"));
+assert.ok(page.includes("Distant thunder"));
+assert.deepStrictEqual(S.BEDS, ["silent", "white", "pink", "brown", "rain-light", "rain-steady", "rain-roof", "rain-thunder", "drone", "bowl", "pad"]);
+const bell = require("fs").readFileSync(require("path").join(__dirname, "bell.js"), "utf8");
+assert.ok(bell.includes("from 1 to \" + root.YantraSit.MAX_MINUTES"));
+assert.strictEqual(bell.includes("1 to 90"), false);
 assert.ok(page.includes("Use same tone for all"));
 assert.ok(page.includes('id="bell-positions"'));
 assert.ok(page.includes('id="bell-same"'));

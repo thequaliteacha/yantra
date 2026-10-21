@@ -6,5 +6,5 @@ repo=$(cd "$here/../.." && pwd)
 rm -rf "$here/dist"
 mkdir -p "$here/dist/web"
 cp "$repo/index.html" "$repo/discs.json" "$here/dist/"
-rsync -a --exclude audio-stage --exclude audio --exclude __pycache__ --exclude '*.py' "$repo/web/" "$here/dist/web/"
+rsync -a --exclude audio-stage --exclude ambient-stage --exclude audio --exclude __pycache__ --exclude '*.py' "$repo/web/" "$here/dist/web/"
 echo "built $(find "$here/dist" -type f | wc -l) files into dist/"
