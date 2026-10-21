@@ -79,7 +79,9 @@ assert.strictEqual(forSangha.list.children.length, 0);
 
 // The page carries the section, loads talks.js, and checks the level itself.
 assert.ok(page.includes('id="talks-list" hidden'));
-assert.ok(page.includes('id="open-talks" data-room="talks" hidden'));
+assert.ok(page.includes('<section class="account-block" id="account-mindful" hidden>'));
+assert.ok(page.includes('<h3>Mindfulness material</h3>'));
+assert.ok(page.includes('id="open-talks" data-room="talks"'));
 assert.ok(!/Rama|Frederick Lenz/.test(page), "the shared page carries no Rama text for the Sangha word");
 assert.ok(page.includes('window.YANTRA_LEVEL !== "zazen"'));
 assert.ok(loader.includes('src="talks.js"'));

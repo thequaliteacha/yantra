@@ -102,7 +102,8 @@ The home screen holds only the two sits and the week: seven circles whose left
 half fills with the sunrise sit and right half with the sunset sit, and one line
 toward the next perfect day. Everything else is under *You*, the mark at the top
 right (titled with your name once you give one), which is this device only:
-Dharma Talks for the Zazen word, albums and forms, and How to sit come first,
+Mindfulness material (the Dharma Talks, for the Zazen word only) comes first, then
+albums and forms and How to sit,
 then practice (the week, total time, sits, perfect
 days, export, erase), the altar, reminders, name, Spotify, privacy, and Log out. *Before you
 sit*, on the song-count screen, holds the album, Mix It Up, and the bell (on or
@@ -123,7 +124,8 @@ power, and awareness words lean the colour toward that chakra; stillness hushes
 the figure; enlightenment lets it bloom. Concepts (the sun, a mountain, the
 ocean, a lotus, a path, a door, the wheel of rebirth, and others in
 `web/sketches.js`) draw themselves as small line sketches beside the figure. The
-phrase being spoken can show below, each word brightening as it is said (Words
+phrase being spoken can show below. Closing the visualizer pauses the talk, as
+ending a sit stops the music; it picks up there next time. The, each word brightening as it is said (Words
 on or off). The timed words are made locally with
 `tools/transcribe_talks.py` (faster-whisper) and kept in the private bucket
 next to each talk as `talks/<name>.json`, served only to the Zazen word.

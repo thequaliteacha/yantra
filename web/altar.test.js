@@ -28,6 +28,7 @@ assert.ok(page.includes('id="altar" aria-hidden="true"'));
 assert.ok(page.includes('id="altar-file" type="file" accept="image/*" hidden'));
 // The places come first on the You page, then practice, then the altar.
 const at = (mark) => page.indexOf(mark);
+assert.ok(at('id="account-mindful"') < at('id="account-places"'));
 assert.ok(at('id="account-places"') < at('id="account-practice-block"'));
 assert.ok(at('id="account-practice-block"') < at('id="account-altar"'));
 assert.ok(page.includes('<h2 id="account-title">You</h2>'));
