@@ -83,8 +83,11 @@ assert.ok(!sanghaBody.includes("ramameditationsociety.org"));
 const zazenQuotes = await route(withCookie("https://yantramedi.app/web/quotes.json", zazen), env);
 assert.strictEqual(zazenQuotes.status, 200);
 assert.strictEqual(zazenQuotes.headers.get("cache-control"), "private, no-store");
-const quoteRows = await zazenQuotes.json();
+const quoteFile = await zazenQuotes.json();
+const quoteRows = Array.isArray(quoteFile) ? quoteFile : quoteFile.quotes;
+assert.ok(Array.isArray(quoteRows));
 assert.ok(quoteRows.some((row) => row.text.includes("You decide to be happy") && row.href.includes("/free-resource/balance/")));
+assert.ok(quoteFile.albums && quoteFile.albums["canyons-of-light"]);
 
 gets.length = 0;
 const sanghaTalk = await route(withCookie("https://yantramedi.app/talks/balance.mp3", sangha), env);

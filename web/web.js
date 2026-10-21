@@ -31,6 +31,7 @@
     const level = (access && access.level) || "";
     window.YANTRA_LEVEL = level;
     window.yantraQuotes = [];
+    window.yantraQuoteFile = null;
     if (level === "sangha") {
       discs.circles = (discs.circles || []).filter((circle) => circle.id === "vayu");
       discs.discs = discs.discs.filter((disc) => disc.circle === "vayu");
@@ -47,8 +48,14 @@
     if (level === "zazen") {
       const response = await realFetch("quotes.json", { cache: "no-store" }).catch(() => null);
       if (response && response.ok) {
-        const rows = await response.json().catch(() => []);
-        window.yantraQuotes = Array.isArray(rows) ? rows : [];
+        const data = await response.json().catch(() => null);
+        if (Array.isArray(data)) {
+          window.yantraQuoteFile = { quotes: data };
+          window.yantraQuotes = data;
+        } else if (data && Array.isArray(data.quotes)) {
+          window.yantraQuoteFile = data;
+          window.yantraQuotes = data.quotes;
+        }
       }
       // Rama talks, for the Zazen word only (the Worker refuses talks.json to the Sangha word).
       const talks = await realFetch("talks.json", { cache: "no-store" }).catch(() => null);
@@ -1032,6 +1039,12 @@
     });
   }
 
+  /* The completion screen reads this after liveStop clears the sit. */
+  function noteSit() {
+    const items = Array.isArray(live.items) ? live.items : [];
+    window.yantraLastSit = items.map((item) => ({ discId: item.discId, n: item.n }));
+  }
+
   function complete() {
     dispatchEvent(new Event("yantra:complete"));
   }
@@ -1148,6 +1161,7 @@
         services[live.service].pause();
         NOW.status = "Stopped";
         const finished = live.lastHeard;
+        if (finished) noteSit();
         liveStop(false);
         if (finished) complete();
       }
@@ -1168,6 +1182,7 @@
         if (live.service !== service) return;
         services[service].pause();
         NOW.status = "Stopped";
+        noteSit();
         liveStop(false);
         complete();
       }, Math.max(0, (remaining - 0.3) * 1000));
@@ -1175,6 +1190,7 @@
     // The last song has run out and Spotify stopped on it: the sit is complete.
     if (last && live.lastHeard && !state.playing && (state.position < 1 || state.position >= state.length - 1.5)) {
       NOW.status = "Stopped";
+      noteSit();
       liveStop(false);
       complete();
       return;

@@ -1,50 +1,242 @@
-[
-  {
-    "text": "It’s a decision that you make every day and that you renew, that you strengthen. You decide to be happy.",
-    "talk": "Balance",
-    "by": "Rama",
-    "href": "https://www.ramameditationsociety.org/free-resource/balance/"
+{
+  "guide": "Edit tags here. Put a theme on a quote only when the quote itself says it. Copy a quote exactly. Do not paraphrase. Album and track themes follow the title: the word itself, or a place the title names, such as Anza Borrego, Joshua Tree, or Shasta.",
+  "themes": [
+    "light",
+    "power",
+    "mountains",
+    "ocean",
+    "zen",
+    "tantric",
+    "enlightenment",
+    "desert",
+    "canyons",
+    "himalayas"
+  ],
+  "albums": {
+    "mandala-of-light": [
+      "light"
+    ],
+    "mandala-of-light-lumikara": [
+      "light"
+    ],
+    "light-saber": [
+      "light"
+    ],
+    "the-city-of-lights": [
+      "light"
+    ],
+    "tantra": [
+      "tantric"
+    ],
+    "canyons-of-light": [
+      "canyons",
+      "light"
+    ],
+    "enlightenment": [
+      "enlightenment"
+    ],
+    "great-teachers-of-enlightenment": [
+      "enlightenment"
+    ],
+    "diving-into-enlightenment": [
+      "enlightenment",
+      "ocean"
+    ],
+    "surfing-the-himalayas": [
+      "himalayas"
+    ],
+    "oceans-of-light": [
+      "ocean",
+      "light"
+    ],
+    "mystic-scuba": [
+      "ocean"
+    ],
+    "cayman-blue": [
+      "ocean"
+    ],
+    "big-island": [
+      "ocean"
+    ],
+    "techno-zen-master": [
+      "zen"
+    ],
+    "anza-borrego": [
+      "desert"
+    ],
+    "awake-in-anza-borrego": [
+      "desert"
+    ],
+    "night-vortex-in-shasta": [
+      "mountains"
+    ]
   },
-  {
-    "text": "And the shortcut to happiness, to spiritual balance, is to meditate.",
-    "talk": "Balance",
-    "by": "Rama",
-    "href": "https://www.ramameditationsociety.org/free-resource/balance/"
+  "tracks": {
+    "enlightenment": {
+      "3": [
+        "ocean"
+      ],
+      "5": [
+        "desert"
+      ],
+      "6": [
+        "mountains"
+      ],
+      "14": [
+        "mountains"
+      ]
+    },
+    "canyons-of-light": {
+      "10": [
+        "mountains"
+      ],
+      "11": [
+        "desert"
+      ],
+      "12": [
+        "desert"
+      ],
+      "14": [
+        "desert"
+      ]
+    },
+    "tantra": {
+      "9": [
+        "light"
+      ],
+      "15": [
+        "tantric"
+      ]
+    },
+    "breathless": {
+      "4": [
+        "zen"
+      ],
+      "14": [
+        "enlightenment"
+      ]
+    },
+    "samadhi": {
+      "6": [
+        "ocean"
+      ],
+      "7": [
+        "light"
+      ],
+      "12": [
+        "ocean"
+      ]
+    },
+    "techno-zen-master": {
+      "6": [
+        "mountains"
+      ]
+    },
+    "surfing-the-himalayas": {
+      "4": [
+        "desert"
+      ],
+      "5": [
+        "desert"
+      ],
+      "7": [
+        "canyons"
+      ],
+      "9": [
+        "light"
+      ]
+    },
+    "anza-borrego": {
+      "7": [
+        "desert"
+      ]
+    },
+    "big-island": {
+      "1": [
+        "mountains"
+      ],
+      "10": [
+        "ocean"
+      ]
+    },
+    "mystic-scuba": {
+      "6": [
+        "ocean"
+      ],
+      "7": [
+        "enlightenment"
+      ]
+    },
+    "diving-into-enlightenment": {
+      "13": [
+        "ocean"
+      ]
+    }
   },
-  {
-    "text": "Each time you meditate, you take the journey. Each time, you become more conscious, you love more, you feel more, you increase your depth.",
-    "talk": "Enlightenment",
-    "by": "Rama",
-    "href": "https://www.ramameditationsociety.org/free-resource/enlightenment-cycle-talk/"
-  },
-  {
-    "text": "Meditation is to stop thought, to silence the mind, to move the ego aside and to simply be still, open, clear, bright and fully conscious.",
-    "talk": "Enlightenment",
-    "by": "Rama",
-    "href": "https://www.ramameditationsociety.org/free-resource/enlightenment-cycle-talk/"
-  },
-  {
-    "text": "What makes us happy is contact with Light. As you have experiences with the inner light, which are gained through the practice of meditation and Buddhism, it immediately delights you.",
-    "talk": "Personal Happiness",
-    "by": "Rama",
-    "href": "https://www.ramameditationsociety.org/free-resource/personal-happiness/"
-  },
-  {
-    "text": "But the real miracle, obviously, is the transformation of consciousness from limitation and pain to enlightenment and ecstasy.",
-    "talk": "Miracles",
-    "by": "Rama",
-    "href": "https://www.ramameditationsociety.org/free-resource/miracles/"
-  },
-  {
-    "text": "In intermediate meditation, you’re touching light more deeply than in introductory meditation.",
-    "talk": "Intermediate Meditation",
-    "by": "Rama",
-    "href": "https://www.ramameditationsociety.org/free-resource/intermediate-meditation/"
-  },
-  {
-    "text": "As an enlightened teacher of Buddhism, I’d like to welcome you to the pathway to enlightenment.",
-    "talk": "The Enlightenment Cycle",
-    "by": "Rama",
-    "href": "https://www.ramameditationsociety.org/free-resource/enlightenment-cycle/"
-  }
-]
+  "quotes": [
+    {
+      "text": "It’s a decision that you make every day and that you renew, that you strengthen. You decide to be happy.",
+      "talk": "Balance",
+      "by": "Rama",
+      "href": "https://www.ramameditationsociety.org/free-resource/balance/",
+      "themes": []
+    },
+    {
+      "text": "And the shortcut to happiness, to spiritual balance, is to meditate.",
+      "talk": "Balance",
+      "by": "Rama",
+      "href": "https://www.ramameditationsociety.org/free-resource/balance/",
+      "themes": []
+    },
+    {
+      "text": "Each time you meditate, you take the journey. Each time, you become more conscious, you love more, you feel more, you increase your depth.",
+      "talk": "Enlightenment",
+      "by": "Rama",
+      "href": "https://www.ramameditationsociety.org/free-resource/enlightenment-cycle-talk/",
+      "themes": []
+    },
+    {
+      "text": "Meditation is to stop thought, to silence the mind, to move the ego aside and to simply be still, open, clear, bright and fully conscious.",
+      "talk": "Enlightenment",
+      "by": "Rama",
+      "href": "https://www.ramameditationsociety.org/free-resource/enlightenment-cycle-talk/",
+      "themes": []
+    },
+    {
+      "text": "What makes us happy is contact with Light. As you have experiences with the inner light, which are gained through the practice of meditation and Buddhism, it immediately delights you.",
+      "talk": "Personal Happiness",
+      "by": "Rama",
+      "href": "https://www.ramameditationsociety.org/free-resource/personal-happiness/",
+      "themes": [
+        "light"
+      ]
+    },
+    {
+      "text": "But the real miracle, obviously, is the transformation of consciousness from limitation and pain to enlightenment and ecstasy.",
+      "talk": "Miracles",
+      "by": "Rama",
+      "href": "https://www.ramameditationsociety.org/free-resource/miracles/",
+      "themes": [
+        "enlightenment"
+      ]
+    },
+    {
+      "text": "In intermediate meditation, you’re touching light more deeply than in introductory meditation.",
+      "talk": "Intermediate Meditation",
+      "by": "Rama",
+      "href": "https://www.ramameditationsociety.org/free-resource/intermediate-meditation/",
+      "themes": [
+        "light"
+      ]
+    },
+    {
+      "text": "As an enlightened teacher of Buddhism, I’d like to welcome you to the pathway to enlightenment.",
+      "talk": "The Enlightenment Cycle",
+      "by": "Rama",
+      "href": "https://www.ramameditationsociety.org/free-resource/enlightenment-cycle/",
+      "themes": [
+        "enlightenment"
+      ]
+    }
+  ]
+}

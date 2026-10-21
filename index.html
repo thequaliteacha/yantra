@@ -223,6 +223,13 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #done-words p { text-align: center; font-style: italic; color: #f3e6c8; }
   #done-words cite { display: block; margin-top: 0.6rem; font-style: normal; font-size: 0.9rem; color: rgba(243, 230, 200, 0.62); }
   #done-words a { color: inherit; }
+  #done-from {
+    display: block; margin: 0.55rem auto 0; min-height: 2.75rem; padding: 0.45rem 0.6rem;
+    background: none; border: 0; font: inherit; font-size: 0.95rem; line-height: 1.4;
+    color: rgba(243, 230, 200, 0.72); cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  #done-from[hidden] { display: none; }
   .room .choice {
     width: 100%; padding: 1.05rem 0; font: inherit; font-size: 1.12rem; letter-spacing: 0.06em; cursor: pointer;
     background: rgba(5, 4, 10, 0.4); color: #f7edd4; border: 1px solid rgba(230, 201, 138, 0.55);
@@ -491,6 +498,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <blockquote id="done-words" hidden>
       <p id="done-quote"></p>
       <cite id="done-cite"></cite>
+      <button type="button" id="done-from" hidden></button>
     </blockquote>
     <button class="choice" type="button" data-room="home" style="margin-top:1.4rem">Back to Home</button>
   </div>
@@ -2328,7 +2336,14 @@ function paintTalks() {
   const section = document.getElementById("practice-talks");
   if (!section) return;
   if (!window.YantraTalks || window.YANTRA_LEVEL !== "zazen") {
+    const player = section.querySelector("audio");
+    if (player) {
+      player.pause();
+      player.removeAttribute("src");
+      player.hidden = true;
+    }
     section.hidden = true;
+    section.dataset.painted = "";
     return;
   }
   if (section.dataset.painted === "1" && !section.hidden) return;
@@ -2529,7 +2544,7 @@ if (window.YANTRA_WEB) {
   document.getElementById("practice-back").addEventListener("click", () => {
     const from = document.getElementById("practice").dataset.from;
     roomTrail = [];
-    showRoom(from === "shelf" ? "" : from === "account" ? "account" : "home");
+    showRoom(from === "shelf" ? "" : from === "account" ? "account" : from === "done" ? "done" : "home");
   });
   const menuAccount = document.getElementById("menu-account");
   menuAccount.hidden = false;
@@ -2580,19 +2595,38 @@ if (window.YANTRA_WEB) {
       practiceLine.textContent = window.YantraPractice.completeLine(window.YantraPractice.summary(), sessionTheme);
     }
     const words = document.getElementById("done-words");
-    const quotes = window.YANTRA_LEVEL === "zazen" && Array.isArray(window.yantraQuotes) ? window.yantraQuotes : [];
-    if (quotes.length) {
-      const quote = quotes[Math.floor(Math.random() * quotes.length)];
-      document.getElementById("done-quote").textContent = "\u201c" + quote.text + "\u201d";
-      const cite = document.getElementById("done-cite");
-      cite.replaceChildren();
-      cite.append(document.createTextNode("\u2014 " + (quote.by || "") + ", "));
-      const link = document.createElement("a");
-      link.target = "_blank";
-      link.rel = "noopener";
-      link.textContent = quote.talk || "";
-      if (quote.href) link.href = quote.href;
-      cite.append(link);
+    const from = document.getElementById("done-from");
+    const cite = document.getElementById("done-cite");
+    const quoteNode = document.getElementById("done-quote");
+    if (from) {
+      from.hidden = true;
+      from.textContent = "";
+      delete from.dataset.src;
+      delete from.dataset.title;
+    }
+    if (cite) cite.replaceChildren();
+    if (quoteNode) quoteNode.textContent = "";
+    const file = window.YANTRA_LEVEL === "zazen" ? window.yantraQuoteFile : null;
+    const quote = file && window.YantraQuotes ? window.YantraQuotes.choose(file, window.yantraLastSit || []) : null;
+    const talk = quote && window.YantraTalks
+      ? window.YantraTalks.findTalk(window.yantraTalks, "zazen", quote.talk)
+      : null;
+    if (quote && quote.text) {
+      quoteNode.textContent = "\u201c" + quote.text + "\u201d";
+      if (talk && from) {
+        from.hidden = false;
+        from.textContent = "From: " + talk.title;
+        from.dataset.src = talk.src;
+        from.dataset.title = talk.title;
+      } else if (cite) {
+        cite.append(document.createTextNode("\u2014 " + (quote.by || "") + ", "));
+        const link = document.createElement("a");
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = quote.talk || "";
+        if (quote.href) link.href = quote.href;
+        cite.append(link);
+      }
       words.hidden = false;
     } else {
       words.hidden = true;
@@ -2600,6 +2634,21 @@ if (window.YANTRA_WEB) {
     roomTrail = [];
     showRoom("done");
   });
+  const doneFrom = document.getElementById("done-from");
+  if (doneFrom) {
+    doneFrom.addEventListener("click", () => {
+      if (window.YANTRA_LEVEL !== "zazen") return;
+      const src = doneFrom.dataset.src || "";
+      const title = doneFrom.dataset.title || "";
+      if (!src.startsWith("/talks/") || src.includes("..") || !window.YantraTalks) return;
+      const practice = document.getElementById("practice");
+      if (practice) practice.dataset.from = "done";
+      showRoom("practice");
+      const section = document.getElementById("practice-talks");
+      window.YantraTalks.play(section, src, title);
+      if (section && section.scrollIntoView) section.scrollIntoView({ block: "start" });
+    });
+  }
   addEventListener("yantra:unplayed", (event) => {
     sessionLive = false;
     if (document.body.classList.contains("sitting")) endSitting();
