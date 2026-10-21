@@ -1,15 +1,14 @@
 /* What can actually play on this device, and when a sit should give up on a song.
    Hosted mp3s play in the page. Spotify plays only where its in-page player is
-   supported and the account is connected. Anything else stays on the shelf, shaded.
-   A song that never starts is skipped, then shaded for the rest of the visit.
+   supported and the account is connected. Anything else is left off the shelf.
+   A song that never starts is skipped, then left off the lists for the rest of the visit.
    The Sangha word sees only Vayu. Lumikara is for the Zazen word only.
-   Hidden by access stays hidden: it is not shown shaded. */
+   Hidden by access stays hidden. */
 (function (root) {
   const LUMAKARA = "lumikara";
   const VAYU = "vayu";
   const STALL_MS = 5000;
   const PROGRESS_EPS = 0.25;
-  const UNAVAILABLE = "Not available on this device yet";
 
   function spotifySdkSupported(env) {
     const ua = String((env && env.userAgent) || "");
@@ -65,32 +64,10 @@
     return out;
   }
 
-  /* Albums the listener may see. Access-closed circles are left out entirely.
-     A track that cannot play stays in the list, marked so the shelf can shade it.
-     An album is unplayable when none of its tracks can play. */
-  function shelfDiscs(discs, session) {
-    const out = [];
-    for (const disc of discs || []) {
-      if (!disc || !circleOpen(disc.circle, session && session.level)) continue;
-      const tracks = (disc.tracks || []).map((track) => {
-        const row = Object.assign({}, track, { circle: disc.circle });
-        const playable = trackOffered(row, session);
-        return Object.assign({}, track, {
-          playable: playable,
-          unavailable: !playable,
-          note: playable ? "" : UNAVAILABLE,
-        });
-      });
-      if (!tracks.length) continue;
-      const playable = tracks.some((track) => track.playable);
-      out.push(Object.assign({}, disc, {
-        tracks: tracks,
-        playable: playable,
-        unavailable: !playable,
-        note: playable ? "" : UNAVAILABLE,
-      }));
-    }
-    return out;
+  /* A section stays up only while it still has an album that can play. */
+  function visibleCircles(circles, discs) {
+    const open = new Set((discs || []).map((disc) => disc.circle));
+    return (circles || []).filter((circle) => circle && open.has(circle.id));
   }
 
   function createProgressWatch(limitMs) {
@@ -162,7 +139,6 @@
 
   const api = {
     LUMAKARA: LUMAKARA,
-    UNAVAILABLE: UNAVAILABLE,
     STALL_MS: STALL_MS,
     spotifySdkSupported: spotifySdkSupported,
     spotifyUsable: spotifyUsable,
@@ -170,7 +146,7 @@
     trackOffered: trackOffered,
     filterTracks: filterTracks,
     filterDiscs: filterDiscs,
-    shelfDiscs: shelfDiscs,
+    visibleCircles: visibleCircles,
     createProgressWatch: createProgressWatch,
     classifyPlayback: classifyPlayback,
     presentState: presentState,
