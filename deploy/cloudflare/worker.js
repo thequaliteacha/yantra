@@ -77,6 +77,8 @@ export async function route(request, env) {
     }
     if (url.pathname === "/") return Response.redirect(new URL("/web/", url), 302);
     if (url.pathname === "/enter" && request.method === "POST") return enter(request, env, url);
+    if (url.pathname === "/logout" && (request.method === "GET" || request.method === "POST")) return logoutResponse();
+    if (url.pathname === "/logout") return new Response("Method not allowed", { status: 405 });
 
     const icon = ROOT_ICON[url.pathname];
     if (icon && (request.method === "GET" || request.method === "HEAD")) {
@@ -98,8 +100,12 @@ export async function route(request, env) {
         headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "private, no-store" },
       });
     }
-    if (url.pathname === "/access" && request.method === "GET") return privateJson({ level });
-    if (url.pathname === "/access") return new Response("Method not allowed", { status: 405 });
+    if (url.pathname === "/access" && request.method === "GET") return accessResponse(level);
+    if (url.pathname === "/access/sangha" && request.method === "POST") return downgradeResponse(env);
+    if (url.pathname === "/leave" && request.method === "POST") return signOutResponse();
+    if (url.pathname === "/access" || url.pathname === "/access/sangha" || url.pathname === "/leave") {
+      return new Response("Method not allowed", { status: 405 });
+    }
 
     if (url.pathname === "/push/key" && request.method === "GET") return pushKey(env);
     if (url.pathname === "/push" && request.method === "POST") return saveReminder(request, env);
@@ -140,6 +146,48 @@ function privateJson(data, status) {
 }
 
 const ANON = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function accessResponse(level) {
+  return privateJson({ level: level === "zazen" ? "zazen" : "sangha" });
+}
+
+const CLEAR_COOKIE = `${COOKIE}=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax`;
+
+/* The gate cookie is HttpOnly, so the page cannot drop it. Leave asks the Worker. */
+export function signOutResponse() {
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "private, no-store",
+      "set-cookie": CLEAR_COOKIE,
+    },
+  });
+}
+
+/* A real navigation, so iOS standalone replaces the app with the word prompt.
+   The status is 200: a home-screen app will not show a 401 body, so Log out
+   would clear the cookie and leave Stephen on the account page. */
+export function logoutResponse() {
+  const page = gatePage("");
+  const headers = new Headers(page.headers);
+  headers.set("set-cookie", CLEAR_COOKIE);
+  headers.set("cache-control", "no-store");
+  return new Response(page.body, { status: 200, headers });
+}
+
+/* Drop Zazen privilege without asking for a word, and without storing one. */
+export async function downgradeResponse(env) {
+  if (!env || !env.COOKIE_KEY) return privateJson({ error: "The word gate is not open in this copy." }, 503);
+  const exp = Math.floor(Date.now() / 1000) + YEAR;
+  const value = `sangha.${exp}.${await hmac(env, "sangha." + exp)}`;
+  return new Response(JSON.stringify({ ok: true, level: "sangha" }), {
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "private, no-store",
+      "set-cookie": `${COOKIE}=${value}; Max-Age=${YEAR}; Path=/; Secure; HttpOnly; SameSite=Lax`,
+    },
+  });
+}
 
 function remindersUnavailable() {
   return privateJson({ error: "Reminders are not turned on for this site yet. The times stay on this device." }, 503);
@@ -315,7 +363,7 @@ export async function mintCookie(env, level, now = Date.now()) {
   return `${level}.${exp}.${await hmac(env, level + "." + exp)}`;
 }
 
-async function cookieLevel(request, env) {
+export async function cookieLevel(request, env) {
   if (!env.COOKIE_KEY) return "";
   const match = (request.headers.get("cookie") || "").match(new RegExp("(?:^|;\\s*)" + COOKIE + "=([^;]+)"));
   if (!match) return "";

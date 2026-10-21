@@ -93,6 +93,24 @@ either a clock time or coordinates rounded to a tenth of a degree. Delete my
 reminder data removes that record. On iPhone and iPad the note arrives only
 from the Home Screen app.
 
+*Account*, from the small mark at the top right, is this device only. Name,
+access level, Log out, Spotify, reminders, and the practice record live there.
+Name, reminder choices, theme, glow, and saved talks are in one store,
+`yantra.settings.v1`. The practice record stays separate, and its time, sits,
+and days in a row are shown on that page. An optional name can greet you on
+the home screen and when a sit ends. It is not uploaded. **Log out** posts to
+`/logout`, which clears the word-gate cookie and returns the word prompt,
+including from an iPhone or iPad home-screen app. **Sign out** is reserved for
+a later account and stays hidden. The access switch shows Sangha or Zazen.
+Switching to Zazen asks for the Zazen word through the existing gate and does
+not keep the word in the app. Switching back signs a sangha cookie. The Linux
+desktop app does not ask for a word and does not store one. Export and erase
+cover the practice record, every setting, and saved talks. Erase everything on
+this device also clears Spotify and the cookie. Resources stays below the
+practice record and opens the Dharma Talks section on the Rama Meditation
+Society site, which holds the talks, the meditations, and the quotes from the
+end of the sits.
+
 ### Setting up the connections (once, by the site owner)
 
 `web/config.json` holds one public value:
