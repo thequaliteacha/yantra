@@ -65,7 +65,7 @@
     return true;
   }
 
-  /* Fills the #practice-talks section. Returns true when it is shown. */
+  /* Fills the #talks-list section. Returns true when it is shown. */
   function render(section, data, level, doc) {
     if (!section) return false;
     const d = doc || section.ownerDocument;

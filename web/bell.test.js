@@ -35,7 +35,7 @@ assert.strictEqual(bell.includes(".pause("), false);
 assert.strictEqual(bell.includes("mediaSession"), false);
 assert.strictEqual(bell.includes("setInterval"), false);
 assert.strictEqual(bell.includes("setTimeout"), false);
-assert.ok(page.includes(">Meditation bell<"));
+assert.strictEqual(page.includes(">Meditation bell<"), false, "no bell settings on the page");
 ["sitAlbum", "playForm", "playSession"].forEach((name) => {
   const start = page.indexOf("async function " + name);
   const awaited = page.indexOf("await", start);

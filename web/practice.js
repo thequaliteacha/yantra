@@ -14,7 +14,7 @@
 (function (root) {
   const KEY = "yantra.practice.v1";
   const MIN_MS = 60 * 1000;
-  const RULE = "One minute of listening counts as a sit. Paused time does not. Morning and evening each keep their own days in a row, and either one keeps the daily count. The day is this device's date. Nothing here is sent anywhere.";
+  const RULE = "A minute of listening counts as a sit. Kept on this device only.";
 
   function empty() {
     return {
@@ -96,6 +96,8 @@
       const day = days[date];
       if (!day) return false;
       if (kind === "daily") return day.sits > 0;
+      // A perfect day holds both sits: one at sunrise (morning) and one at sunset (evening).
+      if (kind === "perfect") return day.morning > 0 && day.evening > 0;
       return (day[kind] || 0) > 0;
     }).sort();
     let best = 0;
@@ -126,6 +128,7 @@
       morning: streakFor(days, "morning", today),
       evening: streakFor(days, "evening", today),
       daily: streakFor(days, "daily", today),
+      perfect: streakFor(days, "perfect", today),
     };
   }
 
@@ -152,7 +155,7 @@
     const today = normalizeDay(clean.days[todayKey]);
     return {
       totals: { ms: clean.totals.ms, sits: clean.totals.sits },
-      today: { ms: today.ms, sits: today.sits },
+      today: { ms: today.ms, sits: today.sits, morning: today.morning, evening: today.evening },
       streaks: streaks(clean, todayKey),
       milestones: clean.milestones.slice(),
       reminders: clean.reminders,
@@ -176,27 +179,44 @@
     return hourLabel + " " + (minutes === 1 ? "1 minute" : minutes + " minutes");
   }
 
-  function lead(summary) {
-    if (!summary || !summary.totals || summary.totals.sits < 1) {
-      return "Whenever you sit, it will be remembered here, on this device only.";
+  /* Where today stands toward a perfect day (a sunrise sit and a sunset sit), and the
+     run of perfect days it keeps. One warm line; it never scolds. */
+  function perfectLine(summary) {
+    const run = (summary.streaks && summary.streaks.perfect) || {};
+    const current = run.current || 0;
+    const today = summary.today || {};
+    const morning = today.morning > 0;
+    const evening = today.evening > 0;
+    if (morning && evening) {
+      if (current >= 3 && current >= (run.best || 0)) return current + " perfect days in a row, your longest yet.";
+      if (current >= 2) return current + " perfect days in a row.";
+      return "A perfect day: sunrise and sunset.";
     }
-    const sits = summary.totals.sits === 1 ? "1 sit" : summary.totals.sits + " sits";
-    const time = formatSpan(summary.totals.ms) + " across " + sits + ".";
-    const daily = summary.streaks && summary.streaks.daily && summary.streaks.daily.current;
-    if (daily >= 2) return time + " " + daily + " days in a row.";
-    return time + " Kept on this device only.";
+    // Until today is whole, current is the run through yesterday.
+    const next = current + 1;
+    if (morning) return next >= 2 ? "Sit at sunset for " + next + " perfect days in a row." : "Sit at sunset for a perfect day.";
+    if (evening) return "Sunrise and sunset tomorrow make a perfect day.";
+    return next >= 2 ? "Sit at sunrise and sunset for " + next + " perfect days in a row." : "Sit at sunrise and sunset for a perfect day.";
   }
 
+  function lead(summary) {
+    if (!summary || !summary.totals || summary.totals.sits < 1) {
+      return "Sit at sunrise and sunset for a perfect day. Your time and streak begin here.";
+    }
+    return perfectLine(summary);
+  }
+
+  /* The line on the Meditation Complete screen: today's time, then the way to a perfect day. */
   function completeLine(summary, theme) {
     const todayMs = summary && summary.today ? summary.today.ms : 0;
     const minutes = Math.round((Number(todayMs) || 0) / 60000);
     const today = minutes <= 0 ? "" : "Today, " + (minutes === 1 ? "1 minute" : minutes + " minutes") + ".";
-    const key = theme === "evening" ? "evening" : theme === "morning" ? "morning" : "daily";
-    const streak = summary && summary.streaks && summary.streaks[key] ? summary.streaks[key].current : 0;
     let row = "";
-    if (streak >= 2 && key === "morning") row = streak + " mornings in a row.";
-    else if (streak >= 2 && key === "evening") row = streak + " evenings in a row.";
-    else if (streak >= 2 && key === "daily") row = streak + " days in a row.";
+    if (summary && summary.today && (theme === "morning" || theme === "evening")) row = perfectLine(summary);
+    else {
+      const daily = summary && summary.streaks && summary.streaks.daily ? summary.streaks.daily.current : 0;
+      if (daily >= 2) row = daily + " days in a row.";
+    }
     return [today, row].filter(Boolean).join(" ");
   }
 
@@ -364,7 +384,7 @@
       rules: {
         minimumMs: MIN_MS,
         listening: "Playback time only. Paused time is not counted.",
-        streaks: "Morning and evening are separate runs. A missed morning ends only the morning run. The daily run counts a day with either. Shelf sits count toward the daily run only. Dates are the device's local calendar.",
+        streaks: "A perfect day has a morning sit and an evening sit; the perfect run counts those days. Morning and evening are separate runs. A missed morning ends only the morning run. The daily run counts a day with either. Shelf sits count toward the daily run only. Dates are the device's local calendar.",
         milestones: "Reserved. Empty until a later version marks them.",
         reminders: "Reserved. This version does not notify.",
       },

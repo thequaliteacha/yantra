@@ -84,8 +84,10 @@ breathes slowly on its own. Forms you save stay in that browser.
 
 Practice time and days in a row stay in the browser too, under *Your practice*.
 Nothing is uploaded. A sit counts after one minute of listening; paused time
-does not. Morning and evening each keep their own run of days, and either one
-keeps the daily run. The day is the device's own date.
+does not. A perfect day holds a Morning Meditation (sunrise) and an Evening
+Meditation (sunset); perfect days in a row are the main streak, and the page
+nudges toward the next one. Morning and evening also keep their own runs. The
+day is the device's own date.
 
 Morning and evening reminders are on that same page, each one on or off by
 itself. A reminder can follow sunrise or sunset (a few minutes before or after,
@@ -96,23 +98,25 @@ either a clock time or coordinates rounded to a tenth of a degree. Delete my
 reminder data removes that record. On iPhone and iPad the note arrives only
 from the Home Screen app.
 
-*Account*, from the small mark at the top right, is this device only. Name,
-access level, Log out, Spotify, reminders, and the practice record live there.
+*Settings*, from the small mark at the top right, is this device only. The practice
+record (total time, sits, perfect days) is first, then name, Log
+out, glow, reminders, and Spotify. The bell has no settings for now.
 Name, reminder choices, theme, glow, and saved talks are in one store,
 `yantra.settings.v1`. The practice record stays separate, and its time, sits,
 and days in a row are shown on that page. An optional name can greet you on
 the home screen and when a sit ends. It is not uploaded. **Log out** posts to
 `/logout`, which clears the word-gate cookie and returns the word prompt,
 including from an iPhone or iPad home-screen app. **Sign out** is reserved for
-a later account and stays hidden. The access switch shows Sangha or Zazen.
-Switching to Zazen asks for the Zazen word through the existing gate and does
-not keep the word in the app. Switching back signs a sangha cookie. The Linux
+a later account and stays hidden. The page never names the access level, so new
+students are not shown what lies past their word; to use a different word,
+log out and enter it. The Linux
 desktop app does not ask for a word and does not store one. Export and erase
 cover the practice record, every setting, and saved talks. Erase everything on
-this device also clears Spotify and the cookie. Resources stays below the
-practice record and opens the Dharma Talks section on the Rama Meditation
-Society site, which holds the talks, the meditations, and the quotes from the
-end of the sits.
+this device also clears Spotify and the cookie.
+
+*Dharma Talks*, on the home screen for the Zazen word only, plays the Rama
+talks listed in `web/talks.json` (downloaded from the Rama Meditation Society
+site and served from R2 under `/talks/`).
 
 ### Setting up the connections (once, by the site owner)
 

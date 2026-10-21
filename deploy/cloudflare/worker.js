@@ -96,7 +96,7 @@ export async function route(request, env) {
       return wantsPage ? gatePage("") : new Response("Enter the sangha word first.", { status: 401 });
     }
     if (ramaDenied(level, url.pathname)) {
-      return new Response("This is for the Zazen word.", {
+      return new Response("Not available.", {
         status: 403,
         headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "private, no-store" },
       });
@@ -324,7 +324,7 @@ async function recording(request, env, url, level) {
   if (!/^[a-z0-9-]+\/\d{2}\.mp3$/.test(key)) return new Response("Not found", { status: 404 });
   // A recording outside the listener's circles is refused, not just unlisted.
   if ((await hiddenDiscIds(request, env, level)).has(key.split("/")[0])) {
-    return new Response("This is for the Zazen word.", {
+    return new Response("Not available.", {
       status: 403,
       headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "private, no-store" },
     });

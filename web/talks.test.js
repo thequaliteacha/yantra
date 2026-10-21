@@ -63,7 +63,7 @@ const forZazen = section();
 assert.strictEqual(T.render(forZazen.root, data, "zazen"), true);
 assert.strictEqual(forZazen.root.hidden, false, "the talks section shows for the Zazen word");
 assert.strictEqual(forZazen.list.children.length, 3);
-assert.strictEqual(forZazen.head.textContent, "Rama talks");
+assert.strictEqual(forZazen.head.textContent, "Dharma Talks by Rama");
 const liveLa = forZazen.list.children[1];
 assert.strictEqual(liveLa.children[0].textContent, "Rama Live LA");
 liveLa.children[2].listeners.click();
@@ -78,8 +78,9 @@ assert.strictEqual(forSangha.root.hidden, true, "the talks section stays hidden 
 assert.strictEqual(forSangha.list.children.length, 0);
 
 // The page carries the section, loads talks.js, and checks the level itself.
-assert.ok(page.includes('id="practice-talks" hidden'));
-assert.ok(!/Rama talks|Frederick Lenz/.test(page), "the shared page carries no Rama text for the Sangha word");
+assert.ok(page.includes('id="talks-list" hidden'));
+assert.ok(page.includes('id="open-talks" data-room="talks" hidden'));
+assert.ok(!/Rama|Frederick Lenz/.test(page), "the shared page carries no Rama text for the Sangha word");
 assert.ok(page.includes('window.YANTRA_LEVEL !== "zazen"'));
 assert.ok(loader.includes('src="talks.js"'));
 assert.ok(sw.includes('"/talks.json"'), "the service worker never caches the talk list");
