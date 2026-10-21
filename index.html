@@ -275,7 +275,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #pick-album:disabled { opacity: 0.4; cursor: default; }
   #pick-album option, #pick-album optgroup { background: #0b0912; color: #f7edd4; }
   #pick-mix { white-space: nowrap; }
-  #pick-mix[aria-pressed="true"], #bell-same[aria-pressed="true"] { color: #f7edd4; text-decoration-color: rgba(230, 201, 138, 0.9); }
+  #pick-mix[aria-pressed="true"] { color: #f7edd4; text-decoration-color: rgba(230, 201, 138, 0.9); }
   #pick .choice:disabled { opacity: 0.35; cursor: default; }
   #home-note { min-height: 1.3rem; color: rgba(232, 204, 146, 0.89); font-size: 0.92rem; text-align: center; }
   #guide, #about, #talks, #welcome { justify-content: flex-start; overflow: auto; -webkit-overflow-scrolling: touch; }
@@ -321,13 +321,10 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
           border-bottom: 1px solid rgba(230, 201, 138, 0.18); cursor: pointer; }
   .talk span:nth-child(2) { color: rgba(232, 204, 146, 0.69); font-size: 0.88rem; white-space: nowrap; }
   #talks-list audio { width: 100%; margin-top: 0.6rem; }
-  #account-bell, #account-glow { text-align: left; }
-  #account-bell h3, #account-glow h3 { margin: 0; font-weight: 500; color: #f7edd4; }
+  #account-glow { text-align: left; }
+  #account-glow h3 { margin: 0; font-weight: 500; color: #f7edd4; }
   .account-field { display: flex; flex-direction: column; gap: 0.28rem; font-size: 0.82rem; color: rgba(232, 204, 146, 0.84); text-align: left; }
-  .bell-tone { display: flex; align-items: flex-end; gap: 0.7rem; }
-  .bell-tone .account-field { flex: 1; }
-  .bell-tone .quiet { margin-bottom: 0.12rem; }
-  #account-bell input, #account-bell select, #account-glow input {
+  #account-glow input {
     font: inherit; font-size: 1rem; color: #f7edd4; background: rgba(5, 4, 10, 0.6);
     border: 1px solid rgba(230, 201, 138, 0.35); padding: 0.55rem 0.55rem; width: 100%; box-sizing: border-box;
     color-scheme: dark;
@@ -413,11 +410,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #pick-sheet { display: flex; flex-direction: column; gap: 0.6rem; margin: -0.4rem 0 0.6rem; padding: 0.8rem 0 1rem; border-bottom: 1px solid rgba(230, 201, 138, 0.16); }
   .sheet-head, .room p.sheet-head { margin: 0; font-size: 0.82rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(232, 204, 146, 0.84); text-align: left; }
   #pick-sheet #pick-album-row { margin: 0; }
-  #pick-bell-row { display: flex; gap: 1rem; align-items: center; }
-  #pick-bell { white-space: nowrap; min-width: 5.5rem; text-align: left; }
-  #pick-bell[aria-pressed="false"] { color: rgba(232, 204, 146, 0.74); }
-  #pick-bell-volume { flex: 1; }
-  #pick-bell-volume:disabled { opacity: 0.35; }
   #pick .choice span { color: rgba(243, 230, 200, 0.84); font-size: 0.92em; }
   #welcome .step[hidden] { display: none; }
   #welcome .step { display: flex; flex-direction: column; gap: 1.1rem; }
@@ -426,7 +418,11 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #welcome .dots { display: flex; justify-content: center; gap: 0.55rem; margin-top: 1.8rem; }
   #welcome .dots span { width: 0.42rem; height: 0.42rem; border-radius: 50%; background: rgba(230, 201, 138, 0.28); }
   #welcome .dots span.on { background: rgba(230, 201, 138, 0.9); }
-  #account-places .links { margin: -0.4rem 0 0.4rem; }
+  #account-places { margin-top: 0.35rem; padding-top: 0.6rem; border-top: 1px solid rgba(230, 201, 138, 0.16); }
+  #account-mindful[hidden] + #account-places { border-top: 0; padding-top: 0; }
+  #account-places .links { margin: 0.2rem 0 0.4rem; }
+  #account-mindful[hidden] { display: none; }
+  #account-mindful .links { margin-top: 0.2rem; justify-content: flex-start; }
   /* The altar: up to three small round photos resting above the yantra during sits and talks. */
   #altar { position: fixed; z-index: 2; left: 50%; top: max(1rem, env(safe-area-inset-top)); transform: translateX(-50%);
     display: flex; gap: 0.9rem; opacity: 0; pointer-events: none; transition: opacity 2.4s ease; }
@@ -556,10 +552,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <select id="pick-album" aria-label="Album"><option value="">A new album each sit</option></select>
         <button class="quiet" type="button" id="pick-mix" aria-pressed="false">Mix It Up</button>
       </div>
-      <div id="pick-bell-row">
-        <button class="quiet" type="button" id="pick-bell" aria-pressed="true">Bell on</button>
-        <input id="pick-bell-volume" type="range" min="0" max="100" value="70" aria-label="Bell volume">
-      </div>
     </div>
     <button class="choice" type="button" data-count="1">1 song <span>· 4 min</span></button>
     <button class="choice" type="button" data-count="3">3 songs <span>· 12 min</span></button>
@@ -629,9 +621,12 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <p>A later sign-in can keep these choices with you. Nothing leaves this device yet.</p>
       <p id="account-sync-method"></p>
     </section>
+    <section class="account-block" id="account-mindful" hidden>
+      <h3>Mindfulness material</h3>
+      <div class="links"><button class="quiet" type="button" id="open-talks" data-room="talks">Dharma Talks</button></div>
+    </section>
     <section class="account-places" id="account-places">
       <div class="links">
-        <button class="quiet" type="button" id="open-talks" data-room="talks" hidden>Dharma Talks</button>
         <button class="quiet" type="button" id="open-shelf">Albums and forms</button>
         <button class="quiet" type="button" data-room="guide">How to sit</button>
         <button class="quiet" type="button" id="install-app" hidden>Install Yantra</button>
@@ -1721,7 +1716,6 @@ function sourceFor(disc) {
 /* Begin sitting: the album starts on the chosen source and the yantra opens.
    The yantra waits until the music has actually started. */
 async function sitAlbum() {
-  if (window.YantraBell) window.YantraBell.unlock();
   const disc = selected();
   const source = sourceFor(disc);
   if (!source) {
@@ -2087,7 +2081,6 @@ function followHearing() {
 }
 
 function begin() {
-  if (window.YantraBell && !window.yantraTimedSit) window.YantraBell.beginSit(false);
   window.yantraTimedSit = false;
   window.drawEpoch = (window.drawEpoch || 0) + 1;
   document.body.classList.add("sitting");
@@ -2102,7 +2095,6 @@ function begin() {
 }
 
 function endSitting() {
-  if (window.YantraBell) window.YantraBell.endSit();
   const wasSitting = document.body.classList.contains("sitting");
   document.body.classList.remove("sitting", "awake");
   if (wasSitting) dispatchEvent(new Event("yantra:ended"));
@@ -2229,7 +2221,6 @@ function formReady(tracks) {
 }
 
 async function playForm(name, id, tracks) {
-  if (window.YantraBell) window.YantraBell.unlock();
   if (!formReady(tracks)) return;
   playNote = "Opening " + name + ".";
   applyNow();
@@ -2503,7 +2494,8 @@ window.paintPractice = paintPractice;
 function paintTalks() {
   const section = document.getElementById("talks-list");
   if (!section) return;
-  const open = document.getElementById("open-talks");
+  // The Mindfulness material section, with the talks, shows for the Zazen word only.
+  const open = document.getElementById("account-mindful");
   const shown = !!(window.YantraTalks && window.YANTRA_LEVEL === "zazen" && window.yantraTalks);
   if (open) open.hidden = !shown;
   if (!shown) {
@@ -2618,7 +2610,6 @@ function paintPick(rebuild) {
     button.disabled = !sitMix && !!chosen && !fitsCount(chosen, Number(button.dataset.count));
   });
   document.getElementById("pick-note").textContent = sitMix ? "Songs from across the albums" : "";
-  if (window.paintBellSheet) window.paintBellSheet();
 }
 function keepPick() {
   try {
@@ -2628,7 +2619,6 @@ function keepPick() {
   paintPick();
 }
 async function playSession(theme, count, choice) {
-  if (window.YantraBell) window.YantraBell.unlock();
   sessionTheme = theme;
   const mix = choice ? !!choice.mix : sitMix;
   const album = choice ? choice.album || "" : pickAlbum;
@@ -2869,28 +2859,16 @@ if (window.YANTRA_WEB) {
     if (window.yantraWatch === view) view.segments = segments;
   }
   function closeWatch() {
+    // Leaving the talk is like ending a sit: it pauses, and picks up here next time.
+    const view = window.yantraWatch;
+    if (view && !view.audio.paused) view.audio.pause();
     document.body.classList.remove("watching");
     talkWatch.hidden = true;
     window.yantraWatch = null;
     if (watchLock) watchLock.release().catch(() => {});
     watchLock = null;
   }
-  addEventListener("yantra:talk", (event) => {
-    lastTalk = event.detail;
-    openWatch(event.detail);
-  });
-  // While a talk plays on another screen, the yantra returns after half a minute untouched.
-  let lastTalk = null;
-  let touchedAt = Date.now();
-  ["pointerdown", "keydown", "wheel", "touchstart"].forEach((name) => addEventListener(name, () => { touchedAt = Date.now(); }, { passive: true }));
-  setInterval(() => {
-    const audio = document.querySelector("#talks-list audio");
-    if (!lastTalk || !audio || audio.paused || audio.ended) return;
-    if (document.body.classList.contains("watching") || document.body.classList.contains("sitting")) return;
-    if (Date.now() - touchedAt < 30000) return;
-    if (audio.getAttribute("src") !== lastTalk.src) return;
-    openWatch(lastTalk);
-  }, 5000);
+  addEventListener("yantra:talk", (event) => openWatch(event.detail));
   talkWatch.addEventListener("click", (event) => {
     if (!event.target.closest("button")) showTalkBar();
   });
@@ -3022,31 +3000,6 @@ if (window.YANTRA_WEB) {
     }
   }
 
-  /* Before you sit: the bell at the start, on or off, and how loud. */
-  const bellButton = document.getElementById("pick-bell");
-  const bellVolume = document.getElementById("pick-bell-volume");
-  function paintBellSheet() {
-    const S = window.YantraSettings;
-    const on = S ? S.get("bell.on") !== false : true;
-    bellButton.setAttribute("aria-pressed", String(on));
-    bellButton.textContent = on ? "Bell on" : "Bell off";
-    bellVolume.disabled = !on;
-    bellVolume.value = String(Math.round((S ? Number(S.get("bell.volume")) : 0.7) * 100));
-  }
-  bellButton.addEventListener("click", () => {
-    const S = window.YantraSettings;
-    if (!S) return;
-    const on = S.get("bell.on") === false;
-    S.set("bell.on", on);
-    S.set("bell.startStrikes", null);
-    paintBellSheet();
-  });
-  bellVolume.addEventListener("change", () => {
-    if (!window.YantraSettings) return;
-    window.YantraSettings.set("bell.volume", Number(bellVolume.value) / 100);
-    if (window.YantraBell) window.YantraBell.preview("medium", 1);
-  });
-  window.paintBellSheet = paintBellSheet;
 
   const ready = params.get("ready");
   if (ready === "morning" || ready === "evening") openReadySit(ready);

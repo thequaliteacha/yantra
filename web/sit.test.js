@@ -146,9 +146,6 @@ assert.deepStrictEqual(kept.events.map((event) => [event.position, event.strikes
 
 const page = require("fs").readFileSync(require("path").join(__dirname, "../index.html"), "utf8");
 assert.deepStrictEqual(S.BEDS, ["silent", "white", "pink", "brown", "rain-light", "rain-steady", "rain-roof", "rain-thunder", "drone", "bowl", "pad"]);
-const bell = require("fs").readFileSync(require("path").join(__dirname, "bell.js"), "utf8");
-assert.ok(bell.includes("from 1 to \" + root.YantraSit.MAX_MINUTES"));
-assert.strictEqual(bell.includes("1 to 90"), false);
 
 function marks(minutes, midway) {
   return S.bellTimes(minutes, midway).marks.map((mark) => [mark.position, mark.at]);
