@@ -2,7 +2,7 @@
    Callers behind the word gate pass a lookup id and a device id. What is stored
    is ciphertext. Nothing here is written to a log.
  */
-export const PRACTICE_MAX_BYTES = 512 * 1024;
+export const PRACTICE_MAX_BYTES = 2 * 1024 * 1024; // room for three altar photos
 export const PRACTICE_MAX_DEVICES = 8;
 export const PRACTICE_RATE_LIMIT = 60;
 const WINDOW_MS = 60 * 1000;

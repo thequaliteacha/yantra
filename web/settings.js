@@ -43,6 +43,13 @@
     "motion.awakening": true,
   };
   const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow"];
+  /* What a linked device shares. The look of each screen (theme, brightness), the
+     access word, and this device's reminder id stay on the device. */
+  const SHARED = [
+    "profile.name", "profile.greeting", "altar.photos", "altar.show",
+    "talks.saved", "talks.progress", "reminders", "welcome.seen",
+    "sit.minutes", "sit.midway", "sit.background", "sit.bedVolume",
+  ];
   const listeners = new Set();
 
   function browserStore() {
@@ -214,8 +221,8 @@
   function subscribe(keyOrFn, maybeFn) {
     const key = typeof keyOrFn === "function" ? "*" : keyOrFn;
     const fn = typeof keyOrFn === "function" ? keyOrFn : maybeFn;
-    const wrapped = (changed, value) => {
-      if (key === "*" || key === changed) fn(changed, value);
+    const wrapped = (changed, value, info) => {
+      if (key === "*" || key === changed) fn(changed, value, info);
     };
     listeners.add(wrapped);
     return function unsubscribe() { listeners.delete(wrapped); };
@@ -250,17 +257,69 @@
     });
   }
 
+  /* Shared settings this device has chosen, each with the time it was chosen. */
+  function sharedEntries(store) {
+    const kept = store || browserStore();
+    const raw = kept ? migrate(kept) : {};
+    const out = {};
+    SHARED.forEach((key) => {
+      const entry = raw[key];
+      const at = entry && typeof entry === "object" ? Number(entry.updatedAt) || 0 : 0;
+      if (!at || !("value" in entry)) return;
+      let value = clone(entry.value);
+      if (key === "reminders" && value && typeof value === "object") delete value.id;
+      out[key] = { value: value, updatedAt: at };
+    });
+    return out;
+  }
+
+  /* Takes a linked device's shared settings where they are newer than ours.
+     Returns the keys that changed. Listeners hear them with from: "link". */
+  function adopt(incoming, store) {
+    const kept = store || browserStore();
+    if (!kept || !incoming || typeof incoming !== "object") return [];
+    const raw = migrate(kept);
+    const changed = [];
+    SHARED.forEach((key) => {
+      const entry = incoming[key];
+      if (!entry || typeof entry !== "object" || !("value" in entry)) return;
+      const at = Number(entry.updatedAt) || 0;
+      const mine = raw[key] && typeof raw[key] === "object" ? Number(raw[key].updatedAt) || 0 : 0;
+      if (!at || at <= mine || at > Date.now() + 86400000) return;
+      let value = known(key, entry.value);
+      if (key === "reminders") {
+        value = value && typeof value === "object" ? value : {};
+        delete value.id;
+        const local = raw[key] && raw[key].value;
+        if (local && typeof local === "object" && local.id) value.id = local.id;
+      }
+      raw[key] = { value: clone(value), updatedAt: at };
+      changed.push(key);
+    });
+    if (!changed.length) return changed;
+    write(kept, raw);
+    changed.forEach((key) => {
+      listeners.forEach((fn) => {
+        try { fn(key, get(key, kept), { from: "link" }); } catch (e) {}
+      });
+    });
+    return changed;
+  }
+
   if (browserStore()) migrate(browserStore());
 
   const api = {
     KEY: KEY,
     DEFAULTS: DEFAULTS,
+    SHARED: SHARED,
     get: get,
     set: set,
     subscribe: subscribe,
     migrate: migrate,
     entries: entries,
     erase: erase,
+    sharedEntries: sharedEntries,
+    adopt: adopt,
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;

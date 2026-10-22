@@ -20,9 +20,53 @@
   let chain = Promise.resolve();
   let qrFor = "";
   let qrShown = false;
+  let linkShown = false;
   let editingId = "";
   let removeId = "";
   const nativeFetch = root && root.fetch ? root.fetch.bind(root) : null;
+
+  /* Settings load after this file in the page, so they are looked up when used. */
+  function settingsApi() {
+    if (root && root.YantraSettings) return root.YantraSettings;
+    if (typeof require === "function") {
+      try { return require("./settings.js"); } catch (e) { return null; }
+    }
+    return null;
+  }
+
+  function sharedSettings() {
+    const api = settingsApi();
+    try { return api && api.sharedEntries ? api.sharedEntries() : {}; } catch (e) { return {}; }
+  }
+
+  /* A linked device's newer settings replace ours; then the page repaints. */
+  function adoptSettings(list) {
+    const api = settingsApi();
+    if (!api || !api.adopt) return [];
+    const newest = {};
+    list.forEach((incoming) => {
+      if (!incoming || typeof incoming !== "object") return;
+      Object.keys(incoming).forEach((key) => {
+        const entry = incoming[key];
+        const at = entry && Number(entry.updatedAt) || 0;
+        if (at && (!newest[key] || at > newest[key].updatedAt)) newest[key] = { value: entry.value, updatedAt: at };
+      });
+    });
+    let changed = [];
+    try { changed = api.adopt(newest); } catch (e) { changed = []; }
+    if (changed.length && root) {
+      ["paintAccount", "paintGreeting", "paintTalks"].forEach((name) => {
+        try { if (typeof root[name] === "function") root[name](); } catch (e) {}
+      });
+      try { if (root.YantraAltar) root.YantraAltar.paint(); } catch (e) {}
+      try {
+        if (typeof root.dispatchEvent === "function" && typeof CustomEvent === "function") {
+          root.dispatchEvent(new CustomEvent("yantra:settings-merged", { detail: { keys: changed } }));
+        }
+      } catch (e) {}
+    }
+    return changed;
+  }
 
   function storage() {
     try {
@@ -404,6 +448,7 @@
       const devices = data && Array.isArray(data.devices) ? data.devices : [];
       const now = loadState();
       const nextPeers = {};
+      const peerSettings = [];
       for (let i = 0; i < devices.length; i += 1) {
         const device = devices[i];
         if (!device || device.id === now.deviceId || !DEVICE_ID.test(device.id || "")) continue;
@@ -415,10 +460,12 @@
             days: Practice.normalize({ days: plain && plain.days }).days,
             labels: labelsFrom(plain && plain.labels),
           };
+          if (plain && plain.settings) peerSettings.push(plain.settings);
         } catch (e) {
           if (now.peers[device.id]) nextPeers[device.id] = now.peers[device.id];
         }
       }
+      adoptSettings(peerSettings);
       const saved = loadState();
       saved.peers = nextPeers;
       const book = labelBook(saved, nextPeers);
@@ -625,6 +672,7 @@
       namedAt: stampOf(state.namedAt) || 0,
       days: (local && local.days) || {},
       labels: labelsFrom(state.labels),
+      settings: sharedSettings(),
     };
   }
 
@@ -858,6 +906,15 @@
     const field = root.document.getElementById("practice-link-url");
     if (field && field.value !== url) field.value = url;
     if (!on) qrShown = false;
+    if (!on) linkShown = false;
+    // The link is the key itself, so it stays out of sight (and screenshots) until asked for.
+    show("practice-link-field", on && linkShown);
+    const reveal = root.document.getElementById("practice-link-url-show");
+    if (reveal) {
+      reveal.hidden = !on;
+      reveal.textContent = linkShown ? "Hide the link" : "Show the link";
+      reveal.setAttribute("aria-expanded", linkShown ? "true" : "false");
+    }
     const toggle = root.document.getElementById("practice-link-qr-show");
     if (toggle) {
       toggle.hidden = !on;
@@ -982,15 +1039,24 @@
     });
     const copy = doc.getElementById("practice-link-copy");
     if (copy) copy.addEventListener("click", () => {
-      const url = (doc.getElementById("practice-link-url") || {}).value || "";
+      const state = loadState();
+      const url = state.practiceKey ? linkFor(state.practiceKey) : "";
       const done = () => setNote("Link copied.");
+      const byHand = () => {
+        linkShown = true;
+        paint();
+        const field = doc.getElementById("practice-link-url");
+        if (field) { field.focus(); field.select(); }
+        setNote("Select the link and copy it.");
+      };
       if (root.navigator && root.navigator.clipboard && url) {
-        root.navigator.clipboard.writeText(url).then(done).catch(() => {
-          const field = doc.getElementById("practice-link-url");
-          if (field) { field.focus(); field.select(); }
-          setNote("Select the link and copy it.");
-        });
-      } else done();
+        root.navigator.clipboard.writeText(url).then(done).catch(byHand);
+      } else byHand();
+    });
+    const urlShow = doc.getElementById("practice-link-url-show");
+    if (urlShow) urlShow.addEventListener("click", () => {
+      linkShown = !linkShown;
+      paint();
     });
     const qrShow = doc.getElementById("practice-link-qr-show");
     if (qrShow) qrShow.addEventListener("click", () => {
@@ -1070,6 +1136,7 @@
   function boot() {
     if (!root || !root.document || !root.YANTRA_WEB) return;
     if (!root.document.getElementById("practice-link")) return;
+    watchSettings();
     if (!bound) {
       bind();
       bound = true;
@@ -1095,6 +1162,22 @@
     markPending();
     return sync();
   });
+
+  /* A shared setting chosen here leaves soon after, so other devices see it. */
+  let settingsTimer = 0;
+  function watchSettings() {
+    const api = settingsApi();
+    if (!api || !api.subscribe || watchSettings.done) return;
+    watchSettings.done = true;
+    api.subscribe((key, value, info) => {
+      if (info && info.from === "link") return;
+      if (!api.SHARED || api.SHARED.indexOf(key) < 0) return;
+      if (!loadState().practiceKey) return;
+      markPending();
+      clearTimeout(settingsTimer);
+      settingsTimer = setTimeout(() => sync(), 1500);
+    });
+  }
 
   if (root && root.document) {
     consumeFragment();
@@ -1128,6 +1211,7 @@
     sync: sync,
     settled: settled,
     paint: paint,
+    adoptSettings: adoptSettings,
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;
