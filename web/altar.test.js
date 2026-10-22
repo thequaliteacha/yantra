@@ -31,7 +31,7 @@ const at = (mark) => page.indexOf(mark);
 assert.ok(at('id="account-mindful"') < at('id="account-practice-block"'));
 assert.ok(at('id="account-practice-block"') < at('id="account-profile"'));
 assert.ok(at('id="account-profile"') < at('id="account-altar"'));
-assert.ok(page.includes('<h2 id="account-title">You</h2>'));
+assert.ok(page.includes('<h2 id="account-title">Mindfulness Material</h2>'), "the page opens on Mindfulness Material, not a name");
 assert.ok(page.includes("meditation, enlightenment, power, and peace"));
 assert.ok(page.includes('id="home-altar" class="altar-photos"'));
 assert.ok(page.includes('id="pick-altar" class="altar-photos"'));

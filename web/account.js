@@ -23,18 +23,10 @@
   function paintCorner() {
     const button = document.getElementById("account-corner");
     if (!button || !window.YANTRA_WEB) return;
-    const api = profile();
-    const name = api ? api.load().name : "";
-    const mark = name ? name.slice(0, 1).toUpperCase() : "You";
-    button.textContent = mark;
     button.hidden = false;
-    const title = document.getElementById("account-title");
-    if (title) title.textContent = name || "You";
-    const initial = document.getElementById("account-initial");
-    if (initial) initial.textContent = mark;
   }
 
-  /* Practice, Reminders, Profile, and Settings start closed each time You opens.
+  /* Practice, Reminders, Profile, and Settings start closed each time Settings opens.
      A practice link arriving on this device opens Practice once. */
   function closeFolds() {
     document.querySelectorAll("#account details.account-fold").forEach((node) => {

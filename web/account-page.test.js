@@ -15,7 +15,7 @@ function between(start, end) {
 }
 
 const mindful = between('id="account-mindful"', 'id="account-practice-block"');
-assert.ok(mindful.includes("<h3>Mindfulness Material</h3>"));
+assert.ok(mindful.includes('<h2 id="account-title">Mindfulness Material</h2>'));
 assert.ok(mindful.includes(">Dharma Talks<"));
 assert.ok(mindful.includes(">Sit Guidance<"));
 assert.ok(mindful.includes(">Albums + Playlists<"));
@@ -78,11 +78,17 @@ assert.strictEqual(page.includes('data-fold="practice" open'), false, "every dra
 assert.ok(account.includes("window.closeAccountFolds = closeFolds"));
 assert.ok(page.includes('if (name === "account" && window.closeAccountFolds) window.closeAccountFolds();'));
 assert.ok(!account.includes("yantra.account.folds"), "drawers are not remembered");
-assert.ok(account.includes("account-initial"));
+assert.ok(!account.includes("account-initial"), "the profile mark is the yantra, never an initial");
 assert.ok(page.includes('closest("details")'), "a deep link opens the section that holds it");
 assert.ok(sync.includes("yantraCameFromPracticeLink"));
 assert.ok(account.includes("yantraCameFromPracticeLink"));
 assert.ok(page.includes('class="back" type="button" data-room="home" aria-label="Back"'));
+const corner = between('id="account-corner"', "</button>");
+assert.ok(corner.includes('class="yantra-mark"'), "the corner button is the yantra, not a name or You");
+assert.ok(!/>You</.test(page), "no You label anywhere on the page");
+assert.ok(!page.includes('id="listen"'), "the shelf has no Listen on / Connected row");
+assert.ok(page.includes('id="account-spotify-connect"'), "Spotify still connects from Settings");
+assert.ok(!account.includes("textContent = mark"), "the corner never shows a profile initial");
 assert.ok(page.includes("grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr)"), "the iPad shelf stays two columns");
 assert.strictEqual(page.includes('id="account-bell"'), false);
 assert.strictEqual(page.includes('id="account-glow"'), false);
