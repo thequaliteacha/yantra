@@ -291,7 +291,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     font-size: clamp(1.8rem, 6vw, 2.5rem); color: #f7edd4; text-align: center; margin: 0.35rem 0 0.1rem;
   }
   #practice-sits { text-align: center; margin: 0 0 1rem; }
-  #practice-rows[hidden] { display: none; }
+  #practice-rows[hidden], #practice-link-field[hidden] { display: none; }
   .practice-row {
     display: grid; grid-template-columns: 1.3fr 0.9fr 1fr; gap: 0.6rem; align-items: baseline;
     padding: 0.55rem 0 0.55rem 0.75rem; border-top: 1px solid rgba(230, 201, 138, 0.16);
@@ -716,10 +716,13 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <p>Open this link on another device. The key stays in the link, and the server never sees it.</p>
         <div class="links"><button class="quiet" type="button" id="practice-link-qr-show" aria-expanded="false" aria-controls="practice-link-qr">Show the code</button></div>
         <div id="practice-link-qr" hidden></div>
-        <label class="account-field">Practice link
+        <label class="account-field" id="practice-link-field" hidden>Practice link
           <input id="practice-link-url" type="text" readonly spellcheck="false" autocomplete="off">
         </label>
-        <div class="links"><button class="quiet" type="button" id="practice-link-copy">Copy link</button></div>
+        <div class="links">
+          <button class="quiet" type="button" id="practice-link-copy">Copy link</button>
+          <button class="quiet" type="button" id="practice-link-url-show" aria-expanded="false" aria-controls="practice-link-field">Show the link</button>
+        </div>
       </div>
       <div id="practice-link-join">
         <label class="account-field">Practice key

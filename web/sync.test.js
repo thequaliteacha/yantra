@@ -407,6 +407,36 @@ global.fetch = (url, init) => net.handler(url, init);
   assert.ok(worker.includes("practiceRoute"));
   assert.strictEqual(/console\.(log|info|debug|warn|error)/.test(fs.readFileSync(path.join(__dirname, "../deploy/cloudflare/practice.js"), "utf8")), false);
 
+  // Settings travel too: the newer choice wins on every linked device.
+  const Settings = require("./settings.js");
+  const laptopStore = memory();
+  const phoneStore = memory();
+  use(laptopStore);
+  const photo = "data:image/jpeg;base64," + "A".repeat(120000);
+  Settings.set("altar.photos", [photo, photo]);
+  Settings.set("profile.name", "Stephen");
+  Settings.set("reminders", { id: "11111111-1111-4111-8111-111111111111", morning: { on: true, mode: "clock", time: "05:30" } });
+  Settings.set("glow.levelDark", 60);
+  const linkedLaptop = Sync.linkNew({ name: "March On" });
+  await Sync.sync();
+  use(phoneStore);
+  Settings.set("glow.levelDark", 120);
+  Sync.join(linkedLaptop.practiceKey, { name: "Pixel" });
+  await Sync.sync();
+  assert.strictEqual(Settings.get("altar.photos").length, 2, "altar photos reach the phone");
+  assert.strictEqual(Settings.get("profile.name"), "Stephen");
+  assert.strictEqual(Settings.get("reminders").morning.time, "05:30", "reminder times reach the phone");
+  assert.strictEqual(Settings.get("reminders").id, undefined, "the laptop's reminder id stays on the laptop");
+  assert.strictEqual(Settings.get("glow.levelDark"), 120, "brightness stays per device");
+  await new Promise((done) => setTimeout(done, 5));
+  Settings.set("profile.name", "Stephen F");
+  await Sync.sync();
+  use(laptopStore);
+  await Sync.sync();
+  assert.strictEqual(Settings.get("profile.name"), "Stephen F", "a newer change on the phone reaches the laptop");
+  assert.strictEqual(Settings.get("reminders").id, "11111111-1111-4111-8111-111111111111");
+  assert.strictEqual(Settings.get("altar.photos").length, 2);
+
   console.log("sync.test.js ok");
 })().catch((error) => {
   console.error(error);

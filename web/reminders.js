@@ -334,6 +334,32 @@ function boot() {
   }
   document.getElementById("remind-copy").textContent = "Morning: " + COPY.morning;
   preview(record);
+  // Times chosen on a linked device arrive here. Notifications are allowed per
+  // device, so this one only follows along once it has said yes itself.
+  window.addEventListener("yantra:settings-merged", async (event) => {
+    const keys = (event.detail && event.detail.keys) || [];
+    if (keys.indexOf("reminders") < 0) return;
+    record = load();
+    applyTheme("morning", record.morning);
+    applyTheme("evening", record.evening);
+    document.getElementById("remind-place").value = placeLabel(record.place);
+    preview(record);
+    const wants = !!((record.morning && record.morning.on) || (record.evening && record.evening.on));
+    let subscription = null;
+    try {
+      if ("serviceWorker" in navigator && "PushManager" in window && typeof Notification !== "undefined" && Notification.permission === "granted") {
+        const registration = await navigator.serviceWorker.ready;
+        subscription = await registration.pushManager.getSubscription();
+      }
+    } catch (e) {}
+    if (subscription && (wants || record.id)) {
+      const sent = await pushServer("/push", payload(record, subscription.toJSON())).catch(() => ({ ok: false }));
+      save(record);
+      status(sent.ok ? "Reminder times updated from your linked device." : "");
+    } else if (wants) {
+      status("Reminder times came from your linked device. Tap Save reminders to get the notes here too.");
+    }
+  });
   root.addEventListener("change", () => preview(record));
   root.addEventListener("click", (event) => {
     const button = event.target.closest("[data-on]");
