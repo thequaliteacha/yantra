@@ -40,6 +40,7 @@
     "bell.threeQuarterTone": "medium",
     "glow.levelDark": null,
     "glow.levelLight": null,
+    "motion.awakening": true,
   };
   const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow"];
   const listeners = new Set();
@@ -120,6 +121,7 @@
       return Math.max(0, Math.min(1, level));
     }
     if (key === "theme.light" || key === "flags.accountSync" || key === "flags.accountSignOut") return !!value;
+    if (key === "motion.awakening") return value !== false && value !== "off";
     if (key === "glow.level" || key === "glow.levelLight" || key === "glow.levelDark") {
       if (value === null || value === undefined || value === "") return null;
       const level = Number(value);

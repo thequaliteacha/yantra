@@ -2034,8 +2034,8 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        if path == "/web/series.js":
-            file = ROOT / "web" / "series.js"
+        if path in ("/web/series.js", "/web/field.js", "/web/awakening.js"):
+            file = ROOT / "web" / path.rsplit("/", 1)[-1]
             if not file.is_file():
                 self.send_error(404)
                 return
