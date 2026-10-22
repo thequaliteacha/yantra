@@ -134,14 +134,14 @@ of home switches between dark and cream (a warm eggshell with brown-gold ink).
 
 Playing a talk opens *Watch*: the glowing Sri Yantra forms over the talk's
 opening minutes with the navel lotus's ten petals, and the
-words being spoken embellish it. Words of light send soft rays out; heart,
-power, and awareness words lean the colour toward that chakra; stillness hushes
-the figure; enlightenment lets it bloom. Concepts (the sun, a mountain, the
-ocean, a lotus, a path, a door, the wheel of rebirth, and others in
-`web/sketches.js`) draw themselves as small line sketches beside the figure. The
-phrase being spoken can show below. Closing the visualizer pauses the talk, as
-ending a sit stops the music; it picks up there next time. The, each word brightening as it is said (Words
-on or off). The timed words are made locally with
+words being spoken embellish it. Words of light and of enlightenment raise a
+soft brightness in the open field around the figure, clear of the yantra and
+of the words below. Heart, power, and awareness words lean the colour toward
+that chakra; stillness hushes the figure; enlightenment lets the bindu bloom.
+The phrase being spoken can show below, each word brightening as it is said
+(Words on or off). On a short screen the figure lifts so those words stay
+clear of it. Closing the visualizer pauses the talk, as
+ending a sit stops the music; it picks up there next time. The timed words are made locally with
 `tools/transcribe_talks.py` (faster-whisper) and kept in the private bucket
 next to each talk as `talks/<name>.json`, served only to the Zazen word.
 Name, reminder choices, theme, glow, and saved talks are in one store,

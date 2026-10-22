@@ -2,8 +2,9 @@
  * being spoken embellish it. The timed words come from /talks/<key>.json, made on
  * the builder's computer (tools/transcribe_talks.py) and gated like the audio.
  *
- * Words of light send soft rays out; words of the heart, of power, and of awareness
- * lean the colour toward that chakra; words of stillness hush the figure; words of
+ * Words of light and of enlightenment raise a soft brightness in the open field
+ * around the figure. Words of the heart, of power, and of awareness lean the
+ * colour toward that chakra; words of stillness hush the figure; words of
  * enlightenment let it bloom. The phrase being spoken can show below, each word
  * brightening as it is said.
  */
@@ -27,16 +28,6 @@
   /* What a spoken word does to the figure: a chakra mood, a motif, or nothing. */
   function kindOf(word) {
     return KIND[clean(word)] || "";
-  }
-
-  function sketches() {
-    if (root && root.YantraSketches) return root.YantraSketches;
-    if (typeof require === "function") return require("./sketches.js");
-    return null;
-  }
-  function sketchOf(word) {
-    const S = sketches();
-    return S ? S.sketchOf(word) : "";
   }
 
   /* The segment playing at time t, or -1. Segments are [start, end, text, words]. */
@@ -66,8 +57,7 @@
       for (const pair of segments[i][3] || []) {
         if (pair[0] > from && pair[0] <= to) {
           const kind = kindOf(pair[1]);
-          const sketch = sketchOf(pair[1]);
-          if (kind || sketch) out.push({ at: pair[0], word: pair[1], kind, sketch });
+          if (kind) out.push({ at: pair[0], word: pair[1], kind });
         }
       }
     }
@@ -76,33 +66,61 @@
 
   /* The figure's state as the talk plays. Strengths decay so each word is a gentle wave. */
   function createState() {
-    return { mood: "", light: 0, awake: 0, still: 0, ripples: [], sketches: [], drawnAt: {}, lastSketch: -99, lastT: -1 };
+    return { mood: "", light: 0, awake: 0, still: 0, ripples: [], lastT: -1 };
   }
 
   const DECAY = { light: 6, awake: 9, still: 14 };
-  // A sketch draws itself, rests, then fades; the same one waits before it returns.
-  const SKETCH = { draw: 1.8, hold: 5, fade: 2.2, again: 45, gap: 5, most: 2 };
-  const SLOTS = 4;
 
-  function addSketch(s, name, t) {
-    if (t - s.lastSketch < SKETCH.gap) return;
-    if (s.drawnAt[name] != null && t - s.drawnAt[name] < SKETCH.again) return;
-    if (s.sketches.length >= SKETCH.most) return;
-    const used = s.sketches.map((sk) => sk.slot);
-    let slot = (s.nextSlot || 0) % SLOTS;
-    for (let i = 0; i < SLOTS && used.indexOf(slot) >= 0; i++) slot = (slot + 1) % SLOTS;
-    s.nextSlot = slot + 1;
-    s.sketches.push({ name: name, age: 0, slot: slot });
-    s.drawnAt[name] = t;
-    s.lastSketch = t;
+  /* How strongly light and enlightenment brighten the field around the figure.
+     Other words leave it at rest. */
+  function brightness(state) {
+    const s = state || {};
+    const light = Math.max(0, Math.min(1, Number(s.light) || 0));
+    const awake = Math.max(0, Math.min(1, Number(s.awake) || 0));
+    return Math.min(1, light * 0.75 + awake * 0.85);
   }
 
-  /* How far a sketch is drawn (0..1) and how visible it is (0..1) at its age. */
-  function sketchPhase(age) {
-    const drawn = Math.min(1, age / SKETCH.draw);
-    const end = SKETCH.draw + SKETCH.hold;
-    const alpha = age < end ? 1 : Math.max(0, 1 - (age - end) / SKETCH.fade);
-    return { drawn: drawn, alpha: alpha };
+  /* The square and its doors, plus the small breath of a sit, in units of R.
+     The wash stays outside this, so it does not cover the figure. */
+  const GLOW_CLEAR = 2.72;
+
+  /* Bands of open field above and below the yantra, stopping short of the
+     captions and of anything resting above the figure. Empty when a band
+     would have to cross either one. */
+  function glowBands(box) {
+    const src = box || {};
+    const w = Number(src.w) || 0;
+    const h = Number(src.h) || 0;
+    const cx = Number(src.cx) || 0;
+    const cy = Number(src.cy) || 0;
+    const R = Number(src.R) || 0;
+    const half = R * GLOW_CLEAR;
+    const rects = [];
+    if (!(w > 0) || !(h > 0) || !(R > 0)) return { rects, half };
+    const gap = Math.max(10, R * 0.16);
+    const cap = Number.isFinite(src.captionTop) && src.captionTop > 0 ? src.captionTop : h;
+    const altarBottom = Math.max(0, Number(src.altarBottom) || 0);
+    const topEnd = cy - half - gap;
+    const topStart = Math.max(altarBottom, topEnd - R * 1.15);
+    if (topEnd - topStart >= 12 && topStart < topEnd) {
+      rects.push({
+        x0: 0,
+        y0: Math.max(0, topStart),
+        x1: w,
+        y1: Math.min(h, topEnd),
+      });
+    }
+    const botStart = cy + half + gap;
+    const botEnd = Math.min(h, cap - gap, botStart + R * 1.05);
+    if (botEnd - botStart >= 12 && botStart < botEnd) {
+      rects.push({
+        x0: 0,
+        y0: Math.max(0, botStart),
+        x1: w,
+        y1: botEnd,
+      });
+    }
+    return { rects, half };
   }
 
   function step(state, segments, t, dt) {
@@ -110,7 +128,6 @@
     for (const key of Object.keys(DECAY)) s[key] = Math.max(0, s[key] - dt / DECAY[key]);
     if (s.lastT >= 0 && t > s.lastT) {
       for (const hit of crossed(segments, s.lastT, t)) {
-        if (hit.sketch) addSketch(s, hit.sketch, hit.at);
         if (!hit.kind) continue;
         if (MOODS.indexOf(hit.kind) >= 0) s.mood = hit.kind;
         else s[hit.kind] = Math.min(1, s[hit.kind] + (hit.kind === "still" ? 0.6 : 0.8));
@@ -120,8 +137,6 @@
     s.lastT = t;
     s.ripples.forEach((ripple) => { ripple.age += dt; });
     s.ripples = s.ripples.filter((ripple) => ripple.age < 5).slice(-6);
-    s.sketches.forEach((sk) => { sk.age += dt; });
-    s.sketches = s.sketches.filter((sk) => sk.age < SKETCH.draw + SKETCH.hold + SKETCH.fade);
     return s;
   }
 
@@ -144,7 +159,7 @@
         const span = d.createElement("span");
         span.textContent = (i ? " " : "") + pair[1];
         span.dataset.at = String(pair[0]);
-        const kind = kindOf(pair[1]) || (sketchOf(pair[1]) ? "sketch" : "");
+        const kind = kindOf(pair[1]);
         if (kind) span.className = "k-" + kind;
         node.append(span);
       });
@@ -169,7 +184,28 @@
     }
   }
 
-  const api = { LEXICON, SKETCH, kindOf, sketchOf, segmentAt, crossed, createState, step, sketchPhase, paintWords, loadWords };
+  /* Keep the figure in the open field above the spoken words. A phone already
+     has that room, so it stays centred; a short landscape screen is lifted
+     and, only if it must, drawn a little smaller so the square clears the words. */
+  function placeFigure(box) {
+    const src = box || {};
+    const h = Number(src.h) || 0;
+    let cx = Number(src.cx) || 0;
+    let cy = Number(src.cy) || 0;
+    let R = Number(src.R) || 0;
+    const captionTop = Number.isFinite(src.captionTop) && src.captionTop > 0 ? src.captionTop : h;
+    const margin = Math.max(16, h * 0.02);
+    const top = Math.max(20, h * 0.03);
+    const extent = 2.64;
+    const room = captionTop - margin - top;
+    if (room > 120 && R * extent * 2 > room) R = room / (extent * 2);
+    const limit = captionTop - margin;
+    if (cy + R * extent > limit) cy = limit - R * extent;
+    if (cy - R * extent < top) cy = top + R * extent;
+    return { cx, cy, R, extent };
+  }
+
+  const api = { LEXICON, kindOf, segmentAt, crossed, createState, step, paintWords, loadWords, brightness, glowBands, placeFigure };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.YantraTalkView = api;
 })(typeof window !== "undefined" ? window : null);

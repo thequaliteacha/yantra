@@ -405,7 +405,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #talk-words span.said.k-naval { color: #f6d98c; }
   #talk-words span.said.k-eye { color: #cdc6f4; }
   #talk-words span.said.k-still { color: rgba(247, 237, 212, 0.6); }
-  #talk-words span.said.k-sketch { color: #f2deb0; }
   #talk-bar { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 1.2rem; opacity: 0; transition: opacity 0.6s ease; pointer-events: none; }
   #talk-watch.awake #talk-bar { opacity: 1; pointer-events: auto; }
   #talk-bar button { background: transparent; border: 0; font: inherit; font-size: 0.95rem; color: rgba(232, 204, 146, 0.88); padding: 0.55rem 0.4rem; cursor: pointer; }
@@ -1442,26 +1441,14 @@ function emanate(ctx, cx, cy, R, now, strength) {
   ctx.globalCompositeOperation = op;
 }
 
-/* A talk's words, drawn: rays for light, a widening ring for each word that lands,
-   and a halo while enlightenment is being spoken of. All faint, at the edge of vision. */
-function talkMotifs(ctx, cx, cy, R, now, fx, reduce) {
+/* A talk's words, drawn: a widening ring for each word that lands, faint,
+   at the edge of vision. Light and enlightenment brighten the field around
+   the figure instead of drawing across it. */
+function talkMotifs(ctx, cx, cy, R, fx) {
   if (!fx) return;
   const op = ctx.globalCompositeOperation;
   ctx.globalCompositeOperation = glowBlend();
   ctx.shadowBlur = 0;
-  if (fx.light > 0.01) {
-    const n = 36;
-    const turn = reduce ? 0 : now * 0.00002;
-    ctx.strokeStyle = rgba(inkOf([255, 222, 150]), 0.16 * fx.light);
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    for (let i = 0; i < n; i++) {
-      const a = turn + (i / n) * Math.PI * 2;
-      ctx.moveTo(cx + Math.cos(a) * R * 1.05, cy + Math.sin(a) * R * 1.05);
-      ctx.lineTo(cx + Math.cos(a) * R * (1.5 + 0.9 * fx.light), cy + Math.sin(a) * R * (1.5 + 0.9 * fx.light));
-    }
-    ctx.stroke();
-  }
   for (const ripple of fx.ripples) {
     const p = Math.min(1, ripple.age / 5);
     const tone = ripple.kind === "light" ? [255, 226, 160] : ripple.kind === "awake" ? [247, 237, 212] : (CHAKRA[ripple.kind] || GOLD).glow;
@@ -1471,65 +1458,65 @@ function talkMotifs(ctx, cx, cy, R, now, fx, reduce) {
     circle(ctx, cx, cy, R * (0.3 + 2.4 * p));
     ctx.stroke();
   }
-  if (fx.awake > 0.01) {
-    ctx.strokeStyle = rgba(inkOf([247, 237, 212]), 0.12 * fx.awake);
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    circle(ctx, cx, cy, R * 2.6);
-    ctx.stroke();
-  }
   ctx.globalCompositeOperation = op;
 }
 
-/* The sketches a talk calls up, drawn stroke by stroke in the yantra's ink at four
-   places around it, never over the bindu. Stroke lengths are measured once. */
-const sketchCache = {};
-function sketchStrokes(name) {
-  if (sketchCache[name]) return sketchCache[name];
-  if (!window.YantraSketches) return null;
-  const probe = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  const parts = window.YantraSketches.strokes(name).map((d) => {
-    probe.setAttribute("d", d);
-    let length = 100;
-    try { length = probe.getTotalLength() || 100; } catch (e) {}
-    return { path: new Path2D(d), length: length };
-  });
-  sketchCache[name] = { parts: parts, total: parts.reduce((sum, part) => sum + part.length, 0) };
-  return sketchCache[name];
+/* Where the spoken phrase sits, and where altar photos end, so the wash can
+   stop before either. */
+function shineLimits(h) {
+  const words = document.getElementById("talk-words");
+  let captionTop = h;
+  if (words) {
+    const box = words.getBoundingClientRect();
+    if (box.height > 2 && box.top > 8) captionTop = box.top;
+  }
+  const altar = document.getElementById("altar");
+  let altarBottom = 0;
+  if (altar && altar.classList.contains("on")) {
+    const box = altar.getBoundingClientRect();
+    if (box.height > 2) altarBottom = box.bottom;
+  }
+  return { captionTop, altarBottom };
 }
-const SKETCH_SLOTS = [-140, -40, 140, 40].map((deg) => (deg * Math.PI) / 180);
-function drawSketches(ctx, cx, cy, R, fx, reduce) {
-  if (!fx || !fx.sketches || !fx.sketches.length || !window.YantraTalkView) return;
+
+/* A calm brightness in the open field when the talk speaks of light or
+   enlightenment. Clipped to the bands beside the figure, clear of the
+   yantra and of the words. */
+function talkShine(ctx, w, h, cx, cy, R, fx) {
+  const view = window.YantraTalkView;
+  if (!fx || !view || !view.brightness || !view.glowBands) return;
+  const shine = view.brightness(fx);
+  if (shine < 0.02) return;
+  const limits = shineLimits(h);
+  const bands = view.glowBands({
+    w: w, h: h, cx: cx, cy: cy, R: R,
+    captionTop: limits.captionTop, altarBottom: limits.altarBottom,
+  });
+  if (!bands.rects.length) return;
   const op = ctx.globalCompositeOperation;
   ctx.globalCompositeOperation = glowBlend();
-  const size = R * 1.35;
-  const reach = R * 2.25;
-  for (const sk of fx.sketches) {
-    const drawn = sketchStrokes(sk.name);
-    if (!drawn) continue;
-    const phase = window.YantraTalkView.sketchPhase(sk.age);
-    const progress = reduce ? 1 : phase.drawn;
-    const a = SKETCH_SLOTS[sk.slot % SKETCH_SLOTS.length];
-    const x = cx + Math.cos(a) * reach;
-    const y = cy + Math.sin(a) * reach * 0.92;
+  ctx.shadowBlur = 0;
+  const light = Math.max(0, fx.light || 0);
+  const awake = Math.max(0, fx.awake || 0);
+  const mix = light + awake > 0 ? light / (light + awake) : 1;
+  const sun = [255, 208, 120];
+  const dawn = [255, 246, 226];
+  const tone = sun.map((channel, i) => Math.round(channel * mix + dawn[i] * (1 - mix)));
+  const ink = isLight() ? tone : inkOf(tone);
+  const peak = (isLight() ? 0.26 : 0.4) * shine;
+  for (const rect of bands.rects) {
+    const width = rect.x1 - rect.x0;
+    const height = rect.y1 - rect.y0;
+    if (width <= 0 || height <= 0) continue;
     ctx.save();
-    ctx.translate(x - size / 2, y - size / 2);
-    ctx.scale(size / 100, size / 100);
-    ctx.lineWidth = 1.5 / (size / 100);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = rgba(inkOf(hue.tint), 0.62 * phase.alpha);
-    ctx.shadowColor = rgba(inkOf(hue.glow), 0.5 * phase.alpha);
-    ctx.shadowBlur = 6;
-    let left = drawn.total * progress;
-    for (const part of drawn.parts) {
-      if (left <= 0) break;
-      const ink = Math.min(part.length, left);
-      ctx.setLineDash([ink, part.length + 1]);
-      ctx.lineDashOffset = 0;
-      ctx.stroke(part.path);
-      left -= part.length;
-    }
+    ctx.beginPath();
+    ctx.rect(rect.x0, rect.y0, width, height);
+    ctx.clip();
+    const g = ctx.createRadialGradient(cx, cy, bands.half, cx, cy, bands.half + R * 1.7);
+    g.addColorStop(0, rgba(ink, peak));
+    g.addColorStop(1, rgba(ink, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(rect.x0, rect.y0, width, height);
     ctx.restore();
   }
   ctx.globalCompositeOperation = op;
@@ -1647,9 +1634,17 @@ function frame(now) {
   const sitting = document.body.classList.contains("sitting") || watching;
   let talkFx = null;
   const spot = homeSpot(w, h, sitting);
-  const cx = spot.cx;
-  const cy = spot.cy;
-  const R = spot.R;
+  let cx = spot.cx;
+  let cy = spot.cy;
+  let R = spot.R;
+  if (watching && window.YantraTalkView && window.YantraTalkView.placeFigure) {
+    const placed = window.YantraTalkView.placeFigure({
+      w: w, h: h, cx: cx, cy: cy, R: R, captionTop: shineLimits(h).captionTop,
+    });
+    cx = placed.cx;
+    cy = placed.cy;
+    R = placed.R;
+  }
   const breath = sitting ? 1 + Math.min(1, shown) * 0.03 : 1 + Math.sin(now * 0.00035) * 0.012 + shown * 0.028;
   let reveal = 1;
   let fade = 0;
@@ -1743,7 +1738,8 @@ function frame(now) {
     if (reveal < 0.99) window.wholeAt = 0;
     else if (!window.wholeAt) window.wholeAt = now;
     const rest = (window.wholeAt ? 1 - 0.15 * ease((now - window.wholeAt) / 20000) : 1) * (talkFx ? 1 - 0.3 * talkFx.still : 1);
-    const talkGlow = talkFx ? 1.25 : 1;
+    const shine = talkFx && window.YantraTalkView ? window.YantraTalkView.brightness(talkFx) : 0;
+    const talkGlow = talkFx ? 1.25 + shine * 0.4 : 1;
     gold(ctx, 0.92 * rest, (14 + shown * 10) * talkGlow, Math.min(1, (0.48 + 0.22 * Math.min(1, shown)) * rest * talkGlow));
     // In a sit the wheel starts to quiver as its petals open, in the song's last third,
     // and is fullest at the close. Talks and reduced motion hold the figure still.
@@ -1753,10 +1749,7 @@ function frame(now) {
     window.wheelSpin = ((window.wheelSpin || 0) + leanDt * quiver * (Math.PI * 2 / 30)) % (Math.PI * 2);
     drawSri(ctx, cx, cy, R, reveal, bloom, lotus || CHAKRA.heart, quiver, window.wheelSpin);
     emanate(ctx, cx, cy, R, now, Math.min(1, reveal / 0.12) * rest);
-    if (talkFx) {
-      talkMotifs(ctx, cx, cy, R, now, talkFx, reduceMotion);
-      drawSketches(ctx, cx, cy, R, talkFx, reduceMotion);
-    }
+    if (talkFx) talkMotifs(ctx, cx, cy, R, talkFx);
   } else {
     gold(ctx, 0.9 * (1 - fade), 10 + shown * 16);
     ctx.globalAlpha = 1 - fade;
@@ -1768,6 +1761,7 @@ function frame(now) {
     }
   }
   ctx.restore();
+  if (talkFx) talkShine(ctx, w, h, cx, cy, R, talkFx);
   requestAnimationFrame(frame);
 }
 window.pace = { key: "", pos: 0 };
