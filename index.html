@@ -186,17 +186,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #glowbar input::-moz-range-track { height: 1px; background: rgba(230, 201, 138, 0.35); }
   #glowbar input::-webkit-slider-thumb { -webkit-appearance: none; width: 0.8rem; height: 0.8rem; margin-top: -0.4rem; border-radius: 50%; background: #e6c98a; border: 0; box-shadow: 0 0 8px rgba(230, 180, 90, 0.6); }
   #glowbar input::-moz-range-thumb { width: 0.8rem; height: 0.8rem; border-radius: 50%; background: #e6c98a; border: 0; box-shadow: 0 0 8px rgba(230, 180, 90, 0.6); }
-  #glowbar .sun, body.light #glowbar .moon { display: none; }
-  body.light #glowbar .sun { display: inline; }
-  /* Day: the canvas draws on warm paper; the panels turn to match. */
-  /* Cream: a warm eggshell field with brown-gold ink, never stark. The panels are the dark
-     design turned over, warmed and softened, on a clear background so the field shows through. */
-  body.light, html:has(body.light) { background: #efe4cc; }
-  body.light .room { background: transparent; }
   body { transition: background-color 1.6s linear; }
   @media (prefers-reduced-motion: reduce) { body { transition: none; } }
-  body.light .room, body.light #gate, body.light #glowbar, body.light #account-corner { filter: invert(0.92) hue-rotate(180deg) sepia(0.32) contrast(0.8); }
-  body.light #caption, body.light #transport, body.light #end { filter: invert(0.92) hue-rotate(180deg) sepia(0.32) contrast(0.8) brightness(var(--glow)); }
   #transport svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
 
 
@@ -311,7 +302,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #practice-link-qr[hidden], #practice-link-qr:empty { display: none; }
   #practice-link-qr svg { width: min(220px, 68vw); height: auto; border-radius: 0.4rem; }
   /* The room is inverted for day. Turn the code back so it stays gold on indigo and can still be scanned. */
-  body.light #practice-link-qr { filter: invert(1) hue-rotate(180deg) saturate(0.9) contrast(1.2); }
   #practice-devices { list-style: none; margin: 0.15rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
   #practice-devices[hidden] { display: none; }
   #practice-devices li { display: flex; justify-content: space-between; gap: 0.8rem; align-items: center; color: rgba(247, 237, 212, 0.92); }
@@ -451,7 +441,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #talk-bar button[aria-pressed="false"] { color: rgba(232, 204, 146, 0.55); text-decoration: line-through; }
   #talk-title { margin: 0.5rem 0 0; font-size: 0.85rem; letter-spacing: 0.08em; color: rgba(232, 204, 146, 0.7); opacity: 0; transition: opacity 0.6s ease; text-align: center; }
   #talk-watch.awake #talk-title { opacity: 1; }
-  body.light #talk-watch { filter: invert(0.92) hue-rotate(180deg) sepia(0.32) contrast(0.8); }
   #reminders[hidden] { display: none; }
   /* The week: seven days, each a circle whose left half is the sunrise sit and right half the sunset sit. */
   .week { display: flex; justify-content: center; margin: 0.4rem 0 0; min-height: 1.9rem; }
@@ -487,7 +476,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #altar-show[aria-pressed="false"] { text-decoration: line-through; }
   #altar-note:empty { display: none; }
   /* The room is inverted for day; turn the photos back so faces keep their colour. */
-  body.light #altar-list img, body.light #home-altar img, body.light #pick-altar img { filter: invert(1) hue-rotate(180deg) saturate(0.8) sepia(0.15); }
   .talk.heard span:first-child { color: rgba(243, 230, 200, 0.84); }
   #reminders { text-align: left; display: flex; flex-direction: column; gap: 0.55rem; }
   #account input[type="radio"] { width: auto; padding: 0; margin: 0 0.15rem 0 0; accent-color: #e6c98a; }
@@ -952,10 +940,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 </div>
 <button id="end" type="button">End sitting</button>
 <div id="glowbar">
-  <button type="button" id="theme" aria-label="Switch between dark and cream">
-    <svg class="moon" viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg>
-    <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>
-  </button>
   <input id="glow" type="range" min="35" max="125" step="1" value="100" aria-label="Brightness">
 </div>
 <div id="transport" hidden>
@@ -1137,7 +1121,7 @@ function bhupura(ctx, cx, cy, R, grow) {
    open circle of the mind, its wings left undrawn. Each wheel has its own light:
    Manipura the yellow-gold of the sun, Anahata the living green of the heart, Ajna
    the violet of the mind's eye. The lines carry the tint, the halo and field carry
-   the glow, and in cream the same hue deepens into its ink. The gold leans toward
+   the glow. The gold leans toward
    the song's chakra over a few breaths, and the night stays dark. */
 const CHAKRA = {
   naval: { id: "naval", petals: 10, figure: "fire", tint: [248, 208, 96], glow: [232, 160, 28], ink: [146, 94, 18] },
@@ -1151,22 +1135,15 @@ function leanToward(target, amount) {
     for (let i = 0; i < 3; i++) hue[part][i] += (target[part][i] - hue[part][i]) * amount;
   }
 }
-const isLight = () => document.body.classList.contains("light");
-// In cream the lines are ink on eggshell: the chakra's own hue, gently deepened.
 function inkOf(rgb) {
-  return isLight() ? rgb.map((c, i) => Math.round(c * 0.45 + hue.ink[i] * 0.55)) : rgb.map(Math.round);
-}
-// The chakra's glow pulled toward warm white, for washes that must stay pale.
-function paleOf(rgb, amount) {
-  const wash = [255, 246, 226];
-  return rgb.map((c, i) => Math.round(c * (1 - amount) + wash[i] * amount));
+  return rgb.map(Math.round);
 }
 function rgba(rgb, alpha) {
   return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
 }
-// Light adds up on the dark field; on paper it lays down softly instead.
+// Light adds up on the dark field.
 function glowBlend() {
-  return isLight() ? "multiply" : "lighter";
+  return "lighter";
 }
 
 function goldBlur(blur) {
@@ -1185,7 +1162,7 @@ function gold(ctx, alpha, blur, glow) {
   ctx.lineCap = "round";
   ctx.strokeStyle = rgba(inkOf(hue.tint), alpha);
   const lift = glow == null ? 0.35 + shown * 0.35 : glow;
-  ctx.shadowColor = rgba(inkOf(hue.glow), isLight() ? lift * 0.4 : lift);
+  ctx.shadowColor = rgba(inkOf(hue.glow), lift);
   ctx.shadowBlur = goldBlur(blur);
 }
 
@@ -1274,9 +1251,9 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
   if (reveal > 0.005) {
     const reach = R * (0.2 + 2.2 * ease(reveal));
     const light = ctx.createRadialGradient(cx, cy, 0, cx, cy, reach);
-    const wash = isLight() ? paleOf(hue.glow, 0.55) : [Math.min(255, hue.glow[0] + 41), Math.min(255, hue.glow[1] + 50), Math.min(255, hue.glow[2] + 68)];
+    const wash = [Math.min(255, hue.glow[0] + 41), Math.min(255, hue.glow[1] + 50), Math.min(255, hue.glow[2] + 68)];
     light.addColorStop(0, rgba(wash, 0.16 + 0.1 * reveal));
-    light.addColorStop(0.55, rgba(isLight() ? paleOf(hue.glow, 0.4) : hue.glow, 0.05 + 0.05 * reveal));
+    light.addColorStop(0.55, rgba(hue.glow, 0.05 + 0.05 * reveal));
     light.addColorStop(1, rgba(hue.glow, 0));
     const op = ctx.globalCompositeOperation;
     ctx.globalCompositeOperation = glowBlend();
@@ -1399,23 +1376,22 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
     const halo = R * (0.09 + 0.07 * warmth + 0.012 * breath + 0.03 * bloom);
     const hot = Math.min(1, (0.75 + 0.2 * warmth + 0.05 * breath + bloom * 0.2) * glow);
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, halo);
-    // On paper the bindu is a warm ember; in the dark it is light itself.
-    const core = isLight() ? [176, 84, 16] : [255, 253, 246];
+    const core = [255, 253, 246];
     g.addColorStop(0, rgba(core, glow));
     const mix = (a, k) => a.map((c, i) => Math.round(c * (1 - k) + hue.glow[i] * k));
     // The halo's outer reach takes the chakra's colour, so the point of light sits in its wheel.
-    g.addColorStop(0.1, rgba(isLight() ? [214, 124, 36] : [255, 238, 200], hot));
-    g.addColorStop(0.28, rgba(isLight() ? mix([226, 150, 60], 0.3) : mix([255, 206, 120], 0.45), 0.6 * hot));
-    g.addColorStop(0.6, rgba(isLight() ? mix([236, 170, 80], 0.55) : mix([240, 180, 70], 0.75), 0.14 * hot));
+    g.addColorStop(0.1, rgba([255, 238, 200], hot));
+    g.addColorStop(0.28, rgba(mix([255, 206, 120], 0.45), 0.6 * hot));
+    g.addColorStop(0.6, rgba(mix([240, 180, 70], 0.75), 0.14 * hot));
     g.addColorStop(1, rgba(hue.glow, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(cx, cy, halo, 0, Math.PI * 2);
     ctx.fill();
     ctx.save();
-    ctx.shadowColor = rgba(isLight() ? [200, 110, 30] : [255, 236, 190], glow);
+    ctx.shadowColor = rgba([255, 236, 190], glow);
     ctx.shadowBlur = goldBlur(Math.max(6, R * 0.07));
-    ctx.fillStyle = rgba(isLight() ? [130, 56, 8] : [255, 255, 252], glow);
+    ctx.fillStyle = rgba([255, 255, 252], glow);
     ctx.beginPath();
     ctx.arc(cx, cy, Math.max(2.2, R * (0.016 + 0.005 * warmth)), 0, Math.PI * 2);
     ctx.fill();
@@ -1465,7 +1441,6 @@ function field(w, h, t) {
   const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const breath = reduce ? 0.5 : 0.5 + 0.5 * Math.sin(t * 0.00015);
   const colors = window.YantraField.stops({
-    light: isLight(),
     sitting: sittingNow(),
     reduce: reduce,
     breath: breath,
@@ -1473,7 +1448,7 @@ function field(w, h, t) {
   });
   fieldNow = colors;
   g.addColorStop(0, rgba(colors.center, 1));
-  g.addColorStop(isLight() ? 0.55 : 0.45, rgba(colors.mid, 1));
+  g.addColorStop(0.45, rgba(colors.mid, 1));
   g.addColorStop(1, rgba(colors.edge, 1));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
@@ -1483,7 +1458,7 @@ function dots(cx, cy, R, t) {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(t * 0.00004);
-  ctx.fillStyle = isLight() ? "rgba(140, 100, 50, 0.3)" : "rgba(214, 176, 106, 0.28)";
+  ctx.fillStyle = "rgba(214, 176, 106, 0.28)";
   const n = 108;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
@@ -1573,8 +1548,8 @@ function talkShine(ctx, w, h, cx, cy, R, fx) {
   const sun = [255, 208, 120];
   const dawn = [255, 246, 226];
   const tone = sun.map((channel, i) => Math.round(channel * mix + dawn[i] * (1 - mix)));
-  const ink = isLight() ? tone : inkOf(tone);
-  const peak = (isLight() ? 0.26 : 0.4) * shine;
+  const ink = inkOf(tone);
+  const peak = 0.4 * shine;
   for (const rect of bands.rects) {
     const width = rect.x1 - rect.x0;
     const height = rect.y1 - rect.y0;
@@ -1802,8 +1777,6 @@ function frame(now) {
   const leanDt = Math.min(0.5, Math.max(0, (now - (window.leanAt || now)) / 1000));
   window.leanAt = now;
   leanToward(lotus || GOLD, reduceMotion ? 1 : 1 - Math.exp(-leanDt / 3));
-  if (isLight() && fieldNow) document.body.style.backgroundColor = rgba(fieldNow.center, 1);
-  else document.body.style.backgroundColor = "";
   if (sitting) {
     // Once the figure is whole it settles about 15% dimmer, so the eyes can rest.
     if (reveal < 0.99) window.wholeAt = 0;
@@ -1868,7 +1841,6 @@ window.awakeningOn = true;
   const name = params.get("chakra");
   if (!name || !CHAKRA[name]) return;
   document.body.classList.add("sitting", "awake");
-  if (params.get("light") === "1") document.body.classList.add("light");
   window.yantraPreview = name;
   window.series = {
     key: "preview:" + name,
@@ -3222,81 +3194,53 @@ document.getElementById("menu-forms").addEventListener("click", () => {
 });
 showMenu();
 document.getElementById("end").addEventListener("click", endSitting);
-// Night or day, and how bright. Kept in this browser. Before the first choice the
-// yantra glows a little lower in the early morning and late evening.
+// How bright the yantra glows. Kept in this browser. Before the first choice it
+// glows a little lower in the early morning and late evening.
 (function () {
   const slider = document.getElementById("glow");
   const settings = window.YantraSettings;
   let saved = {};
-  if (settings) saved = { level: settings.get("glow.level"), light: settings.get("theme.light") };
+  if (settings) saved = { level: settings.get("glow.level") };
   else {
     try { saved = JSON.parse(localStorage.getItem("yantra.glow") || "{}"); } catch (e) {}
   }
   const hour = new Date().getHours();
   const night = hour < 6 || hour >= 20;
-  const dayDefault = () => (window.YantraField ? window.YantraField.brightnessDefault(true, night) : 90);
-  const nightDefault = () => (window.YantraField ? window.YantraField.brightnessDefault(false, night) : (night ? 80 : 100));
-  const storedLevel = (light) => {
-    const themed = settings && settings.get(light ? "glow.levelLight" : "glow.levelDark");
-    if (themed != null && themed !== "") return themed;
+  const storedLevel = () => {
+    const dark = settings && settings.get("glow.levelDark");
+    if (dark != null && dark !== "") return dark;
     if (saved.level != null && saved.level !== "") return saved.level;
-    return light ? dayDefault() : nightDefault();
+    return window.YantraField ? window.YantraField.brightnessDefault(night) : (night ? 80 : 100);
   };
   const apply = () => {
     document.documentElement.style.setProperty("--glow", (Number(slider.value) / 100).toFixed(2));
   };
   const paintGlowControls = () => {
-    const light = document.body.classList.contains("light");
     const account = document.getElementById("glow-level");
-    const theme = document.getElementById("glow-theme");
     if (account) account.value = slider.value;
-    if (theme) {
-      theme.setAttribute("aria-pressed", String(light));
-      theme.textContent = light ? "Dark" : "Cream";
-    }
   };
   window.paintGlowControls = paintGlowControls;
   const keep = () => {
     const level = Number(slider.value);
-    const light = document.body.classList.contains("light");
     if (settings) {
       settings.set("glow.level", level);
-      settings.set(light ? "glow.levelLight" : "glow.levelDark", level);
-      settings.set("theme.light", light);
+      settings.set("glow.levelDark", level);
       return;
     }
     try {
-      localStorage.setItem("yantra.glow", JSON.stringify({ level: level, light: light }));
+      localStorage.setItem("yantra.glow", JSON.stringify({ level: level }));
     } catch (e) {}
   };
-  const chooseTheme = (light) => {
-    document.body.classList.toggle("light", light);
-    const themed = settings && settings.get(light ? "glow.levelLight" : "glow.levelDark");
-    if (themed != null && themed !== "") slider.value = themed;
-    else if (light) slider.value = dayDefault();
-    apply();
-    keep();
-    paintGlowControls();
-    rouse();
-  };
-  if (settings ? settings.get("theme.light") : saved.light) document.body.classList.add("light");
-  slider.value = storedLevel(document.body.classList.contains("light"));
+  slider.value = storedLevel();
   apply();
   paintGlowControls();
   slider.addEventListener("input", () => { apply(); keep(); paintGlowControls(); rouse(); });
-  document.getElementById("theme").addEventListener("click", () => {
-    chooseTheme(!document.body.classList.contains("light"));
-  });
   const accountLevel = document.getElementById("glow-level");
-  const accountTheme = document.getElementById("glow-theme");
   if (accountLevel) accountLevel.addEventListener("input", () => {
     slider.value = accountLevel.value;
     apply();
     keep();
     rouse();
-  });
-  if (accountTheme) accountTheme.addEventListener("click", () => {
-    chooseTheme(!document.body.classList.contains("light"));
   });
 })();
 
