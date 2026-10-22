@@ -26,10 +26,10 @@ const loader = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
 assert.ok(loader.includes('src="altar.js"'));
 assert.ok(page.includes('id="altar" aria-hidden="true"'));
 assert.ok(page.includes('id="altar-file" type="file" accept="image/*" hidden'));
-// The places come first on the You page, then practice, then the altar.
+// Mindfulness material, then practice, then the altar inside profile.
 const at = (mark) => page.indexOf(mark);
-assert.ok(at('id="account-mindful"') < at('id="account-places"'));
-assert.ok(at('id="account-places"') < at('id="account-practice-block"'));
-assert.ok(at('id="account-practice-block"') < at('id="account-altar"'));
+assert.ok(at('id="account-mindful"') < at('id="account-practice-block"'));
+assert.ok(at('id="account-practice-block"') < at('id="account-profile"'));
+assert.ok(at('id="account-profile"') < at('id="account-altar"'));
 assert.ok(page.includes('<h2 id="account-title">You</h2>'));
 console.log("altar.test.js ok");

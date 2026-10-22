@@ -25,10 +25,49 @@
     if (!button || !window.YANTRA_WEB) return;
     const api = profile();
     const name = api ? api.load().name : "";
-    button.textContent = name ? name.slice(0, 1).toUpperCase() : "You";
+    const mark = name ? name.slice(0, 1).toUpperCase() : "You";
+    button.textContent = mark;
     button.hidden = false;
     const title = document.getElementById("account-title");
     if (title) title.textContent = name || "You";
+    const initial = document.getElementById("account-initial");
+    if (initial) initial.textContent = mark;
+  }
+
+  /* Which of Practice, Reminders, Profile, and Settings are open.
+     Practice starts open. The choice stays on this device. */
+  const FOLD_KEY = "yantra.account.folds";
+  const FOLD_DEFAULTS = { practice: true, reminders: false, profile: false, settings: false };
+
+  function foldStore() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(FOLD_KEY) || "null");
+      return raw && typeof raw === "object" ? raw : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function applyFolds() {
+    const saved = foldStore();
+    Object.keys(FOLD_DEFAULTS).forEach((name) => {
+      const node = document.querySelector('#account details[data-fold="' + name + '"]');
+      if (!node) return;
+      const open = Object.prototype.hasOwnProperty.call(saved, name) ? saved[name] === true : FOLD_DEFAULTS[name];
+      node.open = open;
+    });
+  }
+
+  function bindFolds() {
+    Object.keys(FOLD_DEFAULTS).forEach((name) => {
+      const node = document.querySelector('#account details[data-fold="' + name + '"]');
+      if (!node) return;
+      node.addEventListener("toggle", () => {
+        const saved = foldStore();
+        saved[name] = node.open === true;
+        try { localStorage.setItem(FOLD_KEY, JSON.stringify(saved)); } catch (e) {}
+      });
+    });
   }
 
   function reminderRecord() {
@@ -300,6 +339,12 @@
 
   function boot() {
     if (!window.YANTRA_WEB || !document.getElementById("account")) return;
+    applyFolds();
+    bindFolds();
+    if (window.yantraCameFromPracticeLink) {
+      const practice = document.querySelector('#account details[data-fold="practice"]');
+      if (practice) practice.open = true;
+    }
     paintGreeting();
     const corner = document.getElementById("account-corner");
     if (corner) {

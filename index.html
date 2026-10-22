@@ -346,10 +346,36 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #home-greeting, #done-greeting { text-align: center; color: rgba(232, 204, 146, 0.88); margin: 0; }
   #home-greeting[hidden], #done-greeting[hidden] { display: none; }
   #account { justify-content: flex-start; overflow: auto; -webkit-overflow-scrolling: touch; }
-  #account .inner { margin-top: 0.4rem; margin-bottom: 2.4rem; text-align: left; }
-  #account h2 { text-align: center; }
+  #account .inner { margin-top: 0.4rem; margin-bottom: 2.4rem; text-align: left; gap: 0.2rem; }
+  #account h2 { text-align: center; margin-bottom: 0.45rem; }
   #account h3 { font-weight: 500; font-size: 1.15rem; color: #f7edd4; margin: 0.2rem 0 0.15rem; }
   .account-block { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.35rem; padding-top: 1rem; border-top: 1px solid rgba(230, 201, 138, 0.16); }
+  #account-mindful { border-top: 0; margin-top: 0; padding-top: 0; }
+  .mindful-links { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.35rem 0.45rem; margin: 0.45rem 0 0.2rem; }
+  .mindful-links .quiet { flex: 1 1 0; min-width: 0; text-align: center; padding: 0.35rem 0.1rem 0.5rem; line-height: 1.3; font-size: 0.92rem; }
+  .mindful-links [hidden] { display: none !important; }
+  #account .account-fold { margin: 0.15rem 0 0; border-top: 1px solid rgba(230, 201, 138, 0.16); }
+  #account .account-fold:last-child { border-bottom: 1px solid rgba(230, 201, 138, 0.16); margin-bottom: 0.4rem; }
+  #account .account-fold summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 0.85rem 0.1rem; font-weight: 500; font-size: 1.15rem; color: #f7edd4;
+  }
+  #account .account-fold summary::-webkit-details-marker { display: none; }
+  #account .account-fold summary::after {
+    content: ""; width: 0.42rem; height: 0.42rem; flex: none; margin-right: 0.35rem;
+    border-right: 1.5px solid rgba(230, 201, 138, 0.7); border-bottom: 1.5px solid rgba(230, 201, 138, 0.7);
+    transform: rotate(45deg) translateY(-0.12rem);
+  }
+  #account .account-fold[open] > summary::after { transform: rotate(225deg) translateY(-0.05rem); }
+  #account .account-fold summary:focus-visible { outline: 1px solid rgba(230, 201, 138, 0.7); outline-offset: 3px; }
+  #account .fold-body { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.1rem 0 0.95rem; }
+  #account .fold-body h3:first-child { margin-top: 0; }
+  #account .links:not(:has(button:not([hidden]), a:not([hidden]))) { display: none; }
+  .profile-mark { display: flex; align-items: center; min-height: 2.4rem; }
+  #account-initial {
+    width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 1px solid rgba(230, 201, 138, 0.5);
+    display: grid; place-items: center; color: #f7edd4; font-size: 0.78rem; flex: none;
+  }
   .account-field { display: flex; flex-direction: column; gap: 0.28rem; font-size: 0.82rem; color: rgba(232, 204, 146, 0.84); text-align: left; }
   #account input, #account select {
     font: inherit; font-size: 1rem; color: #f7edd4; background: rgba(5, 4, 10, 0.6);
@@ -431,11 +457,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #welcome .dots { display: flex; justify-content: center; gap: 0.55rem; margin-top: 1.8rem; }
   #welcome .dots span { width: 0.42rem; height: 0.42rem; border-radius: 50%; background: rgba(230, 201, 138, 0.28); }
   #welcome .dots span.on { background: rgba(230, 201, 138, 0.9); }
-  #account-places { margin-top: 0.35rem; padding-top: 0.6rem; border-top: 1px solid rgba(230, 201, 138, 0.16); }
-  #account-mindful[hidden] + #account-places { border-top: 0; padding-top: 0; }
-  #account-places .links { margin: 0.2rem 0 0.4rem; }
-  #account-mindful[hidden] { display: none; }
-  #account-mindful .links { margin-top: 0.2rem; justify-content: flex-start; }
+  #account .links { margin-top: 0.55rem; }
   /* The altar: up to three small round photos resting above the yantra during sits and talks. */
   #altar { position: fixed; z-index: 2; left: 50%; top: max(1rem, env(safe-area-inset-top)); transform: translateX(-50%);
     display: flex; gap: 0.9rem; opacity: 0; pointer-events: none; transition: opacity 2.4s ease; }
@@ -637,24 +659,17 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <button class="back" type="button" data-room="home" aria-label="Back">&#8592;</button>
   <div class="inner">
     <h2 id="account-title">You</h2>
-    <section id="account-sync" class="account-sync" hidden>
-      <h3>Sign in</h3>
-      <p>A later sign-in can keep these choices with you. Nothing leaves this device yet.</p>
-      <p id="account-sync-method"></p>
-    </section>
-    <section class="account-block" id="account-mindful" hidden>
-      <h3>Mindfulness material</h3>
-      <div class="links"><button class="quiet" type="button" id="open-talks" data-room="talks">Dharma Talks</button></div>
-    </section>
-    <section class="account-places" id="account-places">
-      <div class="links">
-        <button class="quiet" type="button" id="open-shelf">Albums and forms</button>
-        <button class="quiet" type="button" data-room="guide">How to sit</button>
-        <button class="quiet" type="button" id="install-app" hidden>Install Yantra</button>
+    <section class="account-block" id="account-mindful">
+      <h3>Mindfulness Material</h3>
+      <div class="mindful-links">
+        <button class="quiet" type="button" id="open-talks" data-room="talks" hidden>Dharma Talks</button>
+        <button class="quiet" type="button" data-room="guide">Sit Guidance</button>
+        <button class="quiet" type="button" id="open-shelf">Albums + Playlists</button>
       </div>
     </section>
-    <section class="account-block" id="account-practice-block">
-      <h3>Practice</h3>
+    <details class="account-fold" id="account-practice-block" data-fold="practice" open>
+      <summary>Practice</summary>
+      <div class="fold-body">
       <div class="week" id="account-week"></div>
     <p id="practice-lead"></p>
     <p id="practice-time" class="practice-time"></p>
@@ -723,20 +738,11 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       </div>
       <p id="practice-link-note" role="status"></p>
     </div>
-    </section>
-    <section class="account-block" id="account-altar">
-      <h3>Altar</h3>
-      <p>A photo of your teacher, or of your amakua, rests above the yantra while you sit. Up to three. They stay on this device.</p>
-      <div id="altar-list"></div>
-      <div class="links">
-        <button class="quiet" type="button" id="altar-add">Add a photo</button>
-        <button class="quiet" type="button" id="altar-show" aria-pressed="true">Shown during sits</button>
       </div>
-      <input id="altar-file" type="file" accept="image/*" hidden>
-      <p id="altar-note" role="status"></p>
-    </section>
-    <section class="account-block" id="account-reminders-block">
-      <h3>Reminders</h3>
+    </details>
+    <details class="account-fold" id="account-reminders-block" data-fold="reminders">
+      <summary>Reminders</summary>
+      <div class="fold-body">
     <div id="reminders" hidden>
       <p>A quiet note morning and evening, at sunrise and sunset or a time you choose.</p>
       <div class="remind-block" data-theme="morning">
@@ -790,57 +796,79 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <p id="remind-status" role="status"></p>
     </div>
       <p id="account-reminders-push"></p>
-    </section>
-    <section class="account-block">
-      <h3>Name</h3>
-      <label class="account-field">Display name
-        <input id="account-name" type="text" maxlength="40" autocomplete="nickname" placeholder="Optional">
-      </label>
-      <label class="account-field">Greeting
-        <select id="account-greeting">
-          <option value="none">No greeting</option>
-          <option value="hello">Hello</option>
-          <option value="time">By time of day</option>
-        </select>
-      </label>
-      <button class="choice" type="button" id="account-save">Save</button>
-      <p id="account-saved" role="status"></p>
-    </section>
-    <section class="account-block">
-      <h3>Spotify</h3>
-      <p id="account-spotify"></p>
-      <p id="account-spotify-note" hidden></p>
-      <div class="links">
-        <button class="quiet" type="button" id="account-spotify-connect" hidden>Connect</button>
-        <button class="quiet" type="button" id="account-spotify-disconnect" hidden>Disconnect</button>
-        <button class="quiet" type="button" id="account-spotify-clear" hidden>Forget the listener note</button>
       </div>
-    </section>
-    <section class="account-block">
-      <h3>Privacy</h3>
-      <p>Your photos and choices stay on this device. Practice stays here unless you link devices; then only an encrypted copy is kept, and the key never leaves your devices. Reminders, if you turn them on, keep only what they need to reach you. Nothing is tracked.</p>
-      <div class="links"><button class="quiet" type="button" id="account-wipe">Erase everything on this device</button></div>
-      <div id="account-wipe-confirm" hidden>
-        <p>Erase everything on this device, including Spotify and the sangha word? This cannot be undone.</p>
-        <div class="links">
-          <button class="quiet" type="button" id="account-wipe-keep">Keep</button>
-          <button class="quiet" type="button" id="account-wipe-yes">Erase everything</button>
+    </details>
+    <details class="account-fold" id="account-profile" data-fold="profile">
+      <summary>Profile</summary>
+      <div class="fold-body">
+        <div class="profile-mark"><span id="account-initial" aria-hidden="true">You</span></div>
+        <label class="account-field">Display name
+          <input id="account-name" type="text" maxlength="40" autocomplete="nickname" placeholder="Optional">
+        </label>
+        <label class="account-field">Greeting
+          <select id="account-greeting">
+            <option value="none">No greeting</option>
+            <option value="hello">Hello</option>
+            <option value="time">By time of day</option>
+          </select>
+        </label>
+        <button class="choice" type="button" id="account-save">Save</button>
+        <p id="account-saved" role="status"></p>
+        <div id="account-altar">
+          <h3>Altar</h3>
+          <p>A photo of your teacher, or of your amakua, rests above the yantra while you sit. Up to three. They stay on this device.</p>
+          <div id="altar-list"></div>
+          <div class="links">
+            <button class="quiet" type="button" id="altar-add">Add a photo</button>
+            <button class="quiet" type="button" id="altar-show" aria-pressed="true">Shown during sits</button>
+          </div>
+          <input id="altar-file" type="file" accept="image/*" hidden>
+          <p id="altar-note" role="status"></p>
+        </div>
+        <section id="account-sync" class="account-sync" hidden>
+          <h3>Sign in</h3>
+          <p>A later sign-in can keep these choices with you. Nothing leaves this device yet.</p>
+          <p id="account-sync-method"></p>
+        </section>
+        <div id="account-logout">
+          <button class="choice" type="button" id="account-leave">Log out</button>
+          <div id="account-leave-confirm" hidden>
+            <p>Log out? The word will be asked for again. Practice and settings stay.</p>
+            <div class="links">
+              <button class="quiet" type="button" id="account-leave-keep">Stay</button>
+              <form method="post" action="/logout"><button class="choice" type="submit">Log out</button></form>
+            </div>
+          </div>
+          <div id="account-signout-block" hidden>
+            <div class="links"><button class="quiet" type="button" id="account-signout">Sign out</button></div>
+          </div>
         </div>
       </div>
-    </section>
-    <section class="account-block" id="account-logout">
-      <button class="choice" type="button" id="account-leave">Log out</button>
-      <div id="account-leave-confirm" hidden>
-        <p>Log out? The word will be asked for again. Practice and settings stay.</p>
+    </details>
+    <details class="account-fold" id="account-settings" data-fold="settings">
+      <summary>Settings</summary>
+      <div class="fold-body">
+        <h3>Spotify</h3>
+        <p id="account-spotify"></p>
+        <p id="account-spotify-note" hidden></p>
         <div class="links">
-          <button class="quiet" type="button" id="account-leave-keep">Stay</button>
-          <form method="post" action="/logout"><button class="choice" type="submit">Log out</button></form>
+          <button class="quiet" type="button" id="account-spotify-connect" hidden>Connect</button>
+          <button class="quiet" type="button" id="account-spotify-disconnect" hidden>Disconnect</button>
+          <button class="quiet" type="button" id="account-spotify-clear" hidden>Forget the listener note</button>
         </div>
+        <h3>Privacy</h3>
+        <p>Your photos and choices stay on this device. Practice stays here unless you link devices; then only an encrypted copy is kept, and the key never leaves your devices. Reminders, if you turn them on, keep only what they need to reach you. Nothing is tracked.</p>
+        <div class="links"><button class="quiet" type="button" id="account-wipe">Erase everything on this device</button></div>
+        <div id="account-wipe-confirm" hidden>
+          <p>Erase everything on this device, including Spotify and the sangha word? This cannot be undone.</p>
+          <div class="links">
+            <button class="quiet" type="button" id="account-wipe-keep">Keep</button>
+            <button class="quiet" type="button" id="account-wipe-yes">Erase everything</button>
+          </div>
+        </div>
+        <div class="links"><button class="quiet" type="button" id="install-app" hidden>Install Yantra</button></div>
       </div>
-      <div id="account-signout-block" hidden>
-        <div class="links"><button class="quiet" type="button" id="account-signout">Sign out</button></div>
-      </div>
-    </section>
+    </details>
   </div>
 </div>
 <div id="gate">
@@ -2611,10 +2639,10 @@ window.paintPractice = paintPractice;
 function paintTalks() {
   const section = document.getElementById("talks-list");
   if (!section) return;
-  // The Mindfulness material section, with the talks, shows for the Zazen word only.
-  const open = document.getElementById("account-mindful");
+  // Dharma Talks is for the Zazen word only. Sit Guidance and Albums stay.
+  const talks = document.getElementById("open-talks");
   const shown = !!(window.YantraTalks && window.YANTRA_LEVEL === "zazen" && window.yantraTalks);
-  if (open) open.hidden = !shown;
+  if (talks) talks.hidden = !shown;
   if (!shown) {
     const player = section.querySelector("audio");
     if (player) {
@@ -2639,7 +2667,11 @@ function showRoom(name) {
   roomFocus = "";
   if (focus) {
     const node = document.getElementById(focus);
-    if (node && node.scrollIntoView) node.scrollIntoView({ block: "start" });
+    if (node) {
+      const fold = node.closest && node.closest("details");
+      if (fold) fold.open = true;
+      if (node.scrollIntoView) node.scrollIntoView({ block: "start" });
+    }
   }
   if (name !== "pick") document.getElementById("pick-tip").hidden = true;
   if (name === "home") paintPractice();

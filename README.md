@@ -116,11 +116,13 @@ from the Home Screen app.
 The home screen holds only the two sits and the week: seven circles whose left
 half fills with the sunrise sit and right half with the sunset sit, and one line
 toward the next perfect day. Everything else is under *You*, the mark at the top
-right (titled with your name once you give one), which is this device only:
-Mindfulness material (the Dharma Talks, for the Zazen word only) comes first, then
-albums and forms and How to sit,
-then practice (the week, total time, sits, perfect
-days, export, erase), the altar, reminders, name, Spotify, privacy, and Log out. *Before you
+right (titled with your name once you give one). *Mindfulness Material* comes first:
+Dharma Talks (the Zazen word only), Sit Guidance, and Albums + Playlists, in one row.
+Practice, Reminders, Profile, and Settings fold shut except Practice, and this device
+remembers which are open. Practice holds the week, time, sits, perfect days, export,
+erase, and Link my devices. Profile holds the name, initial, altar, and log out.
+Reminders hold the morning and evening times. Settings holds Spotify, privacy, and install.
+*Before you
 sit*, on the song-count screen, holds the album, Mix It Up, and the bell (on or
 off, and its volume); each song count shows its minutes. A first visit on a
 device with no sits gets three welcome steps (the perfect day, reminders, Add

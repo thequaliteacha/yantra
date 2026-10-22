@@ -803,6 +803,7 @@
     }
     join(key);
     openedFromLink = true;
+    root.yantraCameFromPracticeLink = true;
     strip();
     return true;
   }

@@ -133,14 +133,19 @@ assert.strictEqual(page.includes('id="account-access"'), false);
 assert.strictEqual(/Zazen|Rama/.test(account.replace(/"zazen"/g, "")), false, "account.js names neither");
 assert.ok(page.includes('id="reminders"'));
 const order = [
-  'id="account-places"',
+  'id="account-mindful"',
   'id="account-practice-block"',
-  'id="account-altar"',
+  'id="practice-link"',
   'id="account-reminders-block"',
-  "<h3>Name</h3>",
+  'id="account-profile"',
+  'id="account-name"',
+  'id="account-altar"',
+  'id="account-sync"',
+  'id="account-logout"',
+  'id="account-settings"',
   "<h3>Spotify</h3>",
   "<h3>Privacy</h3>",
-  'id="account-logout"',
+  'id="install-app"',
 ];
 let cursor = -1;
 order.forEach((mark) => {
