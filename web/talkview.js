@@ -184,7 +184,28 @@
     }
   }
 
-  const api = { LEXICON, kindOf, segmentAt, crossed, createState, step, paintWords, loadWords, brightness, glowBands };
+  /* Keep the figure in the open field above the spoken words. A phone already
+     has that room, so it stays centred; a short landscape screen is lifted
+     and, only if it must, drawn a little smaller so the square clears the words. */
+  function placeFigure(box) {
+    const src = box || {};
+    const h = Number(src.h) || 0;
+    let cx = Number(src.cx) || 0;
+    let cy = Number(src.cy) || 0;
+    let R = Number(src.R) || 0;
+    const captionTop = Number.isFinite(src.captionTop) && src.captionTop > 0 ? src.captionTop : h;
+    const margin = Math.max(16, h * 0.02);
+    const top = Math.max(20, h * 0.03);
+    const extent = 2.64;
+    const room = captionTop - margin - top;
+    if (room > 120 && R * extent * 2 > room) R = room / (extent * 2);
+    const limit = captionTop - margin;
+    if (cy + R * extent > limit) cy = limit - R * extent;
+    if (cy - R * extent < top) cy = top + R * extent;
+    return { cx, cy, R, extent };
+  }
+
+  const api = { LEXICON, kindOf, segmentAt, crossed, createState, step, paintWords, loadWords, brightness, glowBands, placeFigure };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.YantraTalkView = api;
 })(typeof window !== "undefined" ? window : null);

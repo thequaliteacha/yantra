@@ -139,6 +139,14 @@ assert.ok(require("fs").readFileSync(require("path").join(__dirname, "web.js"), 
   const mini = clearOf({ w: 768, h: 1024, cx: 384, cy: 512, R: 768 * 0.155, captionTop: 834, altarBottom: 0 });
   assert.ok(mini.rects.length >= 1, "an iPad mini portrait still has the brightness above the figure");
 
+  const phonePlace = V.placeFigure({ w: 390, h: 844, cx: 195, cy: 422, R: phoneR, captionTop: 679 });
+  assert.ok(Math.abs(phonePlace.cy - 422) < 0.01 && Math.abs(phonePlace.R - phoneR) < 0.01, "a phone keeps the yantra where it was");
+  const ipadPlace = V.placeFigure({ w: 820, h: 1180, cx: 410, cy: 590, R: ipadR, captionTop: 996 });
+  assert.ok(Math.abs(ipadPlace.cy - 590) < 0.01 && Math.abs(ipadPlace.R - ipadR) < 0.01, "a portrait iPad keeps the yantra centred");
+  const landPlace = V.placeFigure({ w: 1180, h: 820, cx: 590, cy: 410, R: ipadR, captionTop: 636 });
+  assert.ok(landPlace.cy + landPlace.R * landPlace.extent <= 636 - 16, "landscape iPad keeps the square above the words");
+  assert.ok(landPlace.cy - landPlace.R * landPlace.extent >= 20, "landscape iPad keeps the square on screen");
+
   const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
   const loader = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   assert.ok(!loader.includes("sketches.js"));

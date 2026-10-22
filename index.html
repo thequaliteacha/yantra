@@ -1503,7 +1503,7 @@ function talkShine(ctx, w, h, cx, cy, R, fx) {
   const dawn = [255, 246, 226];
   const tone = sun.map((channel, i) => Math.round(channel * mix + dawn[i] * (1 - mix)));
   const ink = isLight() ? tone : inkOf(tone);
-  const peak = (isLight() ? 0.18 : 0.4) * shine;
+  const peak = (isLight() ? 0.26 : 0.4) * shine;
   for (const rect of bands.rects) {
     const width = rect.x1 - rect.x0;
     const height = rect.y1 - rect.y0;
@@ -1634,9 +1634,17 @@ function frame(now) {
   const sitting = document.body.classList.contains("sitting") || watching;
   let talkFx = null;
   const spot = homeSpot(w, h, sitting);
-  const cx = spot.cx;
-  const cy = spot.cy;
-  const R = spot.R;
+  let cx = spot.cx;
+  let cy = spot.cy;
+  let R = spot.R;
+  if (watching && window.YantraTalkView && window.YantraTalkView.placeFigure) {
+    const placed = window.YantraTalkView.placeFigure({
+      w: w, h: h, cx: cx, cy: cy, R: R, captionTop: shineLimits(h).captionTop,
+    });
+    cx = placed.cx;
+    cy = placed.cy;
+    R = placed.R;
+  }
   const breath = sitting ? 1 + Math.min(1, shown) * 0.03 : 1 + Math.sin(now * 0.00035) * 0.012 + shown * 0.028;
   let reveal = 1;
   let fade = 0;

@@ -139,7 +139,8 @@ soft brightness in the open field around the figure, clear of the yantra and
 of the words below. Heart, power, and awareness words lean the colour toward
 that chakra; stillness hushes the figure; enlightenment lets the bindu bloom.
 The phrase being spoken can show below, each word brightening as it is said
-(Words on or off). Closing the visualizer pauses the talk, as
+(Words on or off). On a short screen the figure lifts so those words stay
+clear of it. Closing the visualizer pauses the talk, as
 ending a sit stops the music; it picks up there next time. The timed words are made locally with
 `tools/transcribe_talks.py` (faster-whisper) and kept in the private bucket
 next to each talk as `talks/<name>.json`, served only to the Zazen word.
