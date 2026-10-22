@@ -91,6 +91,7 @@
   }
   const onRecordings = (disc) => disc.tracks.length > 0 && disc.tracks.every((track) => recordingOf(disc.id, track.n));
   const Playback = window.YantraPlayback;
+  const Choose = window.YantraChoose;
   const failedKeys = {};
   function navEnv() {
     return {
@@ -981,14 +982,14 @@
   const live = { service: null, name: "", items: [], keys: [], seen: false, timer: 0, form: false, chakras: null, lastHeard: false, recovering: false };
   const progressWatch = Playback.createProgressWatch(Playback.STALL_MS);
 
-  /* The morning and evening sets: 1 song is the heart song, 3 is one per chakra,
-     6 is two per chakra, 12 is four per chakra, always navel, heart, third eye. */
+  /* The morning and evening sets, before a song that cannot play is replaced.
+     1 song is the heart song, 3 is one per chakra, 6 is two, 12 is four. */
   function sessionItems(theme, count) {
     const set = sets && sets[theme];
     if (!set) return null;
     if (count === 1) {
       const one = sets.oneSong && sets.oneSong[theme];
-      return one ? recordedSit([{ discId: one.discId, n: one.n, chakra: "heart" }]) : null;
+      return one ? [{ discId: one.discId, n: one.n, chakra: "heart" }] : null;
     }
     const per = { 3: 1, 6: 2, 12: 4 }[count];
     if (!per) return null;
@@ -996,14 +997,12 @@
     for (const chakra of ["naval", "heart", "eye"]) {
       for (const song of (set[chakra] || []).slice(0, per)) items.push({ discId: song.discId, n: song.n, chakra });
     }
-    return items.length === per * 3 ? recordedSit(items) : null;
+    return items.length === per * 3 ? items : null;
   }
 
-  /* A sit stays inside one album, as the sangha listens. Each album runs from navel
-     songs through heart songs to third eye songs, so a sit takes the same number
-     from each third, in the album's own order; one song is a heart song. With no
-     album chosen, each sit brings a different one, recorded ones first until
-     Spotify is connected. */
+  /* A sit stays inside one album. Each album runs from navel songs through heart
+     songs to third eye songs, so a sit takes the same number from each third;
+     one song is a heart song. The album has to be playable on this device. */
   function albumFits(disc, count) {
     if (closedDisc(disc)) return false;
     const offered = (track, chakra) => chakraOf(disc, track.n) === chakra && itemPlayable({ discId: disc.id, n: track.n });
@@ -1011,45 +1010,6 @@
     if (!sizes.some((size) => size > 0)) return false;
     const per = count === 1 ? 0 : count / 3;
     return count === 1 ? sizes[1] > 0 : sizes.every((size) => size >= per);
-  }
-  function albumSit(count, discId) {
-    if (![1, 3, 6, 12].includes(count)) return null;
-    let disc = DISCS[discId];
-    if (disc && !albumFits(disc, count)) return null;
-    if (!disc) {
-      const fits = collection.discs.filter((item) => albumFits(item, count));
-      const recordedOnly = fits.filter(onRecordings);
-      let pool = spotify.connected() || !recordedOnly.length ? fits : recordedOnly;
-      let last = "";
-      try { last = localStorage.getItem("yantra.lastAlbum") || ""; } catch (e) {}
-      if (pool.length > 1) pool = pool.filter((item) => item.id !== last);
-      if (!pool.length) return null;
-      disc = sample(pool, 1)[0];
-    }
-    try { localStorage.setItem("yantra.lastAlbum", disc.id); } catch (e) {}
-    const per = count === 1 ? 1 : count / 3;
-    const items = [];
-    for (const chakra of count === 1 ? ["heart"] : CHAKRAS) {
-      const songs = disc.tracks.filter((track) => chakraOf(disc, track.n) === chakra && itemPlayable({ discId: disc.id, n: track.n }));
-      for (const track of sample(songs, per).sort((a, b) => a.n - b.n)) items.push({ discId: disc.id, n: track.n, chakra });
-    }
-    return items;
-  }
-
-  /* The curated sets draw on albums the sangha has no recordings of. Where a song
-     isn't recorded, a recorded song for the same chakra takes its place, so a sit
-     plays from the sangha's copies without needing Spotify. */
-  function recordedSit(items) {
-    if (recordedAll(items)) return items;
-    const used = new Set(items.map((item) => item.discId + "#" + item.n));
-    return items.map((item) => {
-      if (recordingOf(item.discId, item.n)) return item;
-      const options = recordedPool(item.chakra).filter(([discId, n]) => !used.has(discId + "#" + n));
-      if (!options.length) return item;
-      const [discId, n] = sample(options, 1)[0];
-      used.add(discId + "#" + n);
-      return { discId, n, chakra: item.chakra };
-    });
   }
 
   /* The completion screen reads this after liveStop clears the sit. */
@@ -1647,111 +1607,153 @@
     return { playing: disc ? disc.title : "", playingId: disc ? disc.id : "", mix: false };
   }
 
-  function pickHostedDisc(count, avoid) {
-    let pool = collection.discs.filter((disc) => onRecordings(disc) && albumFits(disc, count));
-    if (avoid && pool.length > 1) pool = pool.filter((disc) => disc.id !== avoid);
-    let last = "";
-    try { last = localStorage.getItem("yantra.lastAlbum") || ""; } catch (e) {}
-    if (last && pool.length > 1) {
-      const narrower = pool.filter((disc) => disc.id !== last);
-      if (narrower.length) pool = narrower;
+  function themeAlbumIds(theme) {
+    const ids = [];
+    const set = sets && sets[theme];
+    if (set) {
+      for (const chakra of CHAKRAS) {
+        for (const song of set[chakra] || []) {
+          if (ids.indexOf(song.discId) < 0) ids.push(song.discId);
+        }
+      }
     }
-    return pool.length ? sample(pool, 1)[0] : null;
+    const one = sets && sets.oneSong && sets.oneSong[theme];
+    if (one && ids.indexOf(one.discId) < 0) ids.push(one.discId);
+    return ids;
   }
 
-  /* The sit the listener asked for, played from the sangha's copies when Spotify
-     cannot. The page hears about the swap and offers Connect plus every hosted album. */
-  async function startSession(payload) {
-    spotify.load();
+  /* Quick sits, Mix It Up, reminder sits, and a resumed sit all ask here.
+     The album is one this device can play. A remembered album that cannot
+     play falls back inside the plan, with no Spotify panel. */
+  function sitPlan(payload) {
     const theme = payload.theme === "evening" ? "evening" : "morning";
     const count = Number(payload.count) || 3;
     const mix = !!payload.mix;
-    const albumId = String(payload.album || "");
-    const name = String(payload.name || theme);
-    const askedDisc = !mix && albumId ? DISCS[albumId] : null;
-    if (askedDisc && closedDisc(askedDisc)) {
-      const offer = makeOffer({
-        reason: "offline",
-        asked: askedDisc.title,
-        askedId: askedDisc.id,
-        theme, count, mode: "session",
-      });
-      offer.text = "Lumikara is for the Zazen word.";
-      return [{ ok: false, error: offer.text, offer }, 409];
+    let lastId = "";
+    try { lastId = localStorage.getItem("yantra.lastAlbum") || ""; } catch (e) {}
+    const substitute = (chakra, used) => {
+      const options = recordedPool(chakra).filter(([discId, n]) => !used.has(discId + "#" + n));
+      if (!options.length) return null;
+      const [discId, n] = sample(options, 1)[0];
+      return { discId, n };
+    };
+    return Choose.planQuickSit({
+      theme,
+      count,
+      mix,
+      albumId: mix ? "" : String(payload.album || ""),
+      lastId,
+      discs: collection.discs,
+      level: window.YANTRA_LEVEL || "",
+      circleOpen: (circle, level) => Playback.circleOpen(circle, level),
+      themeIds: themeAlbumIds(theme),
+      mixItems: mix ? (sessionItems(theme, count) || []) : [],
+      keep: (item) => !!recordingOf(item.discId, item.n),
+      playable: (item) => itemPlayable(item),
+      canPlay: (disc, track) => itemPlayable({ discId: disc.id, n: track.n }),
+      substitute,
+      rng: Math.random,
+    });
+  }
+
+  function rememberAlbum(items) {
+    const ids = new Set((items || []).map((item) => item.discId));
+    if (ids.size !== 1) return;
+    try { localStorage.setItem("yantra.lastAlbum", items[0].discId); } catch (e) {}
+  }
+
+  /* A sit made only of hosted songs, for when Spotify cannot play what was asked. */
+  function hostedPlan(theme, count) {
+    const sit = theme === "evening" ? "evening" : "morning";
+    return Choose.planQuickSit({
+      theme: sit,
+      count,
+      mix: false,
+      albumId: "",
+      lastId: "",
+      discs: collection.discs,
+      level: window.YANTRA_LEVEL || "",
+      circleOpen: (circle, level) => Playback.circleOpen(circle, level),
+      themeIds: themeAlbumIds(sit),
+      mixItems: [],
+      keep: (item) => !!recordingOf(item.discId, item.n),
+      playable: (item) => !!recordingOf(item.discId, item.n) && itemPlayable(item),
+      canPlay: (disc, track) => !!recordingOf(disc.id, track.n) && itemPlayable({ discId: disc.id, n: track.n }),
+      substitute: () => null,
+      rng: Math.random,
+    });
+  }
+
+  /* Plays a plan. Hosted songs start at once. Spotify is tried only when the
+     plan still needs it. A swap is announced only when the listener asked for
+     that album and this device was expected to play Spotify. */
+  async function startPlanned(name, plan, source) {
+    const items = (plan.items || []).map((item) => ({ discId: item.discId, n: item.n }));
+    const chakras = (plan.items || []).map((item) => item.chakra);
+    if (!items.length || items.some((item) => !itemPlayable(item))) {
+      return [{ ok: false, error: Choose.emptyLine() }, 409];
     }
-    if (askedDisc && !askedDisc.tracks.some((track) => itemPlayable({ discId: askedDisc.id, n: track.n }))) {
-      const offer = makeOffer({
-        reason: spotifyKnownUnavailable() || "offline",
-        asked: askedDisc.title,
-        askedId: askedDisc.id,
-        theme, count, mode: "session",
-      });
-      return [{ ok: false, error: offer.text, offer }, 409];
-    }
-    if (askedDisc && onRecordings(askedDisc)) {
-      const picked = albumSit(count, askedDisc.id);
-      if (!picked) return [{ ok: false, error: askedDisc.title + " is too short for " + count + " songs." }, 404];
-      const items = picked.map((item) => ({ discId: item.discId, n: item.n }));
-      const ok = await liveStart(name, items, "recordings", true, null, "", picked.map((item) => item.chakra));
-      return ok ? [{ ok: true, source: "session" }] : [{ ok: false, error: "The music did not start." }, 404];
+    const origin = source || "session";
+    if (recordedAll(items)) {
+      const ok = await liveStart(name, items, "recordings", true, null, "", chakras);
+      if (!ok) return [{ ok: false, error: "The music did not start." }, 404];
+      rememberAlbum(items);
+      return [{ ok: true, source: origin }];
     }
 
     let unavailable = spotifyKnownUnavailable();
-    let picked = mix ? sessionItems(theme, count) : albumSit(count, albumId);
-    if (!picked) {
-      return [{ ok: false, error: askedDisc ? askedDisc.title + " is too short for " + count + " songs." : "That sit is not available." }, 404];
+    if (!unavailable && spotify.connected()) {
+      const who = await spotify.ensureListener();
+      if (who === "unlisted" || who === "premium") unavailable = who;
+      else if (!spotify.connected()) unavailable = spotify.blocked === "unlisted" ? "unlisted" : "offline";
     }
-    let items = picked.map((item) => ({ discId: item.discId, n: item.n }));
-    let chakras = picked.map((item) => item.chakra);
-
-    if (!unavailable && !recordedAll(items)) {
-      if (spotify.connected()) {
-        const who = await spotify.ensureListener();
-        if (who === "unlisted" || who === "premium") unavailable = who;
-        else if (!spotify.connected()) unavailable = spotify.blocked === "unlisted" ? "unlisted" : "offline";
+    if (!unavailable) {
+      const listId = plan.via === "mix" ? "set-" + plan.theme + "-" + items.length : "";
+      const ok = await liveStart(name, items, "spotify", true, null, listId, chakras);
+      if (ok) {
+        rememberAlbum(items);
+        return [{ ok: true, source: origin }];
       }
-      if (!unavailable) {
-        const listId = mix ? "set-" + theme + "-" + count : "";
-        const ok = await liveStart(name, items, "spotify", true, null, listId, chakras);
-        if (ok) return [{ ok: true, source: "session" }];
-        unavailable = spotify.lastFailure || spotify.blocked || "failed";
-      }
+      unavailable = spotify.lastFailure || spotify.blocked || "failed";
     }
 
-    if (!unavailable && recordedAll(items)) {
-      const ok = await liveStart(name, items, "recordings", true, null, "", chakras);
-      return ok ? [{ ok: true, source: "session" }] : [{ ok: false, error: "The music did not start." }, 404];
+    const fallback = hostedPlan(plan.theme, items.length);
+    if (!fallback.ok) return [{ ok: false, error: Choose.emptyLine() }, 409];
+    const hosted = fallback.items.map((item) => ({ discId: item.discId, n: item.n }));
+    const hostedChakras = fallback.items.map((item) => item.chakra);
+    if (!recordedAll(hosted) || hosted.some((item) => !itemPlayable(item))) {
+      return [{ ok: false, error: Choose.emptyLine() }, 409];
     }
-
-    if (!recordedAll(items)) {
-      const disc = pickHostedDisc(count, albumId);
-      picked = disc ? albumSit(count, disc.id) : null;
-      if (!picked) {
-        const offer = makeOffer({
-          reason: unavailable || "offline",
-          asked: askedDisc ? askedDisc.title : "",
-          askedId: askedDisc ? askedDisc.id : "",
-          theme, count, mode: "session",
-        });
-        return [{ ok: false, error: offer.text, offer }, 409];
-      }
-      items = picked.map((item) => ({ discId: item.discId, n: item.n }));
-      chakras = picked.map((item) => item.chakra);
+    const ok = await liveStart(name, hosted, "recordings", true, null, "", hostedChakras);
+    if (!ok) return [{ ok: false, error: Choose.emptyLine() }, 409];
+    rememberAlbum(hosted);
+    const spotifyExpected = !!Playback.spotifySdkSupported(navEnv()) && unavailable !== "sdk";
+    if (!Choose.announceSwap({ explicit: plan.via === "album", swapped: true, spotifyExpected })) {
+      return [{ ok: true, source: origin }];
     }
-
-    const ok = await liveStart(name, items, "recordings", true, null, "", chakras);
-    const heard = describeItems(ok ? items : []);
+    const asked = plan.requestedId ? DISCS[plan.requestedId] : null;
+    const heard = describeItems(hosted);
     const offer = makeOffer({
       reason: unavailable || "offline",
-      asked: askedDisc && !onRecordings(askedDisc) ? askedDisc.title : "",
-      askedId: askedDisc && !onRecordings(askedDisc) ? askedDisc.id : "",
+      asked: asked ? asked.title : "",
+      askedId: asked ? asked.id : "",
       playing: heard.playing,
       playingId: heard.playingId,
-      mix: heard.mix,
-      theme, count, mode: "session",
+      mix: false,
+      theme: plan.theme,
+      count: hosted.length,
+      mode: "session",
     });
-    if (!ok) return [{ ok: false, error: offer.text, offer }, 409];
-    return [{ ok: true, source: "session", offer }];
+    return [{ ok: true, source: origin, offer }];
+  }
+
+  async function startSession(payload) {
+    spotify.load();
+    const theme = payload.theme === "evening" ? "evening" : "morning";
+    const name = String(payload.name || theme);
+    const plan = sitPlan(payload);
+    if (!plan.ok) return [{ ok: false, error: plan.line || Choose.emptyLine() }, 409];
+    return startPlanned(name, plan, "session");
   }
 
   async function startForm(payload) {
@@ -1763,7 +1765,9 @@
     const prefer = payload.prefer === "apple" ? "apple" : "spotify";
     const items = orderedDraft(tracks);
     if (!items.length || items.some((item) => !itemPlayable(item))) {
-      return [{ ok: false, error: "The music did not start." }, 409];
+      const plan = hostedPlan("morning", 3);
+      if (!plan.ok) return [{ ok: false, error: plan.line || Choose.emptyLine() }, 409];
+      return startPlanned(name, plan, "playlist");
     }
     if (recordedAll(items) || prefer === "apple") {
       const ok = await liveStart(name, items, prefer, true, null, payload.id || "");
@@ -1780,24 +1784,21 @@
       if (ok) return [{ ok: true, source: "playlist" }];
       unavailable = spotify.lastFailure || "failed";
     }
-    const count = 3;
-    const disc = pickHostedDisc(count, "");
-    const picked = disc ? albumSit(count, disc.id) : null;
-    if (!picked) {
-      const offer = makeOffer({ reason: unavailable || "offline", asked: name, count, mode: "session" });
-      return [{ ok: false, error: offer.text, offer }, 409];
-    }
-    const hosted = picked.map((item) => ({ discId: item.discId, n: item.n }));
-    const ok = await liveStart(name, hosted, "recordings", true, null, "", picked.map((item) => item.chakra));
-    const heard = describeItems(ok ? hosted : []);
+    const plan = hostedPlan("morning", 3);
+    if (!plan.ok) return [{ ok: false, error: Choose.emptyLine() }, 409];
+    const started = await startPlanned(name, plan, "playlist");
+    if (!started[0] || !started[0].ok) return started;
+    const spotifyExpected = !!Playback.spotifySdkSupported(navEnv()) && unavailable !== "sdk";
+    if (!Choose.announceSwap({ explicit: true, swapped: true, spotifyExpected }) || started[0].offer) return started;
+    const heard = describeItems(plan.items);
     const offer = makeOffer({
       reason: unavailable || "offline",
       asked: name,
       playing: heard.playing,
       playingId: heard.playingId,
-      count, mode: "session",
+      count: plan.items.length,
+      mode: "session",
     });
-    if (!ok) return [{ ok: false, error: offer.text, offer }, 409];
     return [{ ok: true, source: "playlist", offer }];
   }
 
