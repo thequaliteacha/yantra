@@ -2454,35 +2454,6 @@ async function editForm(body) {
   if (collection) renderShelf();
 }
 
-async function openDisc() {
-  const disc = selected();
-  if (!disc) return;
-  if (!(disc.onSpotify || disc.onRecordings)) return;
-  playNote = (disc.onRecordings ? "Playing " : "Opening ") + disc.title + ".";
-  applyNow();
-  try {
-    const response = await fetch("/play", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: disc.id, source: disc.onRecordings ? "recordings" : "spotify" }),
-    });
-    const data = await response.json();
-    if (data.offer && window.yantraMusicOffer) {
-      playNote = "";
-      window.yantraMusicOffer(data.offer);
-    } else {
-      playNote = data.ok ? "Opening " + disc.title + "." : (data.error || "This disc did not open.");
-    }
-  } catch (e) {
-    playNote = "This disc did not open.";
-  }
-  applyNow();
-  setTimeout(() => {
-    playNote = "";
-    applyNow();
-  }, 6000);
-}
-
 async function openApple() {
   const disc = selected();
   if (!disc || !disc.onApple) return;
@@ -2556,7 +2527,8 @@ document.querySelectorAll("#listen button").forEach((button) => {
   });
 });
 paintListen();
-document.getElementById("play").addEventListener("click", openDisc);
+// Opening an album is a sit: the music starts and the yantra opens with it.
+document.getElementById("play").addEventListener("click", sitAlbum);
 document.getElementById("apple").addEventListener("click", openApple);
 document.getElementById("local").addEventListener("click", openInstalled);
 document.getElementById("install").addEventListener("click", () => document.getElementById("install-file").click());
