@@ -1,10 +1,10 @@
-/* The altar: up to three photos (a teacher, an amakua, a place of power) resting
+/* The altar: up to six photos (a teacher, an amakua, a place of power) resting
  * above the yantra during sits and talks, and in the same row on home, the sits
  * menu, and the profile. Each is shrunk on this device to a small square JPEG
  * and kept with the other settings. Nothing is uploaded.
  */
 (function (root) {
-  const MAX = 3;
+  const MAX = 6;
   const SIDE = 320;
 
   /* The size to draw a w x h image so its centre square fills side x side. */
