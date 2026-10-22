@@ -42,7 +42,7 @@ assert.strictEqual(A.innerRate(1, false, false), 0, "the toggle stops the inner 
 assert.strictEqual(A.innerRate(1, true, false), 0);
 
 const stepped = A.step({ outer: 0, inner: 0 }, 2, {
-  drive: 1, reduce: false, enabled: true, now: 1000, energy: 0.4, lotus: "heart",
+  drive: 1, reduce: false, enabled: true, now: 1000, energy: 0.4, lotus: "naval",
 });
 assert.ok(signed(0, stepped.outer) > 0, "a step of the outer wheel is clockwise");
 assert.ok(signed(0, stepped.inner) < 0, "a step of the inner wheel is counterclockwise");
@@ -78,11 +78,17 @@ A.ORDER.forEach((id) => {
   assert.strictEqual(on.innerSign, -1, id);
   assert.strictEqual(held.outerSign, 1, id);
   assert.strictEqual(held.innerSign, 0, id);
-  assert.strictEqual(on.innerTarget, id === "eye" ? "figure" : "petals", id);
+  assert.strictEqual(on.innerTarget, id === "eye" || id === "heart" ? "figure" : "petals", id);
 });
 assert.strictEqual(A.wheels({ id: "eye", petals: 2 }, true).innerTarget, "figure");
 assert.strictEqual(A.wheels({ petals: 12 }, true).innerTarget, "petals");
 assert.strictEqual(A.wheels({ petals: 4, rings: 2 }, true).innerTarget, "petals");
+assert.strictEqual(A.wheels({ id: "heart", petals: 12 }, true).innerTarget, "figure", "Anahata's star is its inner wheel");
+assert.strictEqual(
+  A.innerPetalAngle(0, 8, { petals: 12, innerTarget: "figure", turn: 0, spin: 2, inner: 1, tremor: 0.01 }),
+  -Math.PI / 2,
+  "Anahata's inner eight rest while the star turns"
+);
 
 const outerStill = A.outerPetalAngle(0, 12, 0, 0, 0);
 const outerMoved = A.outerPetalAngle(0, 12, 0, stepped.outer, 0);
