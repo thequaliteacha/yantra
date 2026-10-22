@@ -1,15 +1,19 @@
-/* Practice record for the web edition. Everything stays in this browser.
+/* Practice record for the web edition.
  *
  * A sit counts after one minute of playback. Paused time is not included.
  * Morning and evening are the sits the listener chose on the home screen;
  * a sit from the shelf counts only toward the daily run. The day is the
  * device's local calendar. Missing a morning ends the morning run only.
  *
+ * The days themselves stay in this browser. A device with no practice key
+ * reads only those days. A linked device still records only its own sits
+ * here; sync.js merges the other devices' days for the streaks and totals.
+ * This file never asks to notify and never contacts a server.
+ *
  * days keeps the history a later, calmer set of milestones can read.
  * milestones is reserved for those markers ({ id, earnedOn }), and stays
  * empty until then. reminders is reserved for an optional on-device nudge
- * ({ morning: "HH:MM", evening: "HH:MM" }); this version never asks to
- * notify and never contacts a server.
+ * ({ morning: "HH:MM", evening: "HH:MM" }).
  */
 (function (root) {
   const KEY = "yantra.practice.v1";
@@ -87,6 +91,67 @@
 
   function clone(store) {
     return normalize(JSON.parse(JSON.stringify(store)));
+  }
+
+  /* One row per device. The same device id is counted once, so pulling a log
+     again, or listing a device twice, does not add the sits a second time.
+     Different devices add. The day is the union; the counts are the sum. */
+  function mergeDays(logs) {
+    const out = {};
+    const seen = new Set();
+    (Array.isArray(logs) ? logs : []).forEach((log) => {
+      if (!log || typeof log !== "object") return;
+      const id = typeof log.deviceId === "string" ? log.deviceId : "";
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      const days = log.days && typeof log.days === "object" ? log.days : {};
+      Object.keys(days).forEach((date) => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+        const src = normalizeDay(days[date]);
+        const dst = out[date] ? normalizeDay(out[date]) : normalizeDay(null);
+        dst.ms += src.ms;
+        dst.sits += src.sits;
+        dst.morning += src.morning;
+        dst.evening += src.evening;
+        dst.other += src.other;
+        out[date] = dst;
+      });
+    });
+    return out;
+  }
+
+  function totalsFromDays(days) {
+    const totals = { ms: 0, sits: 0 };
+    const clean = days && typeof days === "object" ? days : {};
+    Object.keys(clean).forEach((date) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+      const day = normalizeDay(clean[date]);
+      totals.ms += day.ms;
+      totals.sits += day.sits;
+    });
+    return totals;
+  }
+
+  let afterCommit = null;
+  let afterErase = null;
+  let viewOf = null;
+
+  function onCommit(fn) { afterCommit = typeof fn === "function" ? fn : null; }
+  function onErase(fn) { afterErase = typeof fn === "function" ? fn : null; }
+  function setView(fn) { viewOf = typeof fn === "function" ? fn : null; }
+
+  /* Local days when this device is on its own. The merged view when a practice
+     key is set. A broken view falls back to the local record. */
+  function loadView() {
+    const local = load();
+    if (!viewOf) return local;
+    try {
+      const viewed = viewOf(local);
+      if (!viewed || typeof viewed !== "object") return local;
+      return normalize(viewed);
+    } catch (e) {
+      return local;
+    }
   }
 
   /* Qualifying sits of one kind, walked as calendar days. current is the run
@@ -344,6 +409,9 @@
   function commit(heard) {
     const result = record(load(), heard);
     save(result.store);
+    if (result.counted && afterCommit) {
+      try { afterCommit(result); } catch (e) {}
+    }
     return result;
   }
 
@@ -367,6 +435,9 @@
     const open = store.open;
     const result = record(store, open);
     save(result.store);
+    if (result.counted && afterCommit) {
+      try { afterCommit(result); } catch (e) {}
+    }
     return result.store;
   }
 
@@ -374,14 +445,17 @@
     const kept = storage();
     if (!kept) return;
     try { kept.removeItem(KEY); } catch (e) {}
+    if (afterErase) {
+      try { afterErase(); } catch (e) {}
+    }
   }
 
   function summary() {
-    return summarize(load(), new Date());
+    return summarize(loadView(), new Date());
   }
 
   function exportData() {
-    const store = load();
+    const store = loadView();
     const picture = summarize(store, new Date());
     return {
       app: "yantra",
@@ -412,8 +486,14 @@
     localDate: localDate,
     addDays: addDays,
     record: record,
+    mergeDays: mergeDays,
+    totalsFromDays: totalsFromDays,
     streaks: streaks,
     summarize: summarize,
+    onCommit: onCommit,
+    onErase: onErase,
+    setView: setView,
+    loadView: loadView,
     formatMinutes: formatMinutes,
     formatSpan: formatSpan,
     lead: lead,

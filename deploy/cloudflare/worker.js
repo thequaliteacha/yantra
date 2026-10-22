@@ -1,4 +1,5 @@
 import { indexEntry, runReminders } from "./dispatch.js";
+import { practiceRoute } from "./practice.js";
 import { sendPush } from "./push.js";
 import { sanitizeSchedule } from "../../web/schedule.js";
 
@@ -113,6 +114,12 @@ export async function route(request, env) {
     if (url.pathname === "/push/delete" && request.method === "POST") return deleteReminder(request, env);
     if (url.pathname === "/push" || url.pathname === "/push/key" || url.pathname === "/push/delete") {
       return new Response("Method not allowed", { status: 405 });
+    }
+
+    // Practice sync. The body is ciphertext; the lookup id is a hash of a key
+    // this Worker never receives. Do not log the request or the record.
+    if (url.pathname === "/api/practice" || url.pathname.startsWith("/api/practice/")) {
+      return practiceRoute(request, env);
     }
 
     if (url.pathname === "/discs.json") return shelf(request, env, level);
