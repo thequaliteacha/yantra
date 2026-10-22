@@ -461,7 +461,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #welcome .dots span.on { background: rgba(230, 201, 138, 0.9); }
   #account .links { margin-top: 0.55rem; }
   /* The altar: the same round photos, the same size and gap, on the home screen, the sits menu, the profile, and above a sit. */
-  .altar-photos { display: flex; justify-content: center; align-items: flex-start; gap: 1.15rem; margin: 0.2rem auto; }
+  .altar-photos { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 1.15rem; margin: 0.2rem auto;
+    max-width: calc(3 * 4.4rem + 2 * 1.15rem); }
   .altar-photos:empty, .altar-photos[hidden] { display: none; }
   .altar-photos img {
     width: 4.4rem; height: 4.4rem; flex: 0 0 4.4rem; border-radius: 50%; object-fit: cover;
@@ -473,6 +474,9 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #altar { position: fixed; z-index: 2; left: 50%; top: max(1rem, env(safe-area-inset-top)); transform: translateX(-50%);
     margin: 0; opacity: 0; pointer-events: none; transition: opacity 2.4s ease; }
   body.sitting #altar.on, body.watching #altar.on { opacity: 0.62; }
+  /* Above a sit, more than three photos stay in one smaller row, clear of the yantra. */
+  #altar:has(img:nth-child(4)) { flex-wrap: nowrap; max-width: none; gap: 0.7rem; }
+  #altar:has(img:nth-child(4)) img { width: 3rem; height: 3rem; flex-basis: 3rem; }
   #altar-show[aria-pressed="false"] { text-decoration: line-through; }
   #altar-note:empty { display: none; }
   /* The room is inverted for day; turn the photos back so faces keep their colour. */
@@ -819,7 +823,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <p id="account-saved" role="status"></p>
         <div id="account-altar">
           <h3>Altar</h3>
-          <p>A beautiful image that recalls meditation, enlightenment, power, and peace. A teacher, an amakua, or a place of power. Up to three, kept on this device.</p>
+          <p>A beautiful image that recalls meditation, enlightenment, power, and peace. A teacher, an amakua, or a place of power. Up to six, kept on this device.</p>
           <div id="altar-list" class="altar-photos"></div>
           <div class="links">
             <button class="quiet" type="button" id="altar-add">Add a photo</button>
