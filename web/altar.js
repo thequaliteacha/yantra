@@ -1,6 +1,7 @@
-/* The altar: up to three photos (a teacher, an amakua) resting above the yantra
- * during sits and talks. Each is shrunk on this device to a small square JPEG and
- * kept with the other settings. Nothing is uploaded.
+/* The altar: up to three photos (a teacher, an amakua, a place of power) resting
+ * above the yantra during sits and talks, and in the same row on home, the sits
+ * menu, and the profile. Each is shrunk on this device to a small square JPEG
+ * and kept with the other settings. Nothing is uploaded.
  */
 (function (root) {
   const MAX = 3;
@@ -59,13 +60,16 @@
     const add = doc.getElementById("altar-add");
     const show = doc.getElementById("altar-show");
     const all = photos();
+    const image = (src, alt) => {
+      const img = doc.createElement("img");
+      img.src = src;
+      img.alt = alt;
+      return img;
+    };
     if (list) {
       list.replaceChildren();
       all.forEach((src, i) => {
         const figure = doc.createElement("figure");
-        const img = doc.createElement("img");
-        img.src = src;
-        img.alt = "Altar photo " + (i + 1);
         const remove = doc.createElement("button");
         remove.type = "button";
         remove.className = "quiet";
@@ -76,10 +80,18 @@
           settings().set("altar.photos", next);
           paint();
         });
-        figure.append(img, remove);
+        figure.append(image(src, "Altar photo " + (i + 1)), remove);
         list.append(figure);
       });
+      list.hidden = !all.length;
     }
+    ["home-altar", "pick-altar"].forEach((id) => {
+      const row = doc.getElementById(id);
+      if (!row) return;
+      row.replaceChildren();
+      all.forEach((src) => row.append(image(src, "")));
+      row.hidden = !all.length;
+    });
     if (add) add.hidden = all.length >= MAX;
     if (show) {
       show.hidden = !all.length;

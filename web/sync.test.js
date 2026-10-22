@@ -322,6 +322,67 @@ global.fetch = (url, init) => net.handler(url, init);
   assert.strictEqual(Sync.ruleLine(), Practice.RULE);
   assert.strictEqual(Practice.load().days["2026-10-22"].evening, 1);
 
+  const desk = memory();
+  const pocket = memory();
+  use(desk);
+  const named = Sync.linkNew({ name: "Desk" });
+  await Sync.sync();
+  use(pocket);
+  Sync.join(named.practiceKey, { name: "  Pocket\nphone  " });
+  await Sync.sync();
+  assert.strictEqual(Sync.loadState().name, "Pocket phone");
+  use(desk);
+  await Sync.sync();
+  const pocketRow = Sync.devices().find((device) => device.name === "Pocket phone");
+  assert.ok(pocketRow && pocketRow.self === false);
+  const messy = "  " + "Night\u0000 table ".repeat(8);
+  assert.strictEqual(Sync.rename(pocketRow.id, messy).length <= Sync.NAME_MAX, true);
+  assert.strictEqual(Sync.rename(pocketRow.id, messy), "Night table Night table");
+  assert.strictEqual(Sync.loadState().name, "Desk", "renaming another device leaves this one");
+  await Sync.sync();
+  use(pocket);
+  await Sync.sync();
+  assert.strictEqual(Sync.loadState().name, "Night table Night table");
+  assert.strictEqual(Sync.devices().find((device) => device.self).name, "Night table Night table");
+  use(desk);
+  await Sync.sync();
+  assert.strictEqual(Sync.devices().some((device) => device.name === "Night table Night table"), true);
+  Sync.rename(pocketRow.id, "   ");
+  await Sync.sync();
+  use(pocket);
+  await Sync.sync();
+  assert.strictEqual(Sync.loadState().name, "");
+  assert.strictEqual(Sync.devices().find((device) => device.self).name, "");
+
+  const pixels = Sync.qrPixels(Sync.linkFor(named.practiceKey), 8);
+  assert.ok(pixels && pixels.width === pixels.height);
+  assert.strictEqual(pixels.quiet, 4);
+  const quietPx = pixels.quiet * pixels.scale;
+  const bgAt = (x, y) => {
+    const o = (y * pixels.width + x) * 4;
+    return [pixels.data[o], pixels.data[o + 1], pixels.data[o + 2]];
+  };
+  assert.deepStrictEqual(bgAt(2, 2), [26, 21, 48]);
+  assert.deepStrictEqual(bgAt(pixels.width - 3, pixels.height - 3), [26, 21, 48]);
+  let gold = 0;
+  for (let y = quietPx; y < pixels.height - quietPx && gold === 0; y += 1) {
+    for (let x = quietPx; x < pixels.width - quietPx; x += 1) {
+      const px = bgAt(x, y);
+      if (px[0] === 230 && px[1] === 211 && px[2] === 164) { gold += 1; break; }
+    }
+  }
+  assert.ok(gold > 0, "modules are muted gold");
+  const channel = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const lum = (rgb) => 0.2126 * channel(rgb[0] / 255) + 0.7152 * channel(rgb[1] / 255) + 0.0722 * channel(rgb[2] / 255);
+  const light = lum([230, 211, 164]);
+  const dark = lum([26, 21, 48]);
+  const contrast = (Math.max(light, dark) + 0.05) / (Math.min(light, dark) + 0.05);
+  assert.ok(contrast >= 4, "the code keeps enough contrast to scan");
+  const jsQR = require("./vendor/jsQR.js");
+  const found = jsQR(pixels.data, pixels.width, pixels.height);
+  assert.ok(found, "the quiet gold code decodes");
+  assert.strictEqual(found.data, Sync.linkFor(named.practiceKey));
+
   const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
   const loader = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const worker = fs.readFileSync(path.join(__dirname, "../deploy/cloudflare/worker.js"), "utf8");
@@ -333,6 +394,11 @@ global.fetch = (url, init) => net.handler(url, init);
   assert.ok(page.includes("Forget this practice key everywhere"));
   assert.ok(page.includes('id="practice-link"'));
   assert.ok(page.includes('id="practice-link-qr"'));
+  assert.ok(page.includes('id="practice-link-qr-show"'));
+  assert.ok(page.includes("Show the code"));
+  assert.strictEqual(page.includes('id="practice-device-name"'), false);
+  assert.ok(fs.readFileSync(path.join(__dirname, "sync.js"), "utf8").includes('fill", "#e6d3a4"'));
+  assert.ok(fs.readFileSync(path.join(__dirname, "sync.js"), "utf8").includes('fill", "#1a1530"'));
   assert.ok(loader.includes('src="qrcode.js"'));
   assert.ok(loader.includes('src="sync.js"'));
   assert.ok(sw.includes('url.pathname.startsWith("/api/")'));

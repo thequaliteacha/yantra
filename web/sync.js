@@ -19,6 +19,8 @@
   let revision = 0;
   let chain = Promise.resolve();
   let qrFor = "";
+  let qrShown = false;
+  let editingId = "";
   let removeId = "";
   const nativeFetch = root && root.fetch ? root.fetch.bind(root) : null;
 
@@ -52,8 +54,30 @@
     return out;
   }
 
+  const NAME_MAX = 24;
+
   function cleanName(value) {
-    return String(value || "").replace(/[\u0000-\u001f]/g, "").replace(/\s+/g, " ").trim().slice(0, 40);
+    return String(value || "").replace(/[\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().slice(0, NAME_MAX).trim();
+  }
+
+  function stampOf(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 1) return 0;
+    return Math.floor(n);
+  }
+
+  function labelsFrom(raw) {
+    const labels = {};
+    if (!raw || typeof raw !== "object") return labels;
+    Object.keys(raw).forEach((id) => {
+      if (!DEVICE_ID.test(id)) return;
+      const row = raw[id] || {};
+      const name = cleanName(row.name);
+      const at = stampOf(row.at);
+      if (!name && !at) return;
+      labels[id] = { name: name, at: at || 1 };
+    });
+    return labels;
   }
 
   function randomBytes(size) {
@@ -100,7 +124,7 @@
   }
 
   function emptyState() {
-    return { practiceKey: "", deviceId: "", name: "", peers: {}, pending: false };
+    return { practiceKey: "", deviceId: "", name: "", namedAt: 0, labels: {}, peers: {}, pending: false };
   }
 
   function peersFrom(raw) {
@@ -111,7 +135,9 @@
       const row = raw[id] || {};
       peers[id] = {
         name: cleanName(row.name),
+        namedAt: stampOf(row.namedAt),
         days: Practice.normalize({ days: row.days }).days,
+        labels: labelsFrom(row.labels),
       };
     });
     return peers;
@@ -129,6 +155,8 @@
         practiceKey: practiceKey,
         deviceId: practiceKey ? deviceId : "",
         name: cleanName(raw.name),
+        namedAt: stampOf(raw.namedAt),
+        labels: practiceKey ? labelsFrom(raw.labels) : {},
         peers: practiceKey ? peersFrom(raw.peers) : {},
         pending: raw.pending === true,
       };
@@ -144,6 +172,8 @@
       practiceKey: state.practiceKey || "",
       deviceId: state.deviceId || "",
       name: cleanName(state.name),
+      namedAt: stampOf(state.namedAt),
+      labels: labelsFrom(state.labels),
       peers: peersFrom(state.peers),
       pending: state.pending === true,
     };
@@ -314,11 +344,7 @@
     const seen = revision;
     let envelope;
     try {
-      envelope = await encrypt(material.aesKey, {
-        v: 1,
-        name: state.name || "",
-        days: local.days || {},
-      }, state.deviceId);
+      envelope = await encrypt(material.aesKey, payloadOf(state, local), state.deviceId);
     } catch (e) {
       setNote(failNote(0));
       return { ok: false };
@@ -385,7 +411,9 @@
           const plain = await decrypt(material.aesKey, device, device.id);
           nextPeers[device.id] = {
             name: cleanName(plain && plain.name),
+            namedAt: stampOf(plain && plain.namedAt),
             days: Practice.normalize({ days: plain && plain.days }).days,
+            labels: labelsFrom(plain && plain.labels),
           };
         } catch (e) {
           if (now.peers[device.id]) nextPeers[device.id] = now.peers[device.id];
@@ -393,7 +421,34 @@
       }
       const saved = loadState();
       saved.peers = nextPeers;
+      const book = labelBook(saved, nextPeers);
+      const mine = book[saved.deviceId];
+      const adopted = !!(mine && mine.at > stampOf(saved.namedAt) && (mine.name !== saved.name || mine.at !== stampOf(saved.namedAt)));
+      if (adopted) {
+        saved.name = mine.name;
+        saved.namedAt = mine.at;
+        saved.pending = true;
+      }
       saveState(saved);
+      if (adopted) {
+        try {
+          const again = await encrypt(material.aesKey, payloadOf(loadState(), Practice.load()), saved.deviceId);
+          const put = await netFetch(devicePath(material.lookupId, saved.deviceId), {
+            method: "PUT",
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(again),
+          });
+          if (put.ok && revision === seen) {
+            const quiet = loadState();
+            quiet.pending = false;
+            saveState(quiet);
+          }
+        } catch (e) {
+          /* the adopted name stays pending and leaves on the next sync */
+        }
+      }
       if (uploaded) setNote("");
       paint();
       return { ok: true };
@@ -417,7 +472,10 @@
     const existing = loadState();
     if (existing.practiceKey) {
       if (!existing.deviceId) existing.deviceId = randomDeviceId();
-      if (options && options.name != null) existing.name = cleanName(options.name);
+      if (options && options.name != null) {
+        existing.name = cleanName(options.name);
+        existing.namedAt = Date.now();
+      }
       existing.pending = true;
       bump();
       saveState(existing);
@@ -431,10 +489,13 @@
     const practiceKey = generatePracticeKey();
     const deviceId = existing.deviceId || randomDeviceId();
     bump();
+    const named = cleanName(options && options.name);
     saveState({
       practiceKey: practiceKey,
       deviceId: deviceId,
-      name: cleanName(options && options.name),
+      name: named,
+      namedAt: named ? Date.now() : 0,
+      labels: {},
       peers: {},
       pending: true,
     });
@@ -457,11 +518,14 @@
     }
     const same = existing.practiceKey === practiceKey;
     const deviceId = existing.deviceId || randomDeviceId();
+    const named = options && options.name != null ? cleanName(options.name) : (same ? existing.name : "");
     bump();
     saveState({
       practiceKey: practiceKey,
       deviceId: deviceId,
-      name: options && options.name != null ? cleanName(options.name) : (same ? existing.name : ""),
+      name: named,
+      namedAt: options && options.name != null ? (named ? Date.now() : 0) : (same ? existing.namedAt : 0),
+      labels: same ? existing.labels : {},
       peers: same ? existing.peers : {},
       pending: true,
     });
@@ -519,6 +583,7 @@
     }
     const latest = loadState();
     delete latest.peers[deviceId];
+    if (latest.labels) delete latest.labels[deviceId];
     saveState(latest);
     setNote("");
     paint();
@@ -553,25 +618,84 @@
     return { ok: true };
   }
 
-  function setName(name) {
+  function payloadOf(state, local) {
+    return {
+      v: 1,
+      name: state.name || "",
+      namedAt: stampOf(state.namedAt) || 0,
+      days: (local && local.days) || {},
+      labels: labelsFrom(state.labels),
+    };
+  }
+
+  /* Newest stamp wins. A name with no stamp counts as 1, so any real rename is newer. */
+  function labelBook(state, peers) {
+    const book = {};
+    const consider = (id, name, at) => {
+      if (!DEVICE_ID.test(id || "")) return;
+      const clean = cleanName(name);
+      let stamp = stampOf(at);
+      if (!stamp) {
+        if (!clean) return;
+        stamp = 1;
+      }
+      const prev = book[id];
+      if (!prev || stamp > prev.at) book[id] = { name: clean, at: stamp };
+    };
+    if (state && state.deviceId) consider(state.deviceId, state.name, state.namedAt);
+    const ours = labelsFrom(state && state.labels);
+    Object.keys(ours).forEach((id) => consider(id, ours[id].name, ours[id].at));
+    Object.keys(peers || {}).forEach((id) => {
+      const peer = peers[id] || {};
+      consider(id, peer.name, peer.namedAt);
+      const labels = labelsFrom(peer.labels);
+      Object.keys(labels).forEach((target) => consider(target, labels[target].name, labels[target].at));
+    });
+    return book;
+  }
+
+  function rename(id, name) {
     const state = loadState();
-    if (!state.practiceKey) return "";
+    if (!state.practiceKey || !state.deviceId || !DEVICE_ID.test(id || "")) return "";
     const clean = cleanName(name);
-    if (clean === state.name) return clean;
-    state.name = clean;
+    state.labels = labelsFrom(state.labels);
+    if (id !== state.deviceId && !state.peers[id]) return clean;
+    const seenAt = id === state.deviceId
+      ? stampOf(state.namedAt)
+      : Math.max(stampOf((state.labels[id] || {}).at), stampOf((state.peers[id] || {}).namedAt));
+    let at = Date.now();
+    if (at <= seenAt) at = seenAt + 1;
+    if (id === state.deviceId) {
+      if (clean === state.name && state.namedAt) return clean;
+      state.name = clean;
+      state.namedAt = at;
+    } else {
+      const prev = state.labels[id] || {};
+      if (prev.name === clean && prev.at) return clean;
+      state.labels = labelsFrom(state.labels);
+      state.labels[id] = { name: clean, at: at };
+    }
     state.pending = true;
     bump();
     saveState(state);
     return clean;
   }
 
+  function setName(name) {
+    const state = loadState();
+    if (!state.practiceKey || !state.deviceId) return "";
+    return rename(state.deviceId, name);
+  }
+
   function devices() {
     const state = loadState();
     if (!state.practiceKey || !state.deviceId) return [];
-    const list = [{ id: state.deviceId, name: state.name, self: true }];
+    const book = labelBook(state, state.peers);
+    const called = (id, fallback) => (book[id] ? book[id].name : (fallback || ""));
+    const list = [{ id: state.deviceId, name: called(state.deviceId, state.name), self: true }];
     Object.keys(state.peers).sort().forEach((id) => {
       if (id === state.deviceId) return;
-      list.push({ id: id, name: state.peers[id].name || "", self: false });
+      list.push({ id: id, name: called(id, state.peers[id].name || ""), self: false });
     });
     return list;
   }
@@ -605,34 +729,107 @@
     return rows;
   }
 
-  function qrElement(text) {
-    const rows = qrMatrix(text);
-    if (!rows || !root || !root.document) return null;
+  /* Muted gold on deep indigo. Modules meet at their edges, with rounded corners
+   * and a quiet zone of four modules so the code still scans. */
+  const QR_BG = [26, 21, 48, 255];
+  const QR_FG = [230, 211, 164, 255];
+  const QR_QUIET = 4;
+  const QR_RADIUS = 0.3;
+
+  function qrGeometry(rows) {
     const n = rows.length;
-    const quiet = 4;
-    const size = n + quiet * 2;
-    const svg = root.document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("viewBox", "0 0 " + size + " " + size);
-    svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", "QR code for the practice link");
-    const bg = root.document.createElementNS(svg.namespaceURI, "rect");
-    bg.setAttribute("width", String(size));
-    bg.setAttribute("height", String(size));
-    bg.setAttribute("fill", "#f7edd4");
-    svg.append(bg);
+    const size = n + QR_QUIET * 2;
+    const cells = [];
     for (let r = 0; r < n; r += 1) {
       for (let c = 0; c < n; c += 1) {
         if (!rows[r][c]) continue;
-        const cell = root.document.createElementNS(svg.namespaceURI, "rect");
-        cell.setAttribute("x", String(c + quiet));
-        cell.setAttribute("y", String(r + quiet));
-        cell.setAttribute("width", "1");
-        cell.setAttribute("height", "1");
-        cell.setAttribute("fill", "#1a140c");
-        svg.append(cell);
+        cells.push({
+          x: c + QR_QUIET,
+          y: r + QR_QUIET,
+          w: 1,
+          h: 1,
+          rx: QR_RADIUS,
+        });
       }
     }
+    return { n: n, size: size, cells: cells };
+  }
+
+  function inRounded(px, py, cell) {
+    const right = cell.x + cell.w;
+    const bottom = cell.y + cell.h;
+    if (px < cell.x || py < cell.y || px > right || py > bottom) return false;
+    const r = cell.rx;
+    let dx = 0;
+    let dy = 0;
+    if (px < cell.x + r) dx = cell.x + r - px;
+    else if (px > right - r) dx = px - (right - r);
+    if (py < cell.y + r) dy = cell.y + r - py;
+    else if (py > bottom - r) dy = py - (bottom - r);
+    return dx * dx + dy * dy <= r * r;
+  }
+
+  function qrElement(text) {
+    const rows = qrMatrix(text);
+    if (!rows || !root || !root.document) return null;
+    const geom = qrGeometry(rows);
+    const svg = root.document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 " + geom.size + " " + geom.size);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "QR code for the practice link");
+    const bg = root.document.createElementNS(svg.namespaceURI, "rect");
+    bg.setAttribute("width", String(geom.size));
+    bg.setAttribute("height", String(geom.size));
+    bg.setAttribute("fill", "#1a1530");
+    svg.append(bg);
+    geom.cells.forEach((cell) => {
+      const node = root.document.createElementNS(svg.namespaceURI, "rect");
+      node.setAttribute("x", String(cell.x));
+      node.setAttribute("y", String(cell.y));
+      node.setAttribute("width", String(cell.w));
+      node.setAttribute("height", String(cell.h));
+      node.setAttribute("rx", String(cell.rx));
+      node.setAttribute("ry", String(cell.rx));
+      node.setAttribute("fill", "#e6d3a4");
+      svg.append(node);
+    });
     return svg;
+  }
+
+  /* The same geometry as the SVG, so a decoder can check the picture we draw. */
+  function qrPixels(text, scale) {
+    const rows = qrMatrix(text);
+    if (!rows) return null;
+    const step = Math.max(2, scale || 8);
+    const geom = qrGeometry(rows);
+    const width = geom.size * step;
+    const height = width;
+    const data = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = QR_BG[0];
+      data[i + 1] = QR_BG[1];
+      data[i + 2] = QR_BG[2];
+      data[i + 3] = 255;
+    }
+    const paint = (x, y) => {
+      const o = (y * width + x) * 4;
+      data[o] = QR_FG[0];
+      data[o + 1] = QR_FG[1];
+      data[o + 2] = QR_FG[2];
+      data[o + 3] = 255;
+    };
+    geom.cells.forEach((cell) => {
+      const x0 = Math.max(0, Math.floor(cell.x * step));
+      const y0 = Math.max(0, Math.floor(cell.y * step));
+      const x1 = Math.min(width, Math.ceil((cell.x + cell.w) * step));
+      const y1 = Math.min(height, Math.ceil((cell.y + cell.h) * step));
+      for (let y = y0; y < y1; y += 1) {
+        for (let x = x0; x < x1; x += 1) {
+          if (inRounded((x + 0.5) / step, (y + 0.5) / step, cell)) paint(x, y);
+        }
+      }
+    });
+    return { width: width, height: height, data: data, quiet: QR_QUIET, scale: step, bg: QR_BG, fg: QR_FG };
   }
 
   function show(id, on) {
@@ -660,39 +857,53 @@
     const url = on ? linkFor(state.practiceKey) : "";
     const field = root.document.getElementById("practice-link-url");
     if (field && field.value !== url) field.value = url;
+    if (!on) qrShown = false;
+    const toggle = root.document.getElementById("practice-link-qr-show");
+    if (toggle) {
+      toggle.hidden = !on;
+      toggle.textContent = qrShown ? "Hide the code" : "Show the code";
+      toggle.setAttribute("aria-expanded", qrShown ? "true" : "false");
+    }
     const qr = root.document.getElementById("practice-link-qr");
     if (qr) {
-      if (!on) {
+      if (!on || !qrShown) {
         qr.replaceChildren();
+        qr.hidden = true;
         qrFor = "";
-      } else if (qrFor !== url) {
+      } else if (qrFor !== url || !qr.firstChild) {
         const picture = qrElement(url);
         qr.replaceChildren(picture || root.document.createTextNode(""));
-        qrFor = url;
+        qr.hidden = !picture;
+        qrFor = picture ? url : "";
+      } else {
+        qr.hidden = false;
       }
     }
-    const name = root.document.getElementById("practice-device-name");
-    if (name && root.document.activeElement !== name) name.value = state.name || "";
     const list = root.document.getElementById("practice-devices");
     if (list) {
-      list.replaceChildren();
-      devices().forEach((device) => {
-        const row = root.document.createElement("li");
-        const label = root.document.createElement("span");
-        const called = device.name || (device.self ? "This device" : "A linked device");
-        label.textContent = device.self ? called + (device.name ? " · this device" : "") : called;
-        if (device.self && !device.name) label.textContent = "This device";
-        row.append(label);
-        if (!device.self) {
-          const button = root.document.createElement("button");
-          button.type = "button";
-          button.className = "quiet";
-          button.textContent = "Remove a device";
-          button.addEventListener("click", () => askRemove(device));
-          row.append(button);
+      const active = root.document.activeElement;
+      const editing = active && active.dataset && active.dataset.rename && list.contains(active);
+      if (!editing) {
+        if (!on) editingId = "";
+        list.replaceChildren();
+        devices().forEach((device) => {
+          const row = root.document.createElement("li");
+          row.append(deviceNameControl(device));
+          if (!device.self) {
+            const button = root.document.createElement("button");
+            button.type = "button";
+            button.className = "quiet";
+            button.textContent = "Remove a device";
+            button.addEventListener("click", () => askRemove(device));
+            row.append(button);
+          }
+          list.append(row);
+        });
+        if (editingId) {
+          const input = list.querySelector("[data-rename]");
+          if (input) input.focus();
         }
-        list.append(row);
-      });
+      }
       list.hidden = !on;
     }
     const eraseCopy = root.document.getElementById("practice-erase-copy");
@@ -705,6 +916,52 @@
     if (note && root.document.activeElement !== note) note.textContent = noteText();
     const practiceNote = root.document.getElementById("practice-note");
     if (practiceNote && root.YantraPractice) practiceNote.textContent = ruleLine();
+  }
+
+  function deviceTitle(device) {
+    if (device.name) return device.self ? device.name + " · this device" : device.name;
+    return device.self ? "This device" : "A linked device";
+  }
+
+  function commitRename(input) {
+    const id = (input && input.dataset && input.dataset.rename) || "";
+    if (!id || editingId !== id) return;
+    editingId = "";
+    rename(id, input.value);
+    paint();
+    sync();
+  }
+
+  function deviceNameControl(device) {
+    if (editingId === device.id) {
+      const input = root.document.createElement("input");
+      input.type = "text";
+      input.maxLength = NAME_MAX;
+      input.value = device.name || "";
+      input.dataset.rename = device.id;
+      input.setAttribute("aria-label", "Name for " + deviceTitle(device));
+      input.autocomplete = "off";
+      input.placeholder = "Name this device";
+      input.addEventListener("blur", () => commitRename(input));
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") input.blur();
+        if (event.key === "Escape") {
+          editingId = "";
+          paint();
+        }
+      });
+      return input;
+    }
+    const button = root.document.createElement("button");
+    button.type = "button";
+    button.className = "device-name";
+    button.textContent = deviceTitle(device);
+    button.setAttribute("aria-label", "Rename " + deviceTitle(device));
+    button.addEventListener("click", () => {
+      editingId = device.id;
+      paint();
+    });
+    return button;
   }
 
   function askRemove(device) {
@@ -735,10 +992,10 @@
         });
       } else done();
     });
-    const name = doc.getElementById("practice-device-name");
-    if (name) name.addEventListener("change", () => {
-      setName(name.value);
-      sync();
+    const qrShow = doc.getElementById("practice-link-qr-show");
+    if (qrShow) qrShow.addEventListener("click", () => {
+      qrShown = !qrShown;
+      paint();
     });
     const joinBtn = doc.getElementById("practice-link-join-btn");
     if (joinBtn) joinBtn.addEventListener("click", () => {
@@ -803,6 +1060,7 @@
     }
     join(key);
     openedFromLink = true;
+    root.yantraCameFromPracticeLink = true;
     strip();
     return true;
   }
@@ -852,13 +1110,16 @@
     derive: derive,
     encrypt: encrypt,
     decrypt: decrypt,
+    NAME_MAX: NAME_MAX,
     qrMatrix: qrMatrix,
+    qrPixels: qrPixels,
     linkNew: linkNew,
     join: join,
     unlink: unlink,
     removeDevice: removeDevice,
     forget: forget,
     setName: setName,
+    rename: rename,
     linked: linked,
     devices: devices,
     loadState: loadState,
