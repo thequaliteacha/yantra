@@ -9,8 +9,10 @@
    the eight-petal lotus is the outer wheel and keeps the clockwise pace. The
    downward triangle turns counterclockwise in its place. A circle has no
    corners, so the mind's circle does not appear to turn; it shares the inner
-   breath instead. Every other chakra has an outer lotus and the inner eight,
-   and the eight is the inner wheel. */
+   breath instead. Anahata keeps its twelve petals as the outer wheel, and its
+   six-pointed star is the inner wheel, so the inner eight rest. Every other
+   chakra has an outer lotus and the inner eight, and the eight is the inner
+   wheel. */
 (function (root) {
   const TAU = Math.PI * 2;
   // One clockwise turn of the outer wheel at full quiver, in seconds.
@@ -27,7 +29,7 @@
     root: { petals: 4, rings: 2 },
     sacral: { petals: 6, rings: 2 },
     naval: { petals: 10, rings: 2 },
-    heart: { petals: 12, rings: 2 },
+    heart: { petals: 12, rings: 2, figureWheel: true },
     throat: { petals: 16, rings: 2 },
     eye: { petals: 2, rings: 1 },
     crown: { petals: 1000, rings: 2 },
@@ -80,7 +82,7 @@
     return {
       outerSign: 1,
       innerSign: enabled && shape ? -1 : 0,
-      innerTarget: oneRing ? "figure" : "petals",
+      innerTarget: oneRing || (shape && shape.figureWheel) ? "figure" : "petals",
     };
   }
 
@@ -119,7 +121,8 @@
   }
 
   /* The inner eight. A single ring (Ajna) is the outer wheel, so it takes the
-     clockwise spin. Two rings turn the eight counterclockwise. */
+     clockwise spin. Where the figure is the inner wheel (Anahata) the eight only
+     drift. Two rings otherwise turn the eight counterclockwise. */
   function innerPetalAngle(index, count, options) {
     const opt = options || {};
     const n = count > 0 ? count : 8;
@@ -128,7 +131,7 @@
     const spin = Number(opt.spin) || 0;
     const inner = Number(opt.inner) || 0;
     const tremor = Number(opt.tremor) || 0;
-    if (opt.innerTarget === "figure") return base + turn + spin;
+    if (opt.innerTarget === "figure" && opt.petals === 2) return base + turn + spin;
     const drift = opt.petals === 2 ? 0 : turn * 0.6;
     let angle = base - drift;
     if (opt.innerTarget === "petals") angle += inner + tremor * Math.sin(index * 1.7 + 0.9);

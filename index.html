@@ -1223,21 +1223,6 @@ function chakraFigure(ctx, cx, cy, r, figure, turn) {
   if (figure === "mind") circle(ctx, cx, cy, r * 0.94);
 }
 
-/* The wheel's quiver. A chakra is a wheel of light turning faster than the eye can
-   follow, so once its petals open the outer figure trembles: a few thousandths of R,
-   at two speeds that never line up, each petal a little out of step with its
-   neighbours. It swells as the song comes to its close, when the wheel is fullest. */
-function quiverAt(now, i, strength) {
-  if (strength <= 0) return { r: 0, a: 0, light: 0 };
-  const fast = Math.sin(now * 0.047 + i * 1.7) * 0.6 + Math.sin(now * 0.079 + i * 2.9) * 0.4;
-  const slow = Math.sin(now * 0.0021 + i * 0.8);
-  return {
-    r: fast * strength * (0.5 + 0.5 * slow),
-    a: Math.sin(now * 0.061 + i * 2.3) * strength,
-    light: 1 + 0.1 * fast * strength,
-  };
-}
-
 function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
   bloom = bloom || 0;
   quiver = quiver || 0;
@@ -1313,18 +1298,18 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
     }
   });
   const mid = stage(reveal, 0.74, 0.8);
-  // The wheel's tremor: the outer figure only, so the bindu and the triangles stay still.
-  const shake = quiverAt(now, 0, quiver);
-  const wheel = swell * (1 + 0.004 * shake.r);
-  layer(ctx, mid, () => ring(ctx, cx, cy, R * 1.5 * (1 + 0.003 * shake.r), mid));
+  // The wheels turn smoothly; nothing trembles, so the eyes can rest on the bindu.
+  const wheel = swell;
+  layer(ctx, mid, () => ring(ctx, cx, cy, R * 1.5, mid));
   // The chakra's own figure rests faintly behind the petals, inscribed in that ring.
-  // On Ajna that figure is the inner wheel: the triangle turns counterclockwise
-  // and the circle, which has no corners to show a turn, shares the breath.
+  // On Ajna and Anahata that figure is the inner wheel: the triangle, or the
+  // six-pointed star, turns counterclockwise, and Ajna's circle, which has no
+  // corners to show a turn, shares the breath.
   if (lotus) {
     const figInner = innerTarget === "figure";
     const figBreath = figInner && awake ? awake.innerScale(vibe) : 1;
     const figGlow = figInner && awake ? 1 + awake.innerGlow(vibe) : 1;
-    layer(ctx, mid * 0.32 * shake.light * figGlow, () => {
+    layer(ctx, mid * 0.32 * figGlow, () => {
       chakraFigure(ctx, cx, cy, R * 1.5 * wheel * figBreath, lotus.figure, figInner ? innerSpin : 0);
     });
   }
@@ -1336,21 +1321,17 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
     // Ajna's ring stays open: no wings, so nothing draws the eye away from the bindu.
     if (count === 2) return;
     for (let i = 0; i < count; i++) {
-      const q = quiverAt(now, i + 1, quiver);
-      // The wheel turns as it wakes: still while it forms, then spinning up with the quiver.
+      // The wheel turns as it wakes: still while it forms, then spinning up.
       const a = awake
-        ? awake.outerPetalAngle(i, count, turn, spin, q.a)
-        : -Math.PI / 2 + turn + spin + (i * Math.PI * 2) / count + 0.004 * q.a;
-      const k = swell * (1 + 0.008 * q.r);
-      bud(ctx, cx, cy, a, R * 1.54 * k, R * 1.9 * k, (Math.PI / count) * 0.7, outerPetals);
+        ? awake.outerPetalAngle(i, count, turn, spin, 0)
+        : -Math.PI / 2 + turn + spin + (i * Math.PI * 2) / count;
+      bud(ctx, cx, cy, a, R * 1.54 * swell, R * 1.9 * swell, (Math.PI / count) * 0.7, outerPetals);
     }
   });
-  // Ajna has no petals to tremble, so its open ring carries the quiver instead.
   const outer = stage(reveal, 0.88, 0.92);
-  const ringShake = count === 2 ? 1 + 0.006 * quiverAt(now, 3, quiver).r : 1 + 0.002 * shake.r;
-  layer(ctx, outer * (count === 2 ? shake.light : 1), () => {
-    ring(ctx, cx, cy, R * 1.94 * ringShake, outer);
-    ring(ctx, cx, cy, R * 2.0 * ringShake, outer);
+  layer(ctx, outer, () => {
+    ring(ctx, cx, cy, R * 1.94, outer);
+    ring(ctx, cx, cy, R * 2.0, outer);
   });
 
   // The square enclosure settles in last, whole, from just inside its place.
@@ -1785,9 +1766,9 @@ function frame(now) {
     const shine = talkFx && window.YantraTalkView ? window.YantraTalkView.brightness(talkFx) : 0;
     const talkGlow = talkFx ? 1.25 + shine * 0.4 : 1;
     gold(ctx, 0.92 * rest, (14 + shown * 10) * talkGlow, Math.min(1, (0.48 + 0.22 * Math.min(1, shown)) * rest * talkGlow));
-    // In a sit the wheel starts to quiver as its petals open, in the song's last third,
-    // and is fullest at the close. Talks hold the quiver still. Reduced motion does
-    // too, and slows the turning instead of stopping it.
+    // In a sit the wheel starts to turn as its petals open, in the song's last third,
+    // and is fastest at the close. Talks hold it still. Reduced motion slows the
+    // turning instead of stopping it.
     const spinDrive = talkFx ? 0 : stage(reveal, 0.78, 1);
     const quiver = talkFx || reduceMotion ? 0 : spinDrive;
     const shape = lotus || CHAKRA.heart;
