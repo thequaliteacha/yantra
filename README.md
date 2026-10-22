@@ -93,14 +93,16 @@ does not. A perfect day holds a Morning Meditation (sunrise) and an Evening
 Meditation (sunset); perfect days in a row are the main streak, and the page
 nudges toward the next one. Morning and evening also keep their own runs. The
 day is the device's own date. On its own, a device keeps that record to itself.
-*Link my devices* makes a private practice key, shown as a QR code and as a
-link whose key sits in the fragment (`https://yantramedi.app/web/#link=…`),
+*Link my devices* makes a private practice key. The QR code stays hidden until
+you ask to see it, drawn in muted gold on deep indigo, and the link is there too.
+Its key sits in the fragment (`https://yantramedi.app/web/#link=…`),
 so the key never reaches the server. Another device opens the link or pastes
 the key. Each device encrypts its own days (HKDF for a lookup id and an
 AES-GCM key) and uploads only the lookup id and the ciphertext. The shared
 streak is the sum of those days, once per device. Offline sits stay on the
 device and upload when it can. *Unlink this device*, *Remove a device*, and
-*Forget this practice key everywhere* are on the same page. No account, no
+*Forget this practice key everywhere* are on the same page. Tap a linked device
+to give it a short name; that name travels with the shared list. No account, no
 email, and nothing tracked.
 
 Morning and evening reminders are on that same page, each one on or off by
@@ -129,8 +131,9 @@ device with no sits gets three welcome steps (the perfect day, reminders, Add
 to Home Screen), once. Talks remember where they were left, mark the ones
 heard, and show on the lock screen.
 
-*Altar*: up to three photos (a teacher, an amakua) rest softly above the yantra
-during sits and talks. Each is shrunk on the device to a small JPEG and kept
+*Altar*: up to three photos — a teacher, an amakua, or a place of power — rest
+softly, and at the same size, above the yantra and on the home screen, the sits
+menu, and the profile. Each is shrunk on the device to a small JPEG and kept
 with the other settings; nothing is uploaded. The theme toggle at the top left
 of home switches between dark and cream (a warm eggshell with brown-gold ink).
 
