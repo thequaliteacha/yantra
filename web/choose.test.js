@@ -180,47 +180,9 @@ const rotated = plan({ theme: "evening", count: 3, albumId: "", lastId: "big-isl
 assert.notStrictEqual(rotated.albumId, "big-island");
 assert.strictEqual(discById(rotated.albumId).circle, "vayu");
 
-for (const [theme, count] of sits) {
-  const phone = session("zazen", false);
-  const mixed = plan({
-    theme, count, mix: true, albumId: "india-dream", session: phone,
-    mixItems: blueprint(theme, count),
-  });
-  assertPlayable(mixed, phone);
-  assert.strictEqual(mixed.announce, false);
-  assert.ok(mixed.via === "mix" || mixed.via === "fallback");
-  assert.ok(mixed.items.every((item) => asTrack(discById(item.discId), item.n).hosted));
-  assert.ok(mixed.items.every((item) => discById(item.discId).circle !== "lumikara"));
-  if (mixed.via === "mix") {
-    const per = count === 1 ? 1 : count / 3;
-    const expected = count === 1 ? ["heart"] : ["naval", "heart", "eye"].flatMap((chakra) => Array(per).fill(chakra));
-    assert.deepStrictEqual(mixed.items.map((item) => item.chakra), expected);
-  }
-}
-
-const mixFallback = plan({
-  theme: "evening",
-  count: 3,
-  mix: true,
-  mixItems: blueprint("evening", 3),
-  substitute: () => null,
-});
-assert.strictEqual(mixFallback.via, "fallback");
-assert.strictEqual(mixFallback.announce, false);
-assert.strictEqual(discById(mixFallback.albumId).circle, "vayu");
-assertPlayable(mixFallback, eveningPhone);
-
-const sanghaMix = plan({
-  theme: "evening",
-  count: 3,
-  mix: true,
-  level: "sangha",
-  session: session("sangha", false),
-  mixItems: blueprint("evening", 3),
-});
-assertPlayable(sanghaMix, session("sangha", false));
-assert.ok(sanghaMix.items.every((item) => discById(item.discId).circle === "vayu"));
-assert.notStrictEqual(sanghaMix.albumId, "samurai");
+const crossAsk = plan({ theme: "evening", count: 3, mix: true, albumId: "samurai" });
+assert.strictEqual(crossAsk.albumId, "samurai", "a sit never crosses albums, even if asked to mix");
+assert.strictEqual(new Set(crossAsk.items.map((item) => item.discId)).size, 1);
 
 const lumikara = plan({ theme: "evening", count: 3, level: "zazen", albumId: "awake-in-anza-borrego" });
 assert.notStrictEqual(lumikara.albumId, "awake-in-anza-borrego");
@@ -250,22 +212,6 @@ assert.strictEqual(none.ok, false);
 assert.strictEqual(none.line, Choose.emptyLine());
 assert.ok(!/spotify/i.test(none.line));
 assert.strictEqual(none.items, undefined);
-
-const quietMix = Choose.fillMix(
-  [{ discId: "india-dream", n: 1, chakra: "naval" }],
-  { keep: () => false, playable: () => false, substitute: () => null },
-);
-assert.strictEqual(quietMix, null, "an unplayable mix song is not kept");
-
-const swapped = Choose.fillMix(
-  [{ discId: "india-dream", n: 1, chakra: "naval" }],
-  {
-    keep: () => false,
-    playable: () => false,
-    substitute: () => ({ discId: "big-island", n: 1 }),
-  },
-);
-assert.deepStrictEqual(swapped, [{ discId: "big-island", n: 1, chakra: "naval" }]);
 
 assert.strictEqual(Choose.announceSwap({ explicit: true, swapped: true, spotifyExpected: true }), true);
 assert.strictEqual(Choose.announceSwap({ explicit: true, swapped: true, spotifyExpected: false }), false, "a phone does not announce");

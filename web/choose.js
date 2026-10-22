@@ -2,8 +2,8 @@
    cannot play on this device. Only songs that can play are eligible. A remembered
    album that cannot play falls back without asking: the same circle when one
    fits, otherwise an album the morning or evening set already uses, otherwise
-   any album that can play. Mix It Up keeps a song or replaces it with another
-   playable song of the same chakra. Nothing playable means no sit. */
+   any album that can play. A sit never crosses albums. Nothing playable means
+   no sit. */
 (function (root) {
   const CHAKRAS = ["naval", "heart", "eye"];
   const COUNTS = [1, 3, 6, 12];
@@ -110,40 +110,6 @@
     return items.length === count ? items : null;
   }
 
-  /* keep: the song itself can play here from the sangha's copy.
-     playable: it can play some other way (Spotify, where that player runs).
-     substitute: another playable song of the same chakra. */
-  function fillMix(items, opts) {
-    const keep = (opts && opts.keep) || (() => false);
-    const playable = (opts && opts.playable) || (() => false);
-    const substitute = (opts && opts.substitute) || (() => null);
-    const used = new Set();
-    const out = [];
-    for (const item of items || []) {
-      if (!item) return null;
-      const key = item.discId + "#" + item.n;
-      if (keep(item) && !used.has(key)) {
-        used.add(key);
-        out.push({ discId: item.discId, n: item.n, chakra: item.chakra });
-        continue;
-      }
-      const next = substitute(item.chakra, used);
-      const nextKey = next && next.discId ? next.discId + "#" + next.n : "";
-      if (nextKey && !used.has(nextKey)) {
-        used.add(nextKey);
-        out.push({ discId: next.discId, n: next.n, chakra: item.chakra });
-        continue;
-      }
-      if (playable(item) && !used.has(key)) {
-        used.add(key);
-        out.push({ discId: item.discId, n: item.n, chakra: item.chakra });
-        continue;
-      }
-      return null;
-    }
-    return out.length ? out : null;
-  }
-
   /* The Spotify panel is for a listener who asked for a particular album and
      whose device was expected to play it. A phone, a free choice, and a quiet
      fallback do not announce. */
@@ -159,19 +125,7 @@
     const open = (disc) => !opts.circleOpen || opts.circleOpen(disc.circle, level);
     const catalog = ((opts && opts.discs) || []).filter((disc) => disc && open(disc));
     const canPlay = (opts && opts.canPlay) || (() => false);
-    const mix = !!(opts && opts.mix);
-    if (mix) {
-      const filled = fillMix(opts.mixItems || [], {
-        keep: opts.keep,
-        playable: opts.playable,
-        substitute: opts.substitute,
-      });
-      const playable = opts.playable || (() => false);
-      if (filled && filled.length === count && filled.every((item) => playable(item) || (opts.keep && opts.keep(item)))) {
-        return { ok: true, items: filled, via: "mix", albumId: "", requestedId: "", theme, announce: false };
-      }
-    }
-    const preferredId = mix ? "" : String((opts && opts.albumId) || "");
+    const preferredId = String((opts && opts.albumId) || "");
     const disc = chooseAlbum({
       discs: catalog,
       catalog,
@@ -190,7 +144,7 @@
     }
     let via = "default";
     if (preferredId && disc.id === preferredId) via = "album";
-    else if (preferredId || mix) via = "fallback";
+    else if (preferredId) via = "fallback";
     return {
       ok: true,
       items,
@@ -208,7 +162,6 @@
     albumFits: albumFits,
     chooseAlbum: chooseAlbum,
     sitTracks: sitTracks,
-    fillMix: fillMix,
     announceSwap: announceSwap,
     planQuickSit: planQuickSit,
   };

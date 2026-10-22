@@ -28,7 +28,7 @@ assert.ok(!mindful.includes("Mindfulness material"));
 assert.strictEqual(page.includes('id="account-places"'), false, "the separate links row is gone");
 assert.ok(page.includes("<h2>How to sit</h2>"), "the sit guide itself keeps its title");
 
-assert.ok(page.includes('<details class="account-fold" id="account-practice-block" data-fold="practice" open>'));
+assert.ok(page.includes('<details class="account-fold" id="account-practice-block" data-fold="practice">'));
 assert.ok(page.includes('<details class="account-fold" id="account-reminders-block" data-fold="reminders">'));
 assert.ok(page.includes('<details class="account-fold" id="account-profile" data-fold="profile">'));
 assert.ok(page.includes('<details class="account-fold" id="account-settings" data-fold="settings">'));
@@ -74,13 +74,11 @@ assert.ok(settings.includes('id="account-wipe"'));
 assert.ok(!settings.includes('id="remind-save"'));
 assert.ok(!settings.includes('id="account-name"'));
 
-assert.ok(account.includes("yantra.account.folds"));
-assert.ok(account.includes("practice: true"));
-assert.ok(account.includes("reminders: false"));
-assert.ok(account.includes("profile: false"));
-assert.ok(account.includes("settings: false"));
+assert.strictEqual(page.includes('data-fold="practice" open'), false, "every drawer starts closed");
+assert.ok(account.includes("window.closeAccountFolds = closeFolds"));
+assert.ok(page.includes('if (name === "account" && window.closeAccountFolds) window.closeAccountFolds();'));
+assert.ok(!account.includes("yantra.account.folds"), "drawers are not remembered");
 assert.ok(account.includes("account-initial"));
-assert.ok(account.includes("localStorage.setItem(FOLD_KEY"));
 assert.ok(page.includes('closest("details")'), "a deep link opens the section that holds it");
 assert.ok(sync.includes("yantraCameFromPracticeLink"));
 assert.ok(account.includes("yantraCameFromPracticeLink"));
