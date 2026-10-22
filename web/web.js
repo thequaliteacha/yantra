@@ -142,7 +142,6 @@
       });
     }).filter((disc) => disc.tracks.length > 0);
     payload.circles = Playback.visibleCircles(payload.circles, payload.discs);
-    payload.mixReady = ["naval", "heart", "eye"].every((chakra) => chakraPool(chakra).length > 0);
     payload.installRoot = "";
     payload.chakras = [
       { id: "naval", name: "Navel", third: "first" },
@@ -982,24 +981,6 @@
   const live = { service: null, name: "", items: [], keys: [], seen: false, timer: 0, form: false, chakras: null, lastHeard: false, recovering: false };
   const progressWatch = Playback.createProgressWatch(Playback.STALL_MS);
 
-  /* The morning and evening sets, before a song that cannot play is replaced.
-     1 song is the heart song, 3 is one per chakra, 6 is two, 12 is four. */
-  function sessionItems(theme, count) {
-    const set = sets && sets[theme];
-    if (!set) return null;
-    if (count === 1) {
-      const one = sets.oneSong && sets.oneSong[theme];
-      return one ? [{ discId: one.discId, n: one.n, chakra: "heart" }] : null;
-    }
-    const per = { 3: 1, 6: 2, 12: 4 }[count];
-    if (!per) return null;
-    const items = [];
-    for (const chakra of ["naval", "heart", "eye"]) {
-      for (const song of (set[chakra] || []).slice(0, per)) items.push({ discId: song.discId, n: song.n, chakra });
-    }
-    return items.length === per * 3 ? items : null;
-  }
-
   /* A sit stays inside one album. Each album runs from navel songs through heart
      songs to third eye songs, so a sit takes the same number from each third;
      one song is a heart song. The album has to be playable on this device. */
@@ -1253,7 +1234,7 @@
     if (!pending || !spotify.connected()) return;
     showResume("Spotify is connected.", () => {
       if (pending.kind === "session" && typeof window.playSession === "function") {
-        window.playSession(pending.theme, pending.count, { mix: !!pending.mix, album: pending.album || "" });
+        window.playSession(pending.theme, pending.count, { album: pending.album || "" });
       } else if (pending.kind === "form" && typeof window.playForm === "function") {
         window.playForm(pending.name, pending.id, pending.tracks);
       } else if (pending.kind === "album") {
@@ -1515,7 +1496,6 @@
           theme: offer.theme || "morning",
           count: offer.count || 3,
           name: offer.asked || offer.playing || "the sit",
-          mix: false,
           album: offer.askedId || "",
         };
       try { sessionStorage.setItem("yantra.pending", JSON.stringify(pending)); } catch (e) {}
@@ -1554,7 +1534,7 @@
           panel.hidden = true;
           if (offer.mode === "album" && typeof window.yantraPlayHosted === "function") window.yantraPlayHosted(album.id);
           else if (typeof window.playSession === "function") {
-            window.playSession(offer.theme || "morning", offer.count || 3, { mix: false, album: album.id });
+            window.playSession(offer.theme || "morning", offer.count || 3, { album: album.id });
           }
         });
         list.append(button);
@@ -1622,36 +1602,26 @@
     return ids;
   }
 
-  /* Quick sits, Mix It Up, reminder sits, and a resumed sit all ask here.
+  /* Quick sits, reminder sits, and a resumed sit all ask here. A sit stays on one album.
      The album is one this device can play. A remembered album that cannot
      play falls back inside the plan, with no Spotify panel. */
   function sitPlan(payload) {
     const theme = payload.theme === "evening" ? "evening" : "morning";
     const count = Number(payload.count) || 3;
-    const mix = !!payload.mix;
     let lastId = "";
     try { lastId = localStorage.getItem("yantra.lastAlbum") || ""; } catch (e) {}
-    const substitute = (chakra, used) => {
-      const options = recordedPool(chakra).filter(([discId, n]) => !used.has(discId + "#" + n));
-      if (!options.length) return null;
-      const [discId, n] = sample(options, 1)[0];
-      return { discId, n };
-    };
     return Choose.planQuickSit({
       theme,
       count,
-      mix,
-      albumId: mix ? "" : String(payload.album || ""),
+      albumId: String(payload.album || ""),
       lastId,
       discs: collection.discs,
       level: window.YANTRA_LEVEL || "",
       circleOpen: (circle, level) => Playback.circleOpen(circle, level),
       themeIds: themeAlbumIds(theme),
-      mixItems: mix ? (sessionItems(theme, count) || []) : [],
       keep: (item) => !!recordingOf(item.discId, item.n),
       playable: (item) => itemPlayable(item),
       canPlay: (disc, track) => itemPlayable({ discId: disc.id, n: track.n }),
-      substitute,
       rng: Math.random,
     });
   }
@@ -1668,18 +1638,15 @@
     return Choose.planQuickSit({
       theme: sit,
       count,
-      mix: false,
       albumId: "",
       lastId: "",
       discs: collection.discs,
       level: window.YANTRA_LEVEL || "",
       circleOpen: (circle, level) => Playback.circleOpen(circle, level),
       themeIds: themeAlbumIds(sit),
-      mixItems: [],
       keep: (item) => !!recordingOf(item.discId, item.n),
       playable: (item) => !!recordingOf(item.discId, item.n) && itemPlayable(item),
       canPlay: (disc, track) => !!recordingOf(disc.id, track.n) && itemPlayable({ discId: disc.id, n: track.n }),
-      substitute: () => null,
       rng: Math.random,
     });
   }
@@ -1708,8 +1675,7 @@
       else if (!spotify.connected()) unavailable = spotify.blocked === "unlisted" ? "unlisted" : "offline";
     }
     if (!unavailable) {
-      const listId = plan.via === "mix" ? "set-" + plan.theme + "-" + items.length : "";
-      const ok = await liveStart(name, items, "spotify", true, null, listId, chakras);
+      const ok = await liveStart(name, items, "spotify", true, null, "", chakras);
       if (ok) {
         rememberAlbum(items);
         return [{ ok: true, source: origin }];

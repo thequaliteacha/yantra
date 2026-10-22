@@ -149,9 +149,9 @@ assert.strictEqual(S.set("motion.awakening", true, store), true);
 
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 assert.ok(page.includes('src="/web/awakening.js"'));
-assert.ok(page.includes('id="awakening"'));
-assert.ok(page.includes("Awakening motion"));
-assert.ok(page.includes("motion.awakening"));
+assert.ok(!page.includes('id="awakening"'), "there is no awakening switch");
+assert.ok(!page.includes("Awakening motion"));
+assert.ok(page.includes("window.awakeningOn = true;"));
 assert.ok(page.includes("YantraAwakening.step"));
 assert.ok(page.includes("awake.outerPetalAngle"));
 assert.ok(page.includes("awake.innerPetalAngle"));
