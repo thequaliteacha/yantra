@@ -40,6 +40,7 @@ assert.strictEqual(state.mood, "eye");
 assert.strictEqual(state.ripples.length, 1);
 V.step(state, segments, 8.3, 0.25);
 assert.ok(state.light > 0.7);
+assert.ok(V.brightness(state) > 0.5, "a light cue triggers the brightness");
 V.step(state, segments, 9.7, 0.25);
 assert.ok(state.still > 0.5);
 assert.strictEqual(state.ripples.length, 3, "stillness hushes; it sends no ring");
@@ -49,6 +50,7 @@ assert.ok(state.light < lit, "light fades");
 for (let t = 11.25; t <= 30.5; t += 0.25) V.step(state, segments, t, 0.25);
 V.step(state, segments, 30.8, 0.3);
 assert.ok(state.awake > 0.7);
+assert.ok(V.brightness(state) > 0.5, "an enlightenment cue triggers the brightness");
 V.step(state, segments, 32.5, 0.25);
 assert.strictEqual(state.mood, "heart");
 for (let t = 33; t < 50; t += 0.25) V.step(state, segments, t, 0.25);
@@ -80,28 +82,69 @@ assert.ok(state.light === 0 && state.awake < 0.01);
 })();
 assert.ok(require("fs").readFileSync(require("path").join(__dirname, "web.js"), "utf8").includes(`!url.startsWith("/talks/")`), "talk words reach the site, not the in-page router");
 
-// Sketches: spoken concepts draw a picture, gently paced.
+// A mountain, or any other sketched concept, does not brighten the field and is not drawn.
+// Light and enlightenment still do.
 {
-  const Sk = require("./sketches.js");
-  Object.keys(Sk.WORDS).forEach((name) => {
-    assert.ok(Sk.SKETCHES[name], name + " has strokes");
-    Sk.strokes(name).forEach((d) => assert.ok(/^M/.test(d), name + " stroke starts with M: " + d));
-  });
-  assert.strictEqual(V.sketchOf("Mountains,"), "mountain");
-  assert.strictEqual(V.sketchOf("the"), "");
   const talk = [
-    [0, 4, "The sun over the mountain.", [[0.5, "sun"], [2.0, "mountain."]]],
-    [4, 9, "The sun and the ocean and a tree.", [[4.2, "sun"], [6.0, "ocean"], [7.5, "tree."]]],
-    [60, 64, "The sun again.", [[60.5, "sun"]]],
+    [0, 6, "It's like climbing the top of the Himalayas and just seeing the ranges of mountains up", [
+      [0.4, "It's"], [1.0, "like"], [1.6, "climbing"], [2.4, "Himalayas"], [3.4, "seeing"], [4.6, "mountains"], [5.4, "up"],
+    ]],
+    [8, 12, "A perfect light.", [[8.2, "A"], [9.0, "perfect"], [10.2, "light."]]],
+    [28, 32, "This is enlightenment.", [[28.4, "This"], [29.2, "is"], [30.2, "enlightenment."]]],
   ];
   const st = V.createState();
-  for (let t = 0; t <= 9; t += 0.25) V.step(st, talk, t, t ? 0.25 : 0);
-  assert.deepStrictEqual(st.sketches.map((sk) => sk.name), ["sun", "wave"],
-    "five seconds between sketches; the mountain comes too soon after the sun, the tree too soon after the waves");
-  assert.notStrictEqual(st.sketches[0].slot, st.sketches[1].slot);
-  for (let t = 9.25; t <= 61; t += 0.25) V.step(st, talk, t, 0.25);
-  assert.deepStrictEqual(st.sketches.map((sk) => sk.name), ["sun"], "the sun returns after its rest");
-  assert.deepStrictEqual(V.sketchPhase(0.9), { drawn: 0.5, alpha: 1 });
-  assert.strictEqual(V.sketchPhase(9).alpha, 0);
-  console.log("sketches ok");
+  const play = (from, to) => {
+    let t = from;
+    while (t < to - 1e-6) {
+      const next = Math.min(to, Math.round((t + 0.25) * 1000) / 1000);
+      V.step(st, talk, next, next - t);
+      t = next;
+    }
+  };
+  play(0, 6);
+  assert.strictEqual(V.brightness(st), 0, "mountains and the climb do not brighten the field");
+  assert.strictEqual(st.mood, "eye", "seeing still leans the figure");
+  assert.ok(!Object.prototype.hasOwnProperty.call(st, "sketches"));
+  assert.deepStrictEqual(V.crossed(talk, 4, 5.5).map((hit) => hit.word), [], "a mountain is not a motif");
+  play(6, 10.25);
+  assert.ok(V.brightness(st) > 0.5, "a light cue triggers the brightness");
+  const lit = V.brightness(st);
+  play(10.25, 22);
+  assert.ok(V.brightness(st) < lit * 0.4, "the brightness fades after the word");
+  play(22, 30.25);
+  assert.ok(V.brightness(st) > 0.5, "an enlightenment cue triggers the brightness");
+  assert.ok(st.awake > 0.7);
+
+  function clearOf(box) {
+    const bands = V.glowBands(box);
+    assert.ok(bands.half > box.R * 2.5, "the wash starts outside the square");
+    for (const rect of bands.rects) {
+      const overlapsFigure = rect.y0 < box.cy + bands.half && rect.y1 > box.cy - bands.half;
+      assert.strictEqual(overlapsFigure, false, "the wash stays off the yantra");
+      assert.ok(rect.y1 <= box.captionTop - 8, "the wash stays off the words");
+      assert.ok(rect.y0 >= (box.altarBottom || 0) - 0.01, "the wash stays off the altar");
+      assert.ok(rect.x0 >= 0 && rect.x1 <= box.w && rect.y0 >= 0 && rect.y1 <= box.h);
+      assert.ok(rect.y1 - rect.y0 >= 12 && rect.x1 > rect.x0);
+    }
+    return bands;
+  }
+  const phoneR = 390 * 0.155;
+  const phone = clearOf({ w: 390, h: 844, cx: 195, cy: 422, R: phoneR, captionTop: 670, altarBottom: 0 });
+  assert.ok(phone.rects.length >= 1, "a phone has room for the brightness");
+  const ipadR = 820 * 0.155;
+  const ipad = clearOf({ w: 820, h: 1180, cx: 410, cy: 590, R: ipadR, captionTop: 990, altarBottom: 88 });
+  assert.ok(ipad.rects.length >= 1, "an iPad has room for the brightness");
+  const land = clearOf({ w: 1180, h: 820, cx: 590, cy: 410, R: ipadR, captionTop: 640, altarBottom: 88 });
+  assert.ok(land.rects.every((rect) => rect.y1 <= 640 - 8));
+  const mini = clearOf({ w: 768, h: 1024, cx: 384, cy: 512, R: 768 * 0.155, captionTop: 834, altarBottom: 0 });
+  assert.ok(mini.rects.length >= 1, "an iPad mini portrait still has the brightness above the figure");
+
+  const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
+  const loader = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  assert.ok(!loader.includes("sketches.js"));
+  assert.strictEqual(fs.existsSync(path.join(__dirname, "sketches.js")), false);
+  assert.ok(!page.includes("drawSketches") && !page.includes("k-sketch") && !page.includes("YantraSketches"));
+  assert.ok(page.includes("talkShine") && page.includes("YantraTalkView.brightness") && page.includes("glowBands"));
+  assert.ok(page.includes('if (window.YANTRA_LEVEL !== "zazen" || !window.YantraTalkView'), "Rama talks stay on the Zazen word");
+  console.log("brightness ok");
 }
