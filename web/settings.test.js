@@ -126,7 +126,7 @@ assert.strictEqual(page.includes('id="practice" '), false, "one practice page: Y
 assert.ok(page.includes('id="account-week"') && page.includes('id="home-week"'));
 assert.ok(page.includes('id="account-sync"'));
 assert.ok(page.includes('id="account-corner"'));
-assert.ok(page.includes('aria-label="Account"'));
+assert.ok(page.includes('aria-label="Settings"'));
 // No access level or Zazen switch on the page: a different word means logging out.
 assert.strictEqual(page.includes('id="account-zazen"'), false);
 assert.strictEqual(page.includes('id="account-access"'), false);

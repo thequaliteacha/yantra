@@ -41,11 +41,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     color: rgba(232, 204, 146, 0.45);
   }
   .menus button.on { color: #f7edd4; }
-  .menus .listen { margin-left: auto; display: flex; gap: 1rem; align-items: baseline; }
-  .menus .listen span {
-    letter-spacing: 0.22em; text-transform: uppercase; font-size: 0.72rem;
-    color: rgba(232, 204, 146, 0.45);
-  }
   .index, .face { min-width: 0; min-height: 0; }
   .kicker, .year {
     letter-spacing: 0.28em; text-transform: uppercase;
@@ -391,7 +386,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .profile-mark { display: flex; align-items: center; min-height: 2.4rem; }
   #account-initial {
     width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 1px solid rgba(230, 201, 138, 0.5);
-    display: grid; place-items: center; color: #f7edd4; font-size: 0.78rem; flex: none;
+    display: grid; place-items: center; color: #e6c98a; font-size: 0.78rem; flex: none;
   }
   .account-field { display: flex; flex-direction: column; gap: 0.28rem; font-size: 0.82rem; color: rgba(232, 204, 146, 0.84); text-align: left; }
   #account input, #account select {
@@ -428,8 +423,10 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #account-corner {
     position: fixed; z-index: 6; top: max(0.7rem, env(safe-area-inset-top)); right: max(0.7rem, env(safe-area-inset-right));
     width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 1px solid rgba(230, 201, 138, 0.5);
-    background: rgba(5, 4, 10, 0.72); color: #f7edd4; font: inherit; font-size: 0.78rem; cursor: pointer;
+    background: rgba(5, 4, 10, 0.72); color: #e6c98a; font: inherit; font-size: 0.78rem; cursor: pointer;
+    display: grid; place-items: center; padding: 0;
   }
+  .yantra-mark { width: 1.45rem; height: 1.45rem; display: block; }
   #account-corner[hidden], body.sitting #account-corner, body.watching #account-corner, body.watching #glowbar { display: none; }
   /* Watching a talk: the phrase being spoken rests low on the screen, each word brightening as it is said. */
   #talk-watch { position: fixed; inset: 0; z-index: 4; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
@@ -538,7 +535,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       -webkit-overflow-scrolling: touch;
     }
     .menus { flex-wrap: wrap; gap: 0.9rem 1.4rem; padding-bottom: 0.9rem; border-bottom: 1px solid rgba(230, 201, 138, 0.14); }
-    .menus .listen { margin-left: 0; width: 100%; }
     #circles { margin: 0.9rem 0 0.6rem; gap: 0.2rem 1rem; }
     #now:empty, #note:empty { display: none; }
     .line { margin: 0.6rem 0 0.2rem; }
@@ -568,7 +564,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 </head>
 <body>
 <canvas id="c"></canvas>
-<button id="account-corner" type="button" hidden aria-label="Account">You</button>
+<button id="account-corner" type="button" hidden aria-label="Settings"><svg class="yantra-mark" viewBox="104 100 304 312" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="9"><circle cx="256" cy="256" r="158" stroke-width="10"/><path d="M123 219H389L256 394Z"/><path d="M122 289.5H390L256 118Z"/><path d="M185.2 352.7H326.8L256 219Z"/><path d="M157 322.1H355L256 156.8Z"/><path d="M173.9 156.8H338.1L256 270.7Z"/><path d="M160.8 191.3H351.2L256 352.7Z"/><path d="M207.6 270.7H304.4L256 191.3Z"/><path d="M209.6 234.3H302.4L256 322.1Z"/><path d="M221 248.8H291L256 289.5Z"/></g><circle cx="256" cy="256" r="9" fill="currentColor"/></svg></button>
 <div class="room" id="home" hidden>
   <div class="inner">
     <h1>Yantra Meditation</h1>
@@ -637,7 +633,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <p>Pick an album, or let each sit bring a new one. Each album carries its own intent, so a sit stays within one.</p>
     <p>Tap the screen to end a sit.</p>
     <p><b>Install:</b> on Android, menu, then <b>Install app</b>. On iPhone, <b>Share</b>, then <b>Add to Home Screen</b>.</p>
-    <p>Your practice stays on this device. From You, you can link other devices with a private key.</p>
+    <p>Your practice stays on this device. To link other devices with a private key, tap the yantra at the top right and open <b>Practice</b>.</p>
   </div>
 </div>
 <div class="room" id="about" hidden>
@@ -677,9 +673,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 <div class="room" id="account" hidden>
   <button class="back" type="button" data-room="home" aria-label="Back">&#8592;</button>
   <div class="inner">
-    <h2 id="account-title">You</h2>
     <section class="account-block" id="account-mindful">
-      <h3>Mindfulness Material</h3>
+      <h2 id="account-title">Mindfulness Material</h2>
       <div class="mindful-links">
         <button class="quiet" type="button" id="open-talks" data-room="talks" hidden>Dharma Talks</button>
         <button class="quiet" type="button" data-room="guide">Sit Guidance</button>
@@ -818,7 +813,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <details class="account-fold" id="account-profile" data-fold="profile">
       <summary>Profile</summary>
       <div class="fold-body">
-        <div class="profile-mark"><span id="account-initial" aria-hidden="true">You</span></div>
+        <div class="profile-mark"><span id="account-initial" aria-hidden="true"><svg class="yantra-mark" viewBox="104 100 304 312" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="9"><circle cx="256" cy="256" r="158" stroke-width="10"/><path d="M123 219H389L256 394Z"/><path d="M122 289.5H390L256 118Z"/><path d="M185.2 352.7H326.8L256 219Z"/><path d="M157 322.1H355L256 156.8Z"/><path d="M173.9 156.8H338.1L256 270.7Z"/><path d="M160.8 191.3H351.2L256 352.7Z"/><path d="M207.6 270.7H304.4L256 191.3Z"/><path d="M209.6 234.3H302.4L256 322.1Z"/><path d="M221 248.8H291L256 289.5Z"/></g><circle cx="256" cy="256" r="9" fill="currentColor"/></svg></span></div>
         <label class="account-field">Display name
           <input id="account-name" type="text" maxlength="40" autocomplete="nickname" placeholder="Optional">
         </label>
@@ -894,12 +889,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <button id="menu-home" type="button" hidden>&#8592; Home</button>
       <button id="menu-albums" type="button" class="on">Albums</button>
       <button id="menu-forms" type="button">Playlists</button>
-      <button id="menu-account" type="button" hidden>You</button>
-      <div class="listen" id="listen">
-        <span>Listen on</span>
-        <button type="button" data-source="spotify">Spotify</button>
-        <button type="button" data-source="apple">Apple Music</button>
-      </div>
+      <button id="menu-account" type="button" hidden>Settings</button>
     </div>
     <div class="index" id="album-index">
       <div id="circles"></div>
