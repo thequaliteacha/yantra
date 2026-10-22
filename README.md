@@ -61,8 +61,9 @@ half a minute as the song closes. The inner wheel turns counterclockwise at
 half that pace, and breathes by about one or two percent with the music.
 Ajna draws no second lotus, so its eight keep the clockwise pace and its inner
 triangle turns the other way. Reduced motion slows both turns and holds that
-breath still. Awakening motion, on the brightness bar, starts on and can still
-the inner wheel and the breath.
+breath still. Awakening motion, in Settings, starts on and can still
+the inner wheel and the breath. The yantra is drawn at full brightness; the
+device's own screen brightness is the control.
 *Meditation Complete* closes the sit. For the Zazen word, the line there is still a verbatim Rama quote. `web/quotes.json` tags albums, tracks, and those lines by theme, and the screen prefers a line that fits what just played, then falls back to any of the lines. When that talk is in the talks on the practice page, the credit is *From:* that talk. The Sangha word does not see the quotes. *Albums and
 forms* opens the full shelf. *Getting Started* explains the practice and how to
 install the app on a phone.
@@ -128,7 +129,7 @@ Dharma Talks (the Zazen word only), Sit Guidance, and Albums + Playlists, in one
 Practice, Reminders, Profile, and Settings fold shut except Practice, and this device
 remembers which are open. Practice holds the week, time, sits, perfect days, export,
 erase, and Link my devices. Profile holds the name, initial, altar, and log out.
-Reminders hold the morning and evening times. Settings holds Spotify, privacy, and install.
+Reminders hold the morning and evening times. Settings holds awakening motion, Spotify, privacy, and install.
 *Before you
 sit*, on the song-count screen, holds the album, Mix It Up, and the bell (on or
 off, and its volume); each song count shows its minutes. A first visit on a
@@ -154,7 +155,7 @@ clear of it. Closing the visualizer pauses the talk, as
 ending a sit stops the music; it picks up there next time. The timed words are made locally with
 `tools/transcribe_talks.py` (faster-whisper) and kept in the private bucket
 next to each talk as `talks/<name>.json`, served only to the Zazen word.
-Name, reminder choices, theme, glow, and saved talks are in one store,
+Name, reminder choices, theme, and saved talks are in one store,
 `yantra.settings.v1`. The practice record stays separate, and its time, sits,
 and days in a row are shown on that page. An optional name can greet you on
 the home screen and when a sit ends. It is not uploaded. **Log out** posts to

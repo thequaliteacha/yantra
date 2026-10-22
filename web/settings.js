@@ -43,8 +43,9 @@
     "motion.awakening": true,
   };
   const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow"];
-  /* What a linked device shares. The look of each screen (theme, brightness), the
-     access word, and this device's reminder id stay on the device. */
+  /* What a linked device shares. The look of each screen (theme), any leftover
+     brightness keys, the access word, and this device's reminder id stay on the
+     device. The page clears a saved brightness and draws the yantra at full light. */
   const SHARED = [
     "profile.name", "profile.greeting", "altar.photos", "altar.show",
     "talks.saved", "talks.progress", "reminders", "welcome.seen",
