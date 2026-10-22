@@ -184,6 +184,14 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     width: 2.2rem; height: 2.2rem; border-radius: 50%; padding: 0; cursor: pointer; display: grid; place-items: center;
     background: transparent; border: 1px solid rgba(230, 201, 138, 0.28); color: rgba(243, 230, 200, 0.89);
   }
+  #glowbar { flex-wrap: wrap; max-width: min(22rem, calc(100vw - 5.5rem)); }
+  #glowbar #awakening {
+    width: auto; height: auto; min-height: 2.2rem; padding: 0.35rem 0.75rem; border-radius: 999px;
+    font-family: Palatino, "Iowan Old Style", "Times New Roman", serif; font-size: 0.78rem; letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  #glowbar #awakening[aria-pressed="true"] { background: rgba(230, 201, 138, 0.16); }
+  #glowbar #awakening[aria-pressed="false"] { opacity: 0.45; }
   #glowbar svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; }
   #glowbar input { -webkit-appearance: none; appearance: none; width: 6.5rem; height: 1.6rem; background: transparent; cursor: pointer; }
   #glowbar input::-webkit-slider-runnable-track { height: 1px; background: rgba(230, 201, 138, 0.35); }
@@ -967,6 +975,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>
   </button>
   <input id="glow" type="range" min="35" max="125" step="1" value="100" aria-label="Brightness">
+  <button type="button" id="awakening" aria-pressed="true">Awakening motion</button>
 </div>
 <div id="transport" hidden>
   <button type="button" data-move="back" aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M6 5v14"/><path d="M18 6l-9 6 9 6z"/></svg></button>
@@ -975,6 +984,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 </div>
 <script src="/web/series.js"></script>
 <script src="/web/field.js"></script>
+<script src="/web/awakening.js"></script>
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
@@ -1149,9 +1159,9 @@ function bhupura(ctx, cx, cy, R, grow) {
    the glow, and in cream the same hue deepens into its ink. The gold leans toward
    the song's chakra over a few breaths, and the night stays dark. */
 const CHAKRA = {
-  naval: { petals: 10, figure: "fire", tint: [248, 208, 96], glow: [232, 160, 28], ink: [146, 94, 18] },
-  heart: { petals: 12, figure: "air", tint: [140, 206, 150], glow: [44, 150, 92], ink: [34, 104, 60] },
-  eye: { petals: 2, figure: "mind", tint: [200, 172, 244], glow: [140, 92, 224], ink: [94, 56, 156] },
+  naval: { id: "naval", petals: 10, figure: "fire", tint: [248, 208, 96], glow: [232, 160, 28], ink: [146, 94, 18] },
+  heart: { id: "heart", petals: 12, figure: "air", tint: [140, 206, 150], glow: [44, 150, 92], ink: [34, 104, 60] },
+  eye: { id: "eye", petals: 2, figure: "mind", tint: [200, 172, 244], glow: [140, 92, 224], ink: [94, 56, 156] },
 };
 const GOLD = { tint: [232, 204, 146], glow: [214, 164, 72], ink: [128, 88, 44] };
 const hue = { tint: GOLD.tint.slice(), glow: GOLD.glow.slice(), ink: GOLD.ink.slice() };
@@ -1241,9 +1251,10 @@ function ring(ctx, cx, cy, r, grow) {
   if (grow > 0) circle(ctx, cx, cy, r * (0.82 + 0.18 * grow));
 }
 
-function chakraFigure(ctx, cx, cy, r, figure) {
+function chakraFigure(ctx, cx, cy, r, figure, turn) {
+  turn = turn || 0;
   const tri = (start) => [0, 1, 2].map((i) => {
-    const a = start + (i * Math.PI * 2) / 3;
+    const a = start + turn + (i * Math.PI * 2) / 3;
     return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
   });
   if (figure === "fire" || figure === "mind") partial(ctx, tri(Math.PI / 2), 1);
@@ -1269,10 +1280,11 @@ function quiverAt(now, i, strength) {
   };
 }
 
-function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin) {
+function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
   bloom = bloom || 0;
   quiver = quiver || 0;
   spin = spin || 0;
+  motion = motion || null;
   const tris = RAW.map((raw) => triangle(raw, cx, cy, R));
   tris.sort((a, b) => span(a.map((p) => [p[0] - cx, p[1] - cy])) - span(b.map((p) => [p[0] - cx, p[1] - cy])));
   const now = performance.now();
@@ -1310,18 +1322,36 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin) {
     ring(ctx, cx, cy, R * 1.03, inner);
     ring(ctx, cx, cy, R * 1.08, inner);
   });
-  // In a sitting the two petal rings turn, slowly and in opposite directions, about
-  // once in half an hour: too slow to follow, so the eyes stay on the bindu while
-  // the edges of vision feel the figure alive. Both breathe with the bindu.
+  // A slow clockwise drift, about one turn in half an hour, too slow to follow.
+  // The inner eight drift the other way, a little slower. The waking spin is
+  // separate: the outer lotus stays clockwise, and the inner wheel turns
+  // counterclockwise at half that pace, with a breath of a percent or two.
   const turn = lotus ? now * 0.0000035 : 0;
+  const awake = window.YantraAwakening;
+  const plan = motion && motion.plan;
+  const vibe = (motion && motion.breath) || { scale: 1, glow: 0, tremor: 0 };
+  const innerSpin = motion ? motion.inner || 0 : 0;
+  const innerTarget = plan ? plan.innerTarget : "";
   // shown is the breath from /audio: the recording's own shape, or a slow wave.
   const swell = lotus ? 1 + 0.01 * Math.sin(now * 0.00063) + Math.min(1, shown) * 0.045 : 1;
   const eight = stage(reveal, 0.62, 0.78);
-  layer(ctx, eight, () => {
+  // Two rings: the eight are the inner wheel, breathing and turning counterclockwise.
+  // Ajna has one ring, so these eight keep the outer clockwise pace instead.
+  const eightBreath = innerTarget === "petals" && awake ? awake.innerScale(vibe) : 1;
+  const eightGlow = innerTarget === "petals" && awake ? 1 + awake.innerGlow(vibe) : 1;
+  layer(ctx, eight * eightGlow, () => {
     for (let i = 0; i < 8; i++) {
-      // Under Ajna's still wings the eight hold still too, so the figure stays mirrored.
-      const a = -Math.PI / 2 - (lotus && lotus.petals === 2 ? 0 : turn * 0.6) + (i * Math.PI * 2) / 8;
-      bud(ctx, cx, cy, a, R * 1.12 * swell, R * 1.46 * swell, (Math.PI / 8) * 0.72, eight);
+      const a = awake
+        ? awake.innerPetalAngle(i, 8, {
+          petals: lotus ? lotus.petals : 0,
+          innerTarget: innerTarget,
+          turn: turn,
+          spin: spin,
+          inner: innerSpin,
+          tremor: vibe.tremor,
+        })
+        : -Math.PI / 2 - (lotus && lotus.petals === 2 ? 0 : turn * 0.6) + (i * Math.PI * 2) / 8;
+      bud(ctx, cx, cy, a, R * 1.12 * swell * eightBreath, R * 1.46 * swell * eightBreath, (Math.PI / 8) * 0.72, eight);
     }
   });
   const mid = stage(reveal, 0.74, 0.8);
@@ -1330,7 +1360,16 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin) {
   const wheel = swell * (1 + 0.004 * shake.r);
   layer(ctx, mid, () => ring(ctx, cx, cy, R * 1.5 * (1 + 0.003 * shake.r), mid));
   // The chakra's own figure rests faintly behind the petals, inscribed in that ring.
-  if (lotus) layer(ctx, mid * 0.32 * shake.light, () => chakraFigure(ctx, cx, cy, R * 1.5 * wheel, lotus.figure));
+  // On Ajna that figure is the inner wheel: the triangle turns counterclockwise
+  // and the circle, which has no corners to show a turn, shares the breath.
+  if (lotus) {
+    const figInner = innerTarget === "figure";
+    const figBreath = figInner && awake ? awake.innerScale(vibe) : 1;
+    const figGlow = figInner && awake ? 1 + awake.innerGlow(vibe) : 1;
+    layer(ctx, mid * 0.32 * shake.light * figGlow, () => {
+      chakraFigure(ctx, cx, cy, R * 1.5 * wheel * figBreath, lotus.figure, figInner ? innerSpin : 0);
+    });
+  }
 
   // The outer lotus: sixteen petals, or in a sitting the petals of the song's chakra.
   const outerPetals = stage(reveal, 0.78, 0.9);
@@ -1341,7 +1380,9 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin) {
     for (let i = 0; i < count; i++) {
       const q = quiverAt(now, i + 1, quiver);
       // The wheel turns as it wakes: still while it forms, then spinning up with the quiver.
-      const a = -Math.PI / 2 + turn + spin + (i * Math.PI * 2) / count + 0.004 * q.a;
+      const a = awake
+        ? awake.outerPetalAngle(i, count, turn, spin, q.a)
+        : -Math.PI / 2 + turn + spin + (i * Math.PI * 2) / count + 0.004 * q.a;
       const k = swell * (1 + 0.008 * q.r);
       bud(ctx, cx, cy, a, R * 1.54 * k, R * 1.9 * k, (Math.PI / count) * 0.7, outerPetals);
     }
@@ -1791,12 +1832,34 @@ function frame(now) {
     const talkGlow = talkFx ? 1.25 + shine * 0.4 : 1;
     gold(ctx, 0.92 * rest, (14 + shown * 10) * talkGlow, Math.min(1, (0.48 + 0.22 * Math.min(1, shown)) * rest * talkGlow));
     // In a sit the wheel starts to quiver as its petals open, in the song's last third,
-    // and is fullest at the close. Talks and reduced motion hold the figure still.
-    const quiver = talkFx || reduceMotion ? 0 : stage(reveal, 0.78, 1);
-    // An opening chakra turns clockwise, as the wheels of the energy body do. The outer
-    // petals spin up with the quiver, to one turn in about thirty seconds at the close.
-    window.wheelSpin = ((window.wheelSpin || 0) + leanDt * quiver * (Math.PI * 2 / 30)) % (Math.PI * 2);
-    drawSri(ctx, cx, cy, R, reveal, bloom, lotus || CHAKRA.heart, quiver, window.wheelSpin);
+    // and is fullest at the close. Talks hold the quiver still. Reduced motion does
+    // too, and slows the turning instead of stopping it.
+    const spinDrive = talkFx ? 0 : stage(reveal, 0.78, 1);
+    const quiver = talkFx || reduceMotion ? 0 : spinDrive;
+    const shape = lotus || CHAKRA.heart;
+    const awakeningOn = window.awakeningOn !== false && !talkFx;
+    let motion = null;
+    if (window.YantraAwakening) {
+      const stepped = window.YantraAwakening.step(
+        { outer: window.wheelSpin || 0, inner: window.innerSpin || 0 },
+        leanDt,
+        {
+          drive: spinDrive,
+          reduce: reduceMotion,
+          enabled: awakeningOn,
+          now: now,
+          energy: Math.min(1, shown),
+          lotus: shape,
+        }
+      );
+      window.wheelSpin = stepped.outer;
+      window.innerSpin = stepped.inner;
+      motion = { inner: stepped.inner, breath: stepped.breath, plan: stepped.wheels };
+    } else {
+      // The outer petals, as before: clockwise, one turn in about thirty seconds at the close.
+      window.wheelSpin = ((window.wheelSpin || 0) + leanDt * quiver * (Math.PI * 2 / 30)) % (Math.PI * 2);
+    }
+    drawSri(ctx, cx, cy, R, reveal, bloom, shape, quiver, window.wheelSpin, motion);
     emanate(ctx, cx, cy, R, now, Math.min(1, reveal / 0.12) * rest);
     if (talkFx) talkMotifs(ctx, cx, cy, R, talkFx);
   } else {
@@ -1816,6 +1879,36 @@ function frame(now) {
 window.pace = { key: "", pos: 0 };
 window.ink = { key: "", portion: 0 };
 window.drawEpoch = 0;
+window.awakeningOn = (function () {
+  try {
+    if (window.YantraSettings && window.YantraAwakening) {
+      return window.YantraAwakening.enabledFrom(window.YantraSettings.get("motion.awakening"));
+    }
+  } catch (e) {}
+  try {
+    if (window.YantraAwakening) return window.YantraAwakening.enabledFrom(localStorage.getItem("yantra.awakening"));
+  } catch (e) {}
+  return true;
+})();
+(function armPreview() {
+  let params;
+  try { params = new URLSearchParams(location.search); } catch (e) { return; }
+  const name = params.get("chakra");
+  if (!name || !CHAKRA[name]) return;
+  document.body.classList.add("sitting", "awake");
+  if (params.get("light") === "1") document.body.classList.add("light");
+  window.yantraPreview = name;
+  window.series = {
+    key: "preview:" + name,
+    lengths: [90],
+    index: 0,
+    position: 90,
+    length: 90,
+    status: "Playing",
+    chakra: name,
+    at: performance.now(),
+  };
+})();
 requestAnimationFrame(frame);
 </script>
 <script>
@@ -2181,6 +2274,7 @@ function thirdOf(index, count) {
 }
 
 function noteSeries() {
+  if (window.yantraPreview) return;
   if (!snap) {
     window.series = null;
     return;
@@ -3271,6 +3365,22 @@ document.getElementById("end").addEventListener("click", endSitting);
   if (accountTheme) accountTheme.addEventListener("click", () => {
     chooseTheme(!document.body.classList.contains("light"));
   });
+  const awakening = document.getElementById("awakening");
+  if (awakening) {
+    const paintAwakening = () => {
+      awakening.setAttribute("aria-pressed", window.awakeningOn === false ? "false" : "true");
+    };
+    paintAwakening();
+    awakening.addEventListener("click", () => {
+      window.awakeningOn = window.awakeningOn === false;
+      paintAwakening();
+      try {
+        if (window.YantraSettings) window.YantraSettings.set("motion.awakening", window.awakeningOn);
+        else localStorage.setItem("yantra.awakening", window.awakeningOn ? "on" : "off");
+      } catch (e) {}
+      rouse();
+    });
+  }
 })();
 
 // Back, restart, next. The web edition moves its own players; the desktop app asks

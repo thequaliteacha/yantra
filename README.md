@@ -57,7 +57,12 @@ itself once per song in the song's chakra: the navel's ten petals in sun gold, t
 heart's twelve in green, the third eye's open ring in violet, in the dark and in
 cream alike. Once the petals open, in the song's last third, the outer wheel
 quivers and turns clockwise, an opening wheel that spins up to a turn in about
-half a minute as the song closes.
+half a minute as the song closes. The inner wheel turns counterclockwise at
+half that pace, and breathes by about one or two percent with the music.
+Ajna draws no second lotus, so its eight keep the clockwise pace and its inner
+triangle turns the other way. Reduced motion slows both turns and holds that
+breath still. Awakening motion, on the brightness bar, starts on and can still
+the inner wheel and the breath.
 *Meditation Complete* closes the sit. For the Zazen word, the line there is still a verbatim Rama quote. `web/quotes.json` tags albums, tracks, and those lines by theme, and the screen prefers a line that fits what just played, then falls back to any of the lines. When that talk is in the talks on the practice page, the credit is *From:* that talk. The Sangha word does not see the quotes. *Albums and
 forms* opens the full shelf. *Getting Started* explains the practice and how to
 install the app on a phone.
