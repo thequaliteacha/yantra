@@ -279,6 +279,9 @@
   }
 
   async function eraseEverything() {
+    if (window.YantraSync && window.YantraSync.unlink) {
+      await window.YantraSync.unlink({ force: true }).catch(() => {});
+    }
     await forgetPush();
     const api = profile();
     if (api) {

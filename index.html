@@ -309,6 +309,19 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .practice-row.dusk { box-shadow: inset 2px 0 0 rgba(120, 170, 165, 0.8); }
   .practice-row.perfect { box-shadow: inset 2px 0 0 rgba(233, 162, 90, 0.8), inset 4px 0 0 rgba(120, 170, 165, 0.8); color: #f7edd4; }
   #practice-note { font-size: 0.92rem; color: rgba(243, 230, 200, 0.76); }
+  #practice-link { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.35rem; }
+  #practice-link[hidden] { display: none; }
+  #practice-link h4 { margin: 0.2rem 0 0; font-weight: 500; font-size: 1rem; color: #f7edd4; }
+  #practice-link .links { margin-top: 0.15rem; justify-content: flex-start; }
+  #practice-link-qr { display: flex; justify-content: center; background: #f7edd4; padding: 0.7rem; }
+  #practice-link-qr:empty { display: none; }
+  #practice-link-qr svg { width: min(220px, 68vw); height: auto; }
+  #practice-devices { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+  #practice-devices[hidden] { display: none; }
+  #practice-devices li { display: flex; justify-content: space-between; gap: 0.8rem; align-items: baseline; color: #f7edd4; }
+  #practice-link-start[hidden], #practice-link-share[hidden], #practice-link-join[hidden], #practice-link-controls[hidden],
+  #practice-remove-confirm[hidden], #practice-unlink-confirm[hidden], #practice-forget-confirm[hidden] { display: none; }
+  #practice-link-note:empty { display: none; }
   #practice-confirm[hidden] { display: none; }
   #talks-list[hidden], #talks-list audio[hidden] { display: none; }
   #talks-list { text-align: left; }
@@ -582,7 +595,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <p>Pick an album, or let each sit bring a new one. <b>Mix It Up</b> draws from all of them.</p>
     <p>Tap the screen to end a sit.</p>
     <p><b>Install:</b> on Android, menu, then <b>Install app</b>. On iPhone, <b>Share</b>, then <b>Add to Home Screen</b>.</p>
-    <p>Your practice stays on this device.</p>
+    <p>Your practice stays on this device. From You, you can link other devices with a private key.</p>
   </div>
 </div>
 <div class="room" id="about" hidden>
@@ -653,11 +666,62 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <button class="quiet" type="button" id="practice-erase">Erase my data</button>
     </div>
     <div id="practice-confirm" hidden>
-      <p>Erase your practice and settings on this device? Spotify stays. This cannot be undone.</p>
+      <p id="practice-erase-copy">Erase your practice and settings on this device? Spotify stays. This cannot be undone.</p>
       <div class="links">
         <button class="quiet" type="button" id="practice-keep">Keep</button>
         <button class="quiet" type="button" id="practice-erase-yes">Erase</button>
       </div>
+    </div>
+    <div id="practice-link" hidden>
+      <h4>Devices</h4>
+      <p id="practice-link-status"></p>
+      <ul id="practice-devices" hidden></ul>
+      <div class="links" id="practice-link-controls" hidden>
+        <button class="quiet" type="button" id="practice-unlink">Unlink this device</button>
+        <button class="quiet" type="button" id="practice-forget">Forget this practice key everywhere</button>
+      </div>
+      <div id="practice-link-start">
+        <button class="choice" type="button" id="practice-link-start-btn">Link my devices</button>
+      </div>
+      <div id="practice-link-share" hidden>
+        <p>Open this link on another device. The key stays in the link, and the server never sees it.</p>
+        <div id="practice-link-qr"></div>
+        <label class="account-field">Practice link
+          <input id="practice-link-url" type="text" readonly spellcheck="false" autocomplete="off">
+        </label>
+        <div class="links"><button class="quiet" type="button" id="practice-link-copy">Copy link</button></div>
+        <label class="account-field">Name for this device
+          <input id="practice-device-name" type="text" maxlength="40" autocomplete="off" placeholder="iPad, phone, or computer">
+        </label>
+      </div>
+      <div id="practice-link-join">
+        <label class="account-field">Practice key
+          <input id="practice-link-key" type="text" spellcheck="false" autocapitalize="none" autocomplete="off" placeholder="Paste a key or a link">
+        </label>
+        <div class="links"><button class="quiet" type="button" id="practice-link-join-btn">Join</button></div>
+      </div>
+      <div id="practice-remove-confirm" hidden>
+        <p id="practice-remove-copy">Remove that device? Its sits stay on it. If it still has the key, the next sync takes it out of the shared days.</p>
+        <div class="links">
+          <button class="quiet" type="button" id="practice-remove-keep">Keep</button>
+          <button class="quiet" type="button" id="practice-remove-yes">Remove a device</button>
+        </div>
+      </div>
+      <div id="practice-unlink-confirm" hidden>
+        <p>Unlink this device? It keeps its sits, and stops sharing them.</p>
+        <div class="links">
+          <button class="quiet" type="button" id="practice-unlink-keep">Keep linked</button>
+          <button class="quiet" type="button" id="practice-unlink-yes">Unlink this device</button>
+        </div>
+      </div>
+      <div id="practice-forget-confirm" hidden>
+        <p>Forget this key everywhere? Each device keeps the sits already on it. They will no longer share.</p>
+        <div class="links">
+          <button class="quiet" type="button" id="practice-forget-keep">Keep the key</button>
+          <button class="quiet" type="button" id="practice-forget-yes">Forget this practice key everywhere</button>
+        </div>
+      </div>
+      <p id="practice-link-note" role="status"></p>
     </div>
     </section>
     <section class="account-block" id="account-altar">
@@ -754,7 +818,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     </section>
     <section class="account-block">
       <h3>Privacy</h3>
-      <p>Your practice, photos, and choices stay on this device. Reminders, if you turn them on, keep only what they need to reach you. Nothing is tracked.</p>
+      <p>Your photos and choices stay on this device. Practice stays here unless you link devices; then only an encrypted copy is kept, and the key never leaves your devices. Reminders, if you turn them on, keep only what they need to reach you. Nothing is tracked.</p>
       <div class="links"><button class="quiet" type="button" id="account-wipe">Erase everything on this device</button></div>
       <div id="account-wipe-confirm" hidden>
         <p>Erase everything on this device, including Spotify and the sangha word? This cannot be undone.</p>
@@ -2529,7 +2593,10 @@ function paintPractice() {
     today.append(name, current, document.createElement("span"));
     rows.append(today);
   }
-  document.getElementById("practice-note").textContent = practice.RULE;
+  document.getElementById("practice-note").textContent = window.YantraSync && window.YantraSync.ruleLine
+    ? window.YantraSync.ruleLine()
+    : practice.RULE;
+  if (window.paintPracticeLink) window.paintPracticeLink();
   document.getElementById("practice-erase").hidden = !has;
   document.getElementById("practice-confirm").hidden = true;
   document.getElementById("practice-actions").hidden = false;

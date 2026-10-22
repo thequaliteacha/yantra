@@ -87,12 +87,21 @@ Without Spotify set up at all the web edition still works: the album or song ope
 second tab, and a form waits on *Next* at the bottom of the yantra. The yantra
 breathes slowly on its own. Forms you save stay in that browser.
 
-Practice time and days in a row stay in the browser too, under *Your practice*.
-Nothing is uploaded. A sit counts after one minute of listening; paused time
+Practice time and days in a row stay in the browser, under *Your practice*.
+A sit counts after one minute of listening; paused time
 does not. A perfect day holds a Morning Meditation (sunrise) and an Evening
 Meditation (sunset); perfect days in a row are the main streak, and the page
 nudges toward the next one. Morning and evening also keep their own runs. The
-day is the device's own date.
+day is the device's own date. On its own, a device keeps that record to itself.
+*Link my devices* makes a private practice key, shown as a QR code and as a
+link whose key sits in the fragment (`https://yantramedi.app/web/#link=…`),
+so the key never reaches the server. Another device opens the link or pastes
+the key. Each device encrypts its own days (HKDF for a lookup id and an
+AES-GCM key) and uploads only the lookup id and the ciphertext. The shared
+streak is the sum of those days, once per device. Offline sits stay on the
+device and upload when it can. *Unlink this device*, *Remove a device*, and
+*Forget this practice key everywhere* are on the same page. No account, no
+email, and nothing tracked.
 
 Morning and evening reminders are on that same page, each one on or off by
 itself. A reminder can follow sunrise or sunset (a few minutes before or after,
@@ -200,6 +209,8 @@ The script creates a KV namespace named REMINDERS, writes its id into
 does not replace keys that are already set. `./setup-reminders.sh --rotate`
 makes a new pair, and phones then save their reminders again. The usual build
 and deploy is enough after that. The Worker checks for a reminder once a minute.
+Practice sync reuses that same REMINDERS namespace (ciphertext under a
+`practice:` prefix). It needs no new binding and no new secret.
 
 The old GitHub Pages address now forwards to yantramedi.app.
 

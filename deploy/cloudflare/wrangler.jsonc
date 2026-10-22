@@ -12,6 +12,9 @@
   },
   "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "yantra-sangha-audio" }],
   // Reminders: one anonymous record per device. setup-reminders.sh fills in the id.
+  // Practice sync reuses this namespace: practice:d:<lookupId>:<deviceId> holds
+  // ciphertext only, practice:gone:<lookupId> forgets a key, practice:rl:<lookupId>
+  // is a short-lived rate counter. No new binding and no new secret.
   "kv_namespaces": [{ "binding": "REMINDERS", "id": "4ab84262eaf747d0bb2140c0fff24c8e" }],
   "triggers": { "crons": ["* * * * *"] },
   "workers_dev": true,
