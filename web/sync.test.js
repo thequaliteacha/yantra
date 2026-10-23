@@ -87,11 +87,47 @@ function server() {
     seen: seen,
     blobs: blobs,
     setOffline(next) { offline = !!next; },
+    /* Puts a device blob back and clears its removal, as a racing upload can. */
+    resurrect(deviceId) {
+      const suffix = "/" + deviceId;
+      let found = null;
+      blobs.forEach((value, key) => {
+        if (key.endsWith(suffix)) found = { key: key, value: value };
+      });
+      blocked.delete(deviceId && found ? found.key : "");
+      return found;
+    },
+    revive(deviceId, value) {
+      const key = value && value.key;
+      if (!key) return;
+      blocked.delete(key);
+      blobs.set(key, { iv: value.value.iv, ct: value.value.ct, at: Date.now() });
+    },
   };
 }
 
 const net = server();
 global.fetch = (url, init) => net.handler(url, init);
+
+function uaNavigator(userAgent, platform, touch) {
+  return { userAgent: userAgent, platform: platform, maxTouchPoints: touch };
+}
+
+const navDescriptor = Object.getOwnPropertyDescriptor(global, "navigator");
+function setNav(nav) {
+  Object.defineProperty(global, "navigator", { value: nav, configurable: true, writable: true });
+}
+function resetNav() {
+  if (navDescriptor) Object.defineProperty(global, "navigator", navDescriptor);
+}
+
+function snapshotBlob(deviceId) {
+  let found = null;
+  net.blobs.forEach((value, key) => {
+    if (key.endsWith("/" + deviceId)) found = { key: key, value: { iv: value.iv, ct: value.ct, at: value.at } };
+  });
+  return found;
+}
 
 (async () => {
   const key = Sync.generatePracticeKey();
@@ -400,7 +436,14 @@ global.fetch = (url, init) => net.handler(url, init);
   assert.ok(fs.readFileSync(path.join(__dirname, "sync.js"), "utf8").includes('fill", "#e6d3a4"'));
   assert.ok(fs.readFileSync(path.join(__dirname, "sync.js"), "utf8").includes('fill", "#1a1530"'));
   assert.ok(loader.includes('src="qrcode.js"'));
+  assert.ok(loader.includes('src="browser.js"'));
   assert.ok(loader.includes('src="sync.js"'));
+  assert.ok(page.includes('id="safari-link"'));
+  assert.ok(page.includes("Open in Safari"));
+  assert.ok(page.includes("Link in this browser anyway"));
+  assert.ok(page.includes("Paste it into Safari."));
+  assert.strictEqual(/window\.confirm\(/.test(fs.readFileSync(path.join(__dirname, "sync.js"), "utf8")), false);
+  assert.ok(fs.readFileSync(path.join(__dirname, "sync.js"), "utf8").includes("data-remove"));
   assert.ok(sw.includes('url.pathname.startsWith("/api/")'));
   assert.ok(web.includes('!url.startsWith("/api/")'));
   assert.ok(worker.includes('url.pathname.startsWith("/api/practice/")'));
@@ -436,6 +479,59 @@ global.fetch = (url, init) => net.handler(url, init);
   assert.strictEqual(Settings.get("profile.name"), "Stephen F", "a newer change on the phone reaches the laptop");
   assert.strictEqual(Settings.get("reminders").id, "11111111-1111-4111-8111-111111111111");
   assert.strictEqual(Settings.get("altar.photos").length, 2);
+
+  const mac = uaNavigator("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15", "MacIntel", 0);
+  const ipadOs = uaNavigator("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15", "MacIntel", 5);
+  const pixel = uaNavigator("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36", "Linux armv8l", 5);
+  setNav(mac);
+  use(memory());
+  Sync.linkNew();
+  assert.strictEqual(Sync.loadState().name, "Mac");
+  setNav(ipadOs);
+  use(memory());
+  const madeIpad = Sync.linkNew();
+  assert.strictEqual(Sync.loadState().name, "iPad", "iPadOS is not named Mac");
+  await Sync.sync();
+  setNav(pixel);
+  const pixelStore = memory();
+  const linuxStore = memory();
+  use(pixelStore);
+  Sync.join(madeIpad.practiceKey);
+  assert.strictEqual(Sync.loadState().name, "Android phone");
+  await Sync.sync();
+  setNav(uaNavigator("Mozilla/5.0 (X11; Linux x86_64; rv:129.0) Gecko/20100101 Firefox/129.0", "Linux x86_64", 0));
+  use(linuxStore);
+  Sync.join(madeIpad.practiceKey);
+  assert.strictEqual(Sync.loadState().name, "Linux computer");
+  await Sync.sync();
+  use(pixelStore);
+  await Sync.sync();
+  const three = Sync.devices().map((device) => device.name).sort();
+  assert.deepStrictEqual(three, ["Android phone", "Linux computer", "iPad"]);
+  const linuxRow = Sync.devices().find((device) => device.name === "Linux computer");
+  assert.ok(linuxRow && linuxRow.self === false);
+  const savedBlob = snapshotBlob(linuxRow.id);
+  assert.ok(savedBlob, "the third device has a server record");
+  const removedThird = await Sync.removeDevice(linuxRow.id);
+  await Sync.settled();
+  assert.strictEqual(removedThird.ok, true);
+  assert.strictEqual(Sync.devices().some((device) => device.id === linuxRow.id), false);
+  assert.strictEqual(Sync.devices().length, 2);
+  const deletesBefore = net.seen.filter((entry) => entry.method === "DELETE" && entry.path.endsWith("/" + linuxRow.id)).length;
+  net.revive(linuxRow.id, savedBlob);
+  await Sync.sync();
+  assert.strictEqual(Sync.devices().some((device) => device.id === linuxRow.id), false, "a rewritten blob does not bring the device back");
+  const deletesAfter = net.seen.filter((entry) => entry.method === "DELETE" && entry.path.endsWith("/" + linuxRow.id)).length;
+  assert.ok(deletesAfter > deletesBefore, "a returned device is removed again");
+  use(memory());
+  setNav(ipadOs);
+  Sync.join(madeIpad.practiceKey);
+  await Sync.sync();
+  assert.strictEqual(Sync.devices().some((device) => device.name === "Linux computer"), false, "another device learns the removal");
+  use(linuxStore);
+  await Sync.sync();
+  assert.strictEqual(Sync.linked(), false, "the removed device drops the key");
+  resetNav();
 
   console.log("sync.test.js ok");
 })().catch((error) => {

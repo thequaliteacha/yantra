@@ -313,6 +313,49 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #practice-link-start[hidden], #practice-link-share[hidden], #practice-link-join[hidden], #practice-link-controls[hidden],
   #practice-remove-confirm[hidden], #practice-unlink-confirm[hidden], #practice-forget-confirm[hidden] { display: none; }
   #practice-link-note:empty { display: none; }
+  #practice-devices li { flex-wrap: wrap; }
+  #practice-devices .device-remove { flex: none; position: relative; z-index: 1; }
+  #practice-devices div.device-remove {
+    flex: 1 1 100%; display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start;
+  }
+  #practice-devices .device-remove-copy {
+    margin: 0; font-size: 0.92rem; line-height: 1.45; color: rgba(243, 230, 200, 0.82); text-align: left;
+  }
+  #practice-devices .device-remove.quiet,
+  #practice-devices .links { margin-top: 0; }
+  #safari-link {
+    position: fixed; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center;
+    padding: max(1.4rem, env(safe-area-inset-top)) max(1.2rem, env(safe-area-inset-right))
+             max(1.4rem, env(safe-area-inset-bottom)) max(1.2rem, env(safe-area-inset-left));
+    background: rgba(5, 4, 10, 0.78);
+    font-family: Palatino, "Iowan Old Style", "Times New Roman", serif;
+  }
+  #safari-link[hidden] { display: none; }
+  #safari-link .card {
+    width: min(22rem, 100%); display: flex; flex-direction: column; gap: 0.85rem;
+    padding: 1.35rem 1.2rem 1.15rem; text-align: center;
+    background: rgba(5, 4, 10, 0.94); border: 1px solid rgba(230, 201, 138, 0.35);
+    color: rgba(243, 230, 200, 0.86);
+  }
+  #safari-link h2 {
+    margin: 0; font-weight: 500; font-size: 1.35rem; letter-spacing: 0.02em; color: #f7edd4;
+  }
+  #safari-link p { margin: 0; line-height: 1.55; font-size: 1.02rem; color: rgba(243, 230, 200, 0.8); }
+  #safari-link .choice {
+    width: 100%; padding: 0.95rem 0; font: inherit; font-size: 1.05rem; letter-spacing: 0.04em; cursor: pointer;
+    background: rgba(5, 4, 10, 0.4); color: #f7edd4; border: 1px solid rgba(230, 201, 138, 0.55);
+  }
+  #safari-link .quiet {
+    background: transparent; border: 0; font: inherit; cursor: pointer; padding: 0.35rem;
+    color: rgba(232, 204, 146, 0.72); text-decoration: underline; text-underline-offset: 4px; font-size: 0.92rem;
+  }
+  #safari-link-open[hidden], #safari-link-field[hidden] { display: none; }
+  #safari-link-note:empty { display: none; }
+  #safari-link-url {
+    width: 100%; box-sizing: border-box; font: inherit; font-size: 0.85rem;
+    color: rgba(247, 237, 212, 0.9); background: transparent;
+    border: 0; border-bottom: 1px solid rgba(230, 201, 138, 0.35); padding: 0.4rem 0;
+  }
   #practice-confirm[hidden] { display: none; }
   #talks-list[hidden], #talks-list audio[hidden] { display: none; }
   #talks-list { text-align: left; }
@@ -944,6 +987,20 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <div class="links"><button class="quiet" type="button" id="account-signout">Sign out</button></div>
       </div>
     </div>
+  </div>
+</div>
+<div id="safari-link" hidden>
+  <div class="card">
+    <h2>Open in Safari</h2>
+    <p id="safari-link-lead">Linking and Add to Home Screen work in Safari.</p>
+    <button class="choice" type="button" id="safari-link-open">Open in Safari</button>
+    <button class="choice" type="button" id="safari-link-copy">Copy link</button>
+    <p id="safari-link-hint">Paste it into Safari.</p>
+    <label class="account-field" id="safari-link-field" hidden>Practice link
+      <input id="safari-link-url" type="text" readonly spellcheck="false" autocomplete="off">
+    </label>
+    <button class="quiet" type="button" id="safari-link-anyway">Link in this browser anyway</button>
+    <p id="safari-link-note" role="status"></p>
   </div>
 </div>
 <div id="gate">

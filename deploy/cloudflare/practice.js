@@ -177,6 +177,10 @@ export async function practiceRoute(request, env) {
     const ids = await listIds(env, lookupId);
     const devices = [];
     for (let i = 0; i < ids.length; i += 1) {
+      if (await isBlocked(env, lookupId, ids[i])) {
+        await env.REMINDERS.delete(deviceKey(lookupId, ids[i]));
+        continue;
+      }
       const blob = await readBlob(env, lookupId, ids[i]);
       if (blob) devices.push(blob);
     }
@@ -191,6 +195,7 @@ export async function practiceRoute(request, env) {
 
   if (method === "PUT" && deviceId) {
     if (await isBlocked(env, lookupId, deviceId)) {
+      await env.REMINDERS.delete(deviceKey(lookupId, deviceId));
       return json({ error: "This device was removed from the practice." }, 403);
     }
     const envelope = await readEnvelope(request);
@@ -202,6 +207,11 @@ export async function practiceRoute(request, env) {
     }
     const record = { iv: envelope.iv, ct: envelope.ct, at: Date.now() };
     await env.REMINDERS.put(deviceKey(lookupId, deviceId), JSON.stringify(record));
+    /* A removal that landed while this write was in flight must not stick. */
+    if (await isBlocked(env, lookupId, deviceId)) {
+      await env.REMINDERS.delete(deviceKey(lookupId, deviceId));
+      return json({ error: "This device was removed from the practice." }, 403);
+    }
     return json({ ok: true });
   }
 
