@@ -11,10 +11,6 @@
     return Math.max(0, Math.min(255, Math.round(n)));
   }
 
-  function brightnessDefault(night) {
-    return night ? 80 : 100;
-  }
-
   /* A full-screen iPad redraws the line shadow every frame. Past this the fringe
      costs a frame and does not read as a brighter line. */
   function goldBlur(blur, dpr, shortSide) {
@@ -40,7 +36,6 @@
 
   const api = {
     NIGHT: NIGHT,
-    brightnessDefault: brightnessDefault,
     goldBlur: goldBlur,
     stops: stops,
   };

@@ -41,6 +41,8 @@ assert.ok(page.includes('id="altar" class="altar-photos"'));
 assert.ok(page.includes(".altar-photos img"));
 assert.ok(page.includes("gap: 1.15rem"));
 assert.ok(page.includes("width: 4.4rem"));
+assert.ok(page.includes("box-sizing: border-box;\n    width: 4.4rem"), "the ring is inside the circle");
+assert.ok(page.includes("3 * 4.4rem + 2 * 1.15rem + 2px"), "three photos fit one row on a phone");
 assert.ok(fs.readFileSync(path.join(__dirname, "altar.js"), "utf8").includes("home-altar"));
 assert.ok(fs.readFileSync(path.join(__dirname, "altar.js"), "utf8").includes("pick-altar"));
 console.log("altar.test.js ok");

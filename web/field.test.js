@@ -19,9 +19,6 @@ const heldA = F.stops({ sitting: true, reduce: true, breath: 0, glow: naval });
 const heldB = F.stops({ sitting: true, reduce: true, breath: 1, glow: naval });
 assert.deepStrictEqual(heldA, heldB, "reduced motion holds the field still");
 
-assert.strictEqual(F.brightnessDefault(true), 80);
-assert.strictEqual(F.brightnessDefault(false), 100);
-
 assert.strictEqual(F.goldBlur(30, 2, 834), 16);
 assert.strictEqual(F.goldBlur(12, 2, 1024), 12);
 assert.strictEqual(F.goldBlur(30, 2, 743), 30);
@@ -36,9 +33,15 @@ assert.strictEqual(page.includes('id="account-glow"'), false);
 assert.strictEqual(page.includes('id="theme"'), false, "there is no light mode toggle");
 assert.strictEqual(page.includes("body.light"), false, "there is no light mode");
 assert.strictEqual(page.includes("isLight"), false);
-assert.ok(page.includes('id="glow" type="range"'), "the brightness slider stays");
+assert.strictEqual(page.includes('id="glow"'), false, "the brightness slider is gone");
+assert.strictEqual(page.includes("glowbar"), false, "the brightness bar is gone");
+assert.strictEqual(page.includes("brightness(var(--glow))"), false, "a saved level cannot dim the yantra");
+assert.ok(page.includes("forgetBrightness"));
+assert.ok(page.includes('removeItem("yantra.glow")'), "the legacy brightness key is cleared");
+assert.ok(page.includes('"glow.levelDark"'), "a stored dark level is cleared");
+assert.ok(page.includes("talkShine"), "the talk's light wash stays");
 assert.ok(page.includes("prefers-reduced-motion"));
-assert.ok(page.includes('min="35"'));
-assert.ok(page.includes('max="125"'));
+assert.strictEqual(page.includes('min="35"'), false);
+assert.strictEqual(page.includes('max="125"'), false);
 
 console.log("field.test.js ok");

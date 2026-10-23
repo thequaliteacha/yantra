@@ -71,8 +71,14 @@ assert.ok(settings.includes("<h3>Spotify</h3>"));
 assert.ok(settings.includes("<h3>Privacy</h3>"));
 assert.ok(settings.includes('id="install-app"'));
 assert.ok(settings.includes('id="account-wipe"'));
+assert.ok(settings.includes('id="awakening"'), "awakening motion is in Settings");
+assert.ok(settings.includes("Awakening motion"));
+assert.ok(settings.includes('class="setting-line"'));
+assert.ok(settings.indexOf('id="awakening"') < settings.indexOf("<h3>Spotify</h3>"));
 assert.ok(!settings.includes('id="remind-save"'));
 assert.ok(!settings.includes('id="account-name"'));
+assert.strictEqual(page.includes("glowbar"), false);
+assert.strictEqual(page.includes('id="glow"'), false);
 
 assert.strictEqual(page.includes('data-fold="practice" open'), false, "every drawer starts closed");
 assert.ok(account.includes("window.closeAccountFolds = closeFolds"));
