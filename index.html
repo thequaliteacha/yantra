@@ -260,6 +260,14 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #pick-album option, #pick-album optgroup { background: #0b0912; color: #f7edd4; }
   #pick .choice:disabled { opacity: 0.35; cursor: default; }
   #home-note { min-height: 1.3rem; color: rgba(232, 204, 146, 0.89); font-size: 0.92rem; text-align: center; }
+  #home-start {
+    margin: 0.35rem 0 0; padding: 0.15rem 0.2rem; background: transparent; border: 0;
+    font: inherit; font-size: 0.84rem; letter-spacing: 0.04em; cursor: pointer;
+    color: rgba(232, 204, 146, 0.42);
+    text-decoration: underline; text-decoration-color: rgba(232, 204, 146, 0.22); text-underline-offset: 0.28em;
+  }
+  #home-start:hover, #home-start:focus-visible { color: rgba(243, 230, 200, 0.72); text-decoration-color: rgba(232, 204, 146, 0.45); }
+  #home-start[hidden] { display: none; }
   #guide, #about, #talks, #welcome { justify-content: flex-start; overflow: auto; -webkit-overflow-scrolling: touch; }
   /* Scrolling stays as quiet as the sit: a faint gold thread instead of a bar, no bounce
      spilling into the page behind, and a slow glide when a link moves the view. */
@@ -610,6 +618,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <div class="week" id="home-week"></div>
     <p id="home-day"></p>
     <p id="home-note"></p>
+    <button type="button" id="home-start" data-room="guide" hidden>Start Here</button>
   </div>
 </div>
 <div class="room" id="welcome" hidden>
@@ -2744,6 +2753,8 @@ function paintPractice() {
   paintWeek(document.getElementById("account-week"), summary.week);
   const homeDay = document.getElementById("home-day");
   if (homeDay) homeDay.textContent = practice.lead(summary);
+  const startHere = document.getElementById("home-start");
+  if (startHere && practice.startHereDue) startHere.hidden = !practice.startHereDue(practice.load());
   paintTalks();
 }
 window.paintPractice = paintPractice;
