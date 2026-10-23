@@ -8,6 +8,7 @@
  */
 (function (root) {
   const Practice = (root && root.YantraPractice) || require("./practice.js");
+  const Browser = (root && root.YantraBrowser) || require("./browser.js");
   const STATE_KEY = "yantra.practice.sync.v1";
   const NOTE_KEY = "yantra.practice.sync.note";
   const LINK_ORIGIN = "https://yantramedi.app/web/#link=";
@@ -23,6 +24,8 @@
   let linkShown = false;
   let editingId = "";
   let removeId = "";
+  let confirmRemoveId = "";
+  let heldLink = null;
   const nativeFetch = root && root.fetch ? root.fetch.bind(root) : null;
 
   /* Settings load after this file in the page, so they are looked up when used. */
@@ -168,7 +171,46 @@
   }
 
   function emptyState() {
-    return { practiceKey: "", deviceId: "", name: "", namedAt: 0, labels: {}, peers: {}, pending: false };
+    return { practiceKey: "", deviceId: "", name: "", namedAt: 0, labels: {}, peers: {}, removed: {}, pending: false };
+  }
+
+  /* A removed device stays removed. The stamp is when this browser learned it. */
+  function tombstonesFrom(raw) {
+    const removed = {};
+    if (!raw || typeof raw !== "object") return removed;
+    Object.keys(raw).forEach((id) => {
+      if (!DEVICE_ID.test(id)) return;
+      const at = stampOf(typeof raw[id] === "object" ? raw[id].at : raw[id]);
+      if (at) removed[id] = at;
+    });
+    return removed;
+  }
+
+  function currentEnv() {
+    const globalNav = typeof globalThis !== "undefined" ? globalThis.navigator : null;
+    const nav = (root && root.navigator) || (typeof navigator !== "undefined" ? navigator : null) || globalNav || {};
+    let displayMode = "";
+    try {
+      if (root && root.matchMedia && root.matchMedia("(display-mode: standalone)").matches) displayMode = "standalone";
+    } catch (e) {}
+    return {
+      userAgent: nav.userAgent || "",
+      platform: nav.platform || "",
+      maxTouchPoints: nav.maxTouchPoints || 0,
+      brave: nav.brave,
+      standalone: nav.standalone === true,
+      displayMode: displayMode,
+    };
+  }
+
+  /* A name the person typed wins. A device that was never named takes the UA default. */
+  function namedFields(name, namedAt, explicit) {
+    const clean = cleanName(name);
+    const at = stampOf(namedAt);
+    if (clean) return { name: clean, namedAt: at || Date.now() };
+    if (explicit || at) return { name: "", namedAt: at };
+    const fallback = Browser.deviceName(currentEnv());
+    return { name: fallback, namedAt: Date.now() };
   }
 
   function peersFrom(raw) {
@@ -195,13 +237,17 @@
       if (!raw || typeof raw !== "object") return emptyState();
       const practiceKey = parseKey(raw.practiceKey) || "";
       const deviceId = DEVICE_ID.test(raw.deviceId || "") ? raw.deviceId : "";
+      const removed = practiceKey ? tombstonesFrom(raw.removed) : {};
+      const peers = practiceKey ? peersFrom(raw.peers) : {};
+      Object.keys(removed).forEach((id) => { delete peers[id]; });
       return {
         practiceKey: practiceKey,
         deviceId: practiceKey ? deviceId : "",
         name: cleanName(raw.name),
         namedAt: stampOf(raw.namedAt),
         labels: practiceKey ? labelsFrom(raw.labels) : {},
-        peers: practiceKey ? peersFrom(raw.peers) : {},
+        peers: peers,
+        removed: removed,
         pending: raw.pending === true,
       };
     } catch (e) {
@@ -212,13 +258,17 @@
   function saveState(state) {
     const kept = storage();
     if (!kept) return;
+    const removed = tombstonesFrom(state.removed);
+    const peers = peersFrom(state.peers);
+    Object.keys(removed).forEach((id) => { delete peers[id]; });
     const next = {
       practiceKey: state.practiceKey || "",
       deviceId: state.deviceId || "",
       name: cleanName(state.name),
       namedAt: stampOf(state.namedAt),
       labels: labelsFrom(state.labels),
-      peers: peersFrom(state.peers),
+      peers: peers,
+      removed: removed,
       pending: state.pending === true,
     };
     try { kept.setItem(STATE_KEY, JSON.stringify(next)); } catch (e) {}
@@ -447,27 +497,67 @@
       const data = await list.json().catch(() => ({}));
       const devices = data && Array.isArray(data.devices) ? data.devices : [];
       const now = loadState();
+      const tombs = tombstonesFrom(now.removed);
       const nextPeers = {};
       const peerSettings = [];
+      const staleIds = [];
       for (let i = 0; i < devices.length; i += 1) {
         const device = devices[i];
         if (!device || device.id === now.deviceId || !DEVICE_ID.test(device.id || "")) continue;
+        let plain = null;
         try {
-          const plain = await decrypt(material.aesKey, device, device.id);
-          nextPeers[device.id] = {
-            name: cleanName(plain && plain.name),
-            namedAt: stampOf(plain && plain.namedAt),
-            days: Practice.normalize({ days: plain && plain.days }).days,
-            labels: labelsFrom(plain && plain.labels),
-          };
-          if (plain && plain.settings) peerSettings.push(plain.settings);
+          plain = await decrypt(material.aesKey, device, device.id);
         } catch (e) {
-          if (now.peers[device.id]) nextPeers[device.id] = now.peers[device.id];
+          plain = null;
         }
+        if (plain && plain.removed) {
+          const incoming = tombstonesFrom(plain.removed);
+          Object.keys(incoming).forEach((id) => {
+            if (!tombs[id] || incoming[id] > tombs[id]) tombs[id] = incoming[id];
+          });
+        }
+        if (tombs[device.id]) {
+          staleIds.push(device.id);
+          continue;
+        }
+        if (plain) {
+          nextPeers[device.id] = {
+            name: cleanName(plain.name),
+            namedAt: stampOf(plain.namedAt),
+            days: Practice.normalize({ days: plain.days }).days,
+            labels: labelsFrom(plain.labels),
+          };
+          if (plain.settings) peerSettings.push(plain.settings);
+        } else if (now.peers[device.id]) {
+          nextPeers[device.id] = now.peers[device.id];
+        }
+      }
+      Object.keys(nextPeers).forEach((id) => {
+        if (tombs[id]) {
+          delete nextPeers[id];
+          staleIds.push(id);
+        }
+      });
+      if (now.deviceId && tombs[now.deviceId]) {
+        try {
+          await netFetch(devicePath(material.lookupId, now.deviceId), {
+            method: "DELETE",
+            credentials: "same-origin",
+            cache: "no-store",
+          });
+        } catch (e) {}
+        removed();
+        return { ok: false, removed: true };
       }
       adoptSettings(peerSettings);
       const saved = loadState();
       saved.peers = nextPeers;
+      saved.removed = tombs;
+      const previousTombs = tombstonesFrom(now.removed);
+      let grew = false;
+      Object.keys(tombs).forEach((id) => {
+        if (tombs[id] !== previousTombs[id]) grew = true;
+      });
       const book = labelBook(saved, nextPeers);
       const mine = book[saved.deviceId];
       const adopted = !!(mine && mine.at > stampOf(saved.namedAt) && (mine.name !== saved.name || mine.at !== stampOf(saved.namedAt)));
@@ -476,8 +566,36 @@
         saved.namedAt = mine.at;
         saved.pending = true;
       }
+      let nameDefaulted = false;
+      if (!saved.name && !stampOf(saved.namedAt)) {
+        const fields = namedFields("", 0, false);
+        if (fields.name) {
+          saved.name = fields.name;
+          saved.namedAt = fields.namedAt;
+          saved.pending = true;
+          nameDefaulted = true;
+        }
+      }
+      if (grew) saved.pending = true;
       saveState(saved);
-      if (adopted) {
+      let deleteFailed = false;
+      const seenStale = {};
+      for (let i = 0; i < staleIds.length; i += 1) {
+        const id = staleIds[i];
+        if (seenStale[id]) continue;
+        seenStale[id] = true;
+        try {
+          const gone = await netFetch(devicePath(material.lookupId, id), {
+            method: "DELETE",
+            credentials: "same-origin",
+            cache: "no-store",
+          });
+          if (!(gone.ok || gone.status === 404)) deleteFailed = true;
+        } catch (e) {
+          deleteFailed = true;
+        }
+      }
+      if (adopted || nameDefaulted || grew) {
         try {
           const again = await encrypt(material.aesKey, payloadOf(loadState(), Practice.load()), saved.deviceId);
           const put = await netFetch(devicePath(material.lookupId, saved.deviceId), {
@@ -496,9 +614,10 @@
           /* the adopted name stays pending and leaves on the next sync */
         }
       }
-      if (uploaded) setNote("");
+      if (deleteFailed) setNote("Could not remove that device just now. It stays off this list, and this device will try again.");
+      else if (uploaded) setNote("");
       paint();
-      return { ok: true };
+      return { ok: true, removedStale: Object.keys(seenStale).length > 0 };
     } catch (e) {
       setNote(failNote(0));
       return { ok: uploaded, offline: true };
@@ -517,11 +636,13 @@
 
   function linkNew(options) {
     const existing = loadState();
+    const explicit = !!(options && options.name != null);
+    const fields = namedFields(explicit ? options.name : existing.name, explicit ? Date.now() : existing.namedAt, explicit);
     if (existing.practiceKey) {
       if (!existing.deviceId) existing.deviceId = randomDeviceId();
-      if (options && options.name != null) {
-        existing.name = cleanName(options.name);
-        existing.namedAt = Date.now();
+      if (explicit || (!existing.name && !stampOf(existing.namedAt))) {
+        existing.name = fields.name;
+        existing.namedAt = fields.namedAt;
       }
       existing.pending = true;
       bump();
@@ -535,15 +656,16 @@
     }
     const practiceKey = generatePracticeKey();
     const deviceId = existing.deviceId || randomDeviceId();
+    const fresh = explicit ? namedFields(options.name, Date.now(), true) : namedFields("", 0, false);
     bump();
-    const named = cleanName(options && options.name);
     saveState({
       practiceKey: practiceKey,
       deviceId: deviceId,
-      name: named,
-      namedAt: named ? Date.now() : 0,
+      name: fresh.name,
+      namedAt: fresh.namedAt,
       labels: {},
       peers: {},
+      removed: {},
       pending: true,
     });
     setNote("");
@@ -565,15 +687,20 @@
     }
     const same = existing.practiceKey === practiceKey;
     const deviceId = existing.deviceId || randomDeviceId();
-    const named = options && options.name != null ? cleanName(options.name) : (same ? existing.name : "");
+    const explicit = !!(options && options.name != null);
+    let fields;
+    if (explicit) fields = namedFields(options.name, Date.now(), true);
+    else if (same && (existing.name || stampOf(existing.namedAt))) fields = { name: existing.name, namedAt: stampOf(existing.namedAt) };
+    else fields = namedFields("", 0, false);
     bump();
     saveState({
       practiceKey: practiceKey,
       deviceId: deviceId,
-      name: named,
-      namedAt: options && options.name != null ? (named ? Date.now() : 0) : (same ? existing.namedAt : 0),
+      name: fields.name,
+      namedAt: fields.namedAt,
       labels: same ? existing.labels : {},
       peers: same ? existing.peers : {},
+      removed: same ? tombstonesFrom(existing.removed) : {},
       pending: true,
     });
     setNote("");
@@ -612,7 +739,23 @@
 
   async function removeDevice(deviceId) {
     const state = loadState();
-    if (!state.practiceKey || !DEVICE_ID.test(deviceId || "") || deviceId === state.deviceId) return { ok: false };
+    if (!state.practiceKey || !DEVICE_ID.test(deviceId || "") || deviceId === state.deviceId) {
+      setNote("That device could not be removed.");
+      return { ok: false };
+    }
+    const latest = loadState();
+    latest.removed = tombstonesFrom(latest.removed);
+    let at = Date.now();
+    if (at <= (latest.removed[deviceId] || 0)) at = latest.removed[deviceId] + 1;
+    latest.removed[deviceId] = at;
+    delete latest.peers[deviceId];
+    if (latest.labels) delete latest.labels[deviceId];
+    latest.pending = true;
+    bump();
+    saveState(latest);
+    confirmRemoveId = "";
+    paint();
+    let ok = false;
     try {
       const material = await derive(state.practiceKey);
       const response = await netFetch(devicePath(material.lookupId, deviceId), {
@@ -620,20 +763,16 @@
         credentials: "same-origin",
         cache: "no-store",
       });
-      if (!(response.ok || response.status === 404)) {
-        setNote(failNote(response.status));
-        return { ok: false };
-      }
+      ok = !!(response.ok || response.status === 404);
     } catch (e) {
-      setNote(failNote(0));
+      ok = false;
+    }
+    if (!ok) {
+      setNote("Could not remove that device just now. It stays off this list, and this device will try again.");
       return { ok: false };
     }
-    const latest = loadState();
-    delete latest.peers[deviceId];
-    if (latest.labels) delete latest.labels[deviceId];
-    saveState(latest);
-    setNote("");
-    paint();
+    setNote("That device is removed. Its sits stay on it.");
+    sync();
     return { ok: true };
   }
 
@@ -672,6 +811,7 @@
       namedAt: stampOf(state.namedAt) || 0,
       days: (local && local.days) || {},
       labels: labelsFrom(state.labels),
+      removed: tombstonesFrom(state.removed),
       settings: sharedSettings(),
     };
   }
@@ -946,14 +1086,7 @@
         devices().forEach((device) => {
           const row = root.document.createElement("li");
           row.append(deviceNameControl(device));
-          if (!device.self) {
-            const button = root.document.createElement("button");
-            button.type = "button";
-            button.className = "quiet";
-            button.textContent = "Remove a device";
-            button.addEventListener("click", () => askRemove(device));
-            row.append(button);
-          }
+          if (!device.self) row.append(removeControl(device));
           list.append(row);
         });
         if (editingId) {
@@ -1021,12 +1154,66 @@
     return button;
   }
 
-  function askRemove(device) {
-    removeId = device.id;
-    const copy = root.document.getElementById("practice-remove-copy");
-    const name = device.name || "that device";
-    if (copy) copy.textContent = "Remove " + name + "? Its sits stay on it. If it still has the key, the next sync takes it out of the shared days.";
-    show("practice-remove-confirm", true);
+  /* The confirm sits in the row. A separate panel below the share link was easy
+     to miss on a phone: the entry itself never changed, so the tap looked dead. */
+  function removeControl(device) {
+    const doc = root.document;
+    if (confirmRemoveId === device.id) {
+      const box = doc.createElement("div");
+      box.className = "device-remove";
+      const copy = doc.createElement("p");
+      copy.className = "device-remove-copy";
+      copy.textContent = "Remove this device? Its sits stay on it.";
+      const actions = doc.createElement("div");
+      actions.className = "links";
+      const keep = doc.createElement("button");
+      keep.type = "button";
+      keep.className = "quiet";
+      keep.textContent = "Keep";
+      keep.setAttribute("data-remove-keep", device.id);
+      const yes = doc.createElement("button");
+      yes.type = "button";
+      yes.className = "quiet";
+      yes.textContent = "Remove";
+      yes.setAttribute("data-remove-yes", device.id);
+      yes.setAttribute("aria-label", "Remove a device");
+      actions.append(keep, yes);
+      box.append(copy, actions);
+      return box;
+    }
+    const button = doc.createElement("button");
+    button.type = "button";
+    button.className = "quiet device-remove";
+    button.textContent = "Remove";
+    button.setAttribute("data-remove", device.id);
+    button.setAttribute("aria-label", "Remove a device");
+    return button;
+  }
+
+  function onDeviceClick(event) {
+    const doc = root.document;
+    const target = event.target && event.target.closest ? event.target.closest("button") : null;
+    const list = doc && doc.getElementById("practice-devices");
+    if (!target || !list || !list.contains(target)) return;
+    const ask = target.getAttribute("data-remove");
+    const yes = target.getAttribute("data-remove-yes");
+    const keep = target.getAttribute("data-remove-keep");
+    if (!ask && !yes && !keep) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (keep || (ask && confirmRemoveId === ask)) {
+      confirmRemoveId = "";
+      paint();
+      return;
+    }
+    if (ask) {
+      confirmRemoveId = ask;
+      paint();
+      const row = list.querySelector("[data-remove-yes]");
+      if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+      return;
+    }
+    if (yes) removeDevice(yes).then(() => { if (root.paintPractice) root.paintPractice(); });
   }
 
   function bind() {
@@ -1095,15 +1282,86 @@
       show("practice-forget-confirm", false);
       forget().then(() => { if (root.paintPractice) root.paintPractice(); });
     });
+    const devices = doc.getElementById("practice-devices");
+    if (devices) devices.addEventListener("click", onDeviceClick);
     const removeKeep = doc.getElementById("practice-remove-keep");
-    if (removeKeep) removeKeep.addEventListener("click", () => { removeId = ""; show("practice-remove-confirm", false); });
+    if (removeKeep) removeKeep.addEventListener("click", () => { removeId = ""; confirmRemoveId = ""; show("practice-remove-confirm", false); paint(); });
     const removeYes = doc.getElementById("practice-remove-yes");
     if (removeYes) removeYes.addEventListener("click", () => {
-      const id = removeId;
+      const id = removeId || confirmRemoveId;
       removeId = "";
+      confirmRemoveId = "";
       show("practice-remove-confirm", false);
       if (id) removeDevice(id).then(() => { if (root.paintPractice) root.paintPractice(); });
     });
+    const safariOpen = doc.getElementById("safari-link-open");
+    if (safariOpen) safariOpen.addEventListener("click", () => {
+      if (!heldLink || !heldLink.safariUrl) return;
+      try { root.location.assign(heldLink.safariUrl); } catch (e) {}
+    });
+    const safariCopy = doc.getElementById("safari-link-copy");
+    if (safariCopy) safariCopy.addEventListener("click", copyHeldLink);
+    const safariAnyway = doc.getElementById("safari-link-anyway");
+    if (safariAnyway) safariAnyway.addEventListener("click", linkHereAnyway);
+  }
+
+  function setSafariNote(text) {
+    const node = root && root.document ? root.document.getElementById("safari-link-note") : null;
+    if (node) node.textContent = text ? String(text) : "";
+  }
+
+  function paintSafari() {
+    if (!root || !root.document) return;
+    const panel = root.document.getElementById("safari-link");
+    if (!panel) return;
+    const held = heldLink;
+    panel.hidden = !held;
+    if (!held) return;
+    const open = root.document.getElementById("safari-link-open");
+    if (open) open.hidden = !held.open;
+    const lead = root.document.getElementById("safari-link-lead");
+    if (lead) {
+      lead.textContent = held.open
+        ? "Linking and Add to Home Screen work in Safari."
+        : "Linking and Add to Home Screen work in Safari. Copy this link and open it in Safari.";
+    }
+  }
+
+  function copyHeldLink() {
+    if (!heldLink || !heldLink.copyUrl) return;
+    const url = heldLink.copyUrl;
+    const done = () => setSafariNote("Link copied.");
+    const byHand = () => {
+      const field = root.document.getElementById("safari-link-field");
+      const input = root.document.getElementById("safari-link-url");
+      if (field) field.hidden = false;
+      if (input) {
+        input.value = url;
+        try { input.focus(); input.select(); } catch (e) {}
+      }
+      setSafariNote("Select the link and paste it into Safari.");
+    };
+    const clip = root.navigator && root.navigator.clipboard;
+    if (clip && clip.writeText) clip.writeText(url).then(done).catch(byHand);
+    else byHand();
+  }
+
+  function linkHereAnyway() {
+    if (!heldLink) return;
+    const key = heldLink.key;
+    heldLink = null;
+    paintSafari();
+    const result = join(key);
+    if (!result.ok) {
+      setSafariNote(result.error || "That key did not work.");
+      return;
+    }
+    openedFromLink = true;
+    if (root) root.yantraCameFromPracticeLink = true;
+    paint();
+    sync();
+    const welcome = root.document.getElementById("welcome");
+    if (welcome && welcome.hidden && root.showRoom) root.showRoom("account");
   }
 
   let openedFromLink = false;
@@ -1123,6 +1381,15 @@
       setNote("That link did not have a usable key.");
       strip();
       return false;
+    }
+    let href = "";
+    try { href = String(root.location.href || ""); } catch (e) { href = ""; }
+    const decision = Browser.handoff(currentEnv(), href);
+    if (decision.hold) {
+      heldLink = { key: key, copyUrl: href, safariUrl: decision.safariUrl || "", open: !!decision.open };
+      strip();
+      paintSafari();
+      return true;
     }
     join(key);
     openedFromLink = true;
@@ -1148,9 +1415,10 @@
       root.addEventListener("pagehide", () => { if (loadState().pending) sync(); });
     }
     paint();
+    paintSafari();
     const welcome = root.document.getElementById("welcome");
-    if (openedFromLink && welcome && welcome.hidden && root.showRoom) root.showRoom("account");
-    sync();
+    if (openedFromLink && !heldLink && welcome && welcome.hidden && root.showRoom) root.showRoom("account");
+    if (!heldLink) sync();
   }
 
   Practice.setView(viewOf);

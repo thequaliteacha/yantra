@@ -101,8 +101,14 @@ assert.strictEqual(after.devices.length, 2, "putting the same device again does 
 assert.strictEqual(after.devices.find((row) => row.id === first).ct, replaced.ct);
 
 assert.strictEqual((await practiceRoute(call("DELETE", "/api/practice/" + id + "/" + second), env)).status, 200);
+env.REMINDERS.map.set("practice:d:" + id + ":" + second, JSON.stringify({ iv: blob.iv, ct: blob.ct, at: 1 }));
+const hidden = await (await practiceRoute(call("GET", "/api/practice/" + id), env)).json();
+assert.strictEqual(hidden.devices.some((row) => row.id === second), false, "a blocked device is not listed");
+assert.strictEqual(env.REMINDERS.map.has("practice:d:" + id + ":" + second), false, "the leftover blob is dropped");
+const third = device(3);
+assert.strictEqual((await practiceRoute(call("PUT", "/api/practice/" + id + "/" + third, envelope(4)), env)).status, 200, "a third device can join");
 const remaining = await (await practiceRoute(call("GET", "/api/practice/" + id), env)).json();
-assert.deepStrictEqual(remaining.devices.map((row) => row.id), [first]);
+assert.deepStrictEqual(remaining.devices.map((row) => row.id).sort(), [first, third].sort());
 assert.strictEqual((await practiceRoute(call("GET", "/api/practice/" + id + "/" + second), env)).status, 404);
 assert.strictEqual((await practiceRoute(call("PUT", "/api/practice/" + id + "/" + second, other), env)).status, 403);
 assert.strictEqual(env.REMINDERS.map.has("practice:d:" + id + ":" + second), false);

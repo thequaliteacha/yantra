@@ -26,16 +26,16 @@
     button.hidden = false;
   }
 
-  /* Altar, Practice, Reminders, Profile, and Settings start closed each time Settings opens.
-     A practice link arriving on this device opens Practice once. */
+  /* Every fold starts closed each time Settings opens.
+     A practice link arriving on this device opens Linked devices once. */
   function closeFolds() {
     document.querySelectorAll("#account details.account-fold").forEach((node) => {
       node.open = false;
     });
     if (window.yantraCameFromPracticeLink) {
       window.yantraCameFromPracticeLink = false;
-      const practice = document.querySelector('#account details[data-fold="practice"]');
-      if (practice) practice.open = true;
+      const devices = document.querySelector('#account details[data-fold="devices"]');
+      if (devices) devices.open = true;
     }
   }
   window.closeAccountFolds = closeFolds;

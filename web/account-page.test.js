@@ -14,27 +14,30 @@ function between(start, end) {
   return page.slice(from, to);
 }
 
-const mindful = between('id="account-mindful"', 'id="account-practice-block"');
-assert.ok(mindful.includes('<h2 id="account-title">Mindfulness Material</h2>'));
+const mindful = between('id="account-mindful"', 'id="account-settings"');
+assert.ok(mindful.includes('<summary id="account-title">Mindfulness Material</summary>'));
 assert.ok(mindful.includes(">Dharma Talks<"));
-assert.ok(mindful.includes(">Sit Guidance<"));
 assert.ok(mindful.includes(">Albums + Playlists<"));
 assert.ok(mindful.includes('id="open-talks" data-room="talks" hidden'));
-assert.ok(mindful.includes('data-room="guide"'));
 assert.ok(mindful.includes('id="open-shelf"'));
-assert.ok(!mindful.includes("How to sit"), "the account link is Sit Guidance");
+assert.ok(!mindful.includes("Sit Guidance"));
+assert.ok(!mindful.includes("How to sit"), "the guide title stays on the guide page");
 assert.ok(!mindful.includes("Albums and forms"));
 assert.ok(!mindful.includes("Mindfulness material"));
+assert.ok(page.includes('id="start-here" data-room="guide">Start Here</button>'));
+assert.strictEqual(page.includes("Sit Guidance"), false);
 assert.strictEqual(page.includes('id="account-places"'), false, "the separate links row is gone");
 assert.ok(page.includes("<h2>How to sit</h2>"), "the sit guide itself keeps its title");
 
 assert.ok(page.includes('<details class="account-fold" id="account-altar-block" data-fold="altar">'));
 assert.ok(page.includes('<details class="account-fold" id="account-practice-block" data-fold="practice">'));
+assert.ok(page.includes('<details class="account-fold" id="account-devices-block" data-fold="devices">'));
 assert.ok(page.includes('<details class="account-fold" id="account-reminders-block" data-fold="reminders">'));
 assert.ok(page.includes('<details class="account-fold" id="account-profile" data-fold="profile">'));
 assert.ok(page.includes('<details class="account-fold" id="account-settings" data-fold="settings">'));
 assert.ok(page.includes("<summary>Altar</summary>"));
 assert.ok(page.includes("<summary>Practice</summary>"));
+assert.ok(page.includes("<summary>Linked devices</summary>"));
 assert.ok(page.includes("<summary>Reminders</summary>"));
 assert.ok(page.includes("<summary>Profile</summary>"));
 assert.ok(page.includes("<summary>Settings</summary>"));
@@ -42,16 +45,20 @@ assert.strictEqual(page.includes('data-fold="altar" open'), false);
 assert.strictEqual(page.includes('data-fold="reminders" open'), false);
 assert.strictEqual(page.includes('data-fold="profile" open'), false);
 assert.strictEqual(page.includes('data-fold="settings" open'), false);
-assert.ok(page.indexOf('id="account-altar-block"') < page.indexOf('id="account-practice-block"'), "Altar sits above Practice");
+assert.ok(page.indexOf('id="account-altar-block"') < page.indexOf('id="account-profile"'), "Altar sits above Profile");
+assert.ok(page.indexOf('id="account-profile"') < page.indexOf('id="account-practice-block"'), "Profile sits above Practice");
 
-const practice = between('id="account-practice-block"', 'id="account-reminders-block"');
+const practice = between('id="account-practice-block"', 'id="account-devices-block"');
 assert.ok(practice.includes('id="practice-export"'));
 assert.ok(practice.includes('id="practice-erase"'));
-assert.ok(practice.includes('id="practice-link"'));
-assert.ok(practice.includes("Link my devices"));
+assert.ok(!practice.includes('id="practice-link"'), "linking has its own section");
 assert.ok(practice.includes('id="account-week"'));
 
-const reminders = between('id="account-reminders-block"', 'id="account-profile"');
+const devices = between('id="account-devices-block"', 'id="account-reminders-block"');
+assert.ok(devices.includes('id="practice-link"'));
+assert.ok(devices.includes("Link my devices"));
+
+const reminders = between('id="account-reminders-block"', 'id="account-mindful"');
 assert.ok(reminders.includes('id="reminders"'));
 assert.ok(reminders.includes('data-time type="time"'));
 assert.ok(reminders.includes('id="remind-save"'));
@@ -59,7 +66,7 @@ assert.ok(reminders.includes("Save reminders"));
 assert.ok(reminders.includes('id="account-reminders-push"'));
 assert.ok(!reminders.includes('id="account-spotify"'));
 
-const profile = between('id="account-profile"', 'id="account-settings"');
+const profile = between('id="account-profile"', 'id="account-practice-block"');
 assert.ok(profile.includes('id="account-initial"'));
 assert.ok(profile.includes('id="account-name"'));
 assert.ok(!profile.includes('id="account-altar"'), "the altar has its own section");
@@ -85,7 +92,7 @@ assert.ok(settings.indexOf('id="motion-inner"') < settings.indexOf("<h3>Spotify<
 assert.ok(!settings.includes('id="account-logout"'), "log out is not inside Settings");
 assert.ok(!settings.includes('id="remind-save"'));
 assert.ok(!settings.includes('id="account-name"'));
-const altar = between('id="account-altar-block"', 'id="account-practice-block"');
+const altar = between('id="account-altar-block"', 'id="account-profile"');
 assert.ok(altar.includes('id="account-altar"'));
 assert.ok(altar.includes('id="altar-file"'));
 assert.ok(altar.includes("meditation, enlightenment, power, and peace"));
