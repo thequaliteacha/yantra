@@ -372,12 +372,18 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #home-greeting, #done-greeting { text-align: center; color: rgba(232, 204, 146, 0.88); margin: 0; }
   #home-greeting[hidden], #done-greeting[hidden] { display: none; }
   #account { justify-content: flex-start; overflow: auto; -webkit-overflow-scrolling: touch; }
-  #account .inner { margin-top: 0.4rem; margin-bottom: 2.4rem; text-align: left; gap: 0.2rem; }
+  #account .inner { margin-top: 1.8rem; margin-bottom: 2.4rem; text-align: left; gap: 0.2rem; }
   #account h2 { text-align: center; margin-bottom: 0.55rem; font-weight: 500; letter-spacing: 0.01em; color: rgba(247, 237, 212, 0.94); }
   #account h3 { font-weight: 500; font-size: 1.12rem; letter-spacing: 0.03em; color: rgba(247, 237, 212, 0.9); margin: 0.35rem 0 0.2rem; }
   #account p { color: rgba(243, 230, 200, 0.78); }
   .account-block { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.35rem; padding-top: 1rem; border-top: 1px solid rgba(230, 201, 138, 0.16); }
-  #account-mindful { border-top: 0; margin-top: 0; padding-top: 0; }
+  #account .account-jump {
+    display: flex; align-items: center; width: 100%; margin: 0;
+    padding: 0.95rem 0.1rem; background: transparent; border: 0; cursor: pointer;
+    font: inherit; font-weight: 500; font-size: 1.12rem; letter-spacing: 0.03em;
+    color: rgba(247, 237, 212, 0.9); text-align: left;
+  }
+  #account .account-jump:hover, #account .account-jump:focus-visible { color: #f7edd4; }
   .mindful-links { display: flex; justify-content: space-between; align-items: baseline; gap: 0.35rem 0.4rem; margin: 0.5rem 0 0.15rem; }
   .mindful-links .quiet {
     flex: 1 1 0; min-width: 0; text-align: center; padding: 0.4rem 0.05rem 0.5rem;
@@ -750,14 +756,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 <div class="room" id="account" hidden>
   <button class="back" type="button" data-room="home" aria-label="Back">&#8592;</button>
   <div class="inner">
-    <section class="account-block" id="account-mindful">
-      <h2 id="account-title">Mindfulness Material</h2>
-      <div class="mindful-links">
-        <button class="quiet" type="button" id="open-talks" data-room="talks" hidden>Dharma Talks</button>
-        <button class="quiet" type="button" data-room="guide">Sit Guidance</button>
-        <button class="quiet" type="button" id="open-shelf">Albums + Playlists</button>
-      </div>
-    </section>
+    <button class="account-jump" type="button" id="start-here" data-room="guide">Start Here</button>
     <details class="account-fold" id="account-altar-block" data-fold="altar">
       <summary>Altar</summary>
       <div class="fold-body">
@@ -771,6 +770,29 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
           <input id="altar-file" type="file" accept="image/*" hidden>
           <p id="altar-note" role="status"></p>
         </div>
+      </div>
+    </details>
+    <details class="account-fold" id="account-profile" data-fold="profile">
+      <summary>Profile</summary>
+      <div class="fold-body">
+        <div class="profile-mark"><span id="account-initial" aria-hidden="true"><svg class="yantra-mark" viewBox="104 100 304 312" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="9"><circle cx="256" cy="256" r="158" stroke-width="10"/><path d="M123 219H389L256 394Z"/><path d="M122 289.5H390L256 118Z"/><path d="M185.2 352.7H326.8L256 219Z"/><path d="M157 322.1H355L256 156.8Z"/><path d="M173.9 156.8H338.1L256 270.7Z"/><path d="M160.8 191.3H351.2L256 352.7Z"/><path d="M207.6 270.7H304.4L256 191.3Z"/><path d="M209.6 234.3H302.4L256 322.1Z"/><path d="M221 248.8H291L256 289.5Z"/></g><circle cx="256" cy="256" r="9" fill="currentColor"/></svg></span></div>
+        <label class="account-field">Display name
+          <input id="account-name" type="text" maxlength="40" autocomplete="nickname" placeholder="Optional">
+        </label>
+        <label class="account-field">Greeting
+          <select id="account-greeting">
+            <option value="none">No greeting</option>
+            <option value="hello">Hello</option>
+            <option value="time">By time of day</option>
+          </select>
+        </label>
+        <button class="choice" type="button" id="account-save">Save</button>
+        <p id="account-saved" role="status"></p>
+        <section id="account-sync" class="account-sync" hidden>
+          <h3>Sign in</h3>
+          <p>A later sign-in can keep these choices with you. Nothing leaves this device yet.</p>
+          <p id="account-sync-method"></p>
+        </section>
       </div>
     </details>
     <details class="account-fold" id="account-practice-block" data-fold="practice">
@@ -793,6 +815,11 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <button class="quiet" type="button" id="practice-erase-yes">Erase</button>
       </div>
     </div>
+      </div>
+    </details>
+    <details class="account-fold" id="account-devices-block" data-fold="devices">
+      <summary>Linked devices</summary>
+      <div class="fold-body">
     <div id="practice-link" hidden>
       <h4>Devices</h4>
       <p id="practice-link-status"></p>
@@ -905,27 +932,13 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <p id="account-reminders-push"></p>
       </div>
     </details>
-    <details class="account-fold" id="account-profile" data-fold="profile">
-      <summary>Profile</summary>
+    <details class="account-fold" id="account-mindful" data-fold="mindful">
+      <summary id="account-title">Mindfulness Material</summary>
       <div class="fold-body">
-        <div class="profile-mark"><span id="account-initial" aria-hidden="true"><svg class="yantra-mark" viewBox="104 100 304 312" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="9"><circle cx="256" cy="256" r="158" stroke-width="10"/><path d="M123 219H389L256 394Z"/><path d="M122 289.5H390L256 118Z"/><path d="M185.2 352.7H326.8L256 219Z"/><path d="M157 322.1H355L256 156.8Z"/><path d="M173.9 156.8H338.1L256 270.7Z"/><path d="M160.8 191.3H351.2L256 352.7Z"/><path d="M207.6 270.7H304.4L256 191.3Z"/><path d="M209.6 234.3H302.4L256 322.1Z"/><path d="M221 248.8H291L256 289.5Z"/></g><circle cx="256" cy="256" r="9" fill="currentColor"/></svg></span></div>
-        <label class="account-field">Display name
-          <input id="account-name" type="text" maxlength="40" autocomplete="nickname" placeholder="Optional">
-        </label>
-        <label class="account-field">Greeting
-          <select id="account-greeting">
-            <option value="none">No greeting</option>
-            <option value="hello">Hello</option>
-            <option value="time">By time of day</option>
-          </select>
-        </label>
-        <button class="choice" type="button" id="account-save">Save</button>
-        <p id="account-saved" role="status"></p>
-        <section id="account-sync" class="account-sync" hidden>
-          <h3>Sign in</h3>
-          <p>A later sign-in can keep these choices with you. Nothing leaves this device yet.</p>
-          <p id="account-sync-method"></p>
-        </section>
+        <div class="mindful-links">
+          <button class="quiet" type="button" id="open-talks" data-room="talks" hidden>Dharma Talks</button>
+          <button class="quiet" type="button" id="open-shelf">Albums + Playlists</button>
+        </div>
       </div>
     </details>
     <details class="account-fold" id="account-settings" data-fold="settings">
@@ -2808,7 +2821,7 @@ window.paintPractice = paintPractice;
 function paintTalks() {
   const section = document.getElementById("talks-list");
   if (!section) return;
-  // Dharma Talks is for the Zazen word only. Sit Guidance and Albums stay.
+  // Dharma Talks is for the Zazen word only. Albums stay.
   const talks = document.getElementById("open-talks");
   const shown = !!(window.YantraTalks && window.YANTRA_LEVEL === "zazen" && window.yantraTalks);
   if (talks) talks.hidden = !shown;

@@ -27,13 +27,13 @@ const loader = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
 assert.ok(loader.includes('src="altar.js"'));
 assert.ok(page.includes('id="altar" class="altar-photos" aria-hidden="true"'));
 assert.ok(page.includes('id="altar-file" type="file" accept="image/*" hidden'));
-// Mindfulness material, then the altar section, then practice.
+// Start Here, then the altar, then profile. Mindfulness Material is its own fold later.
 const at = (mark) => page.indexOf(mark);
-assert.ok(at('id="account-mindful"') < at('id="account-altar-block"'));
-assert.ok(at('id="account-altar-block"') < at('id="account-practice-block"'));
-assert.ok(at('id="account-practice-block"') < at('id="account-profile"'));
+assert.ok(at('id="start-here"') < at('id="account-altar-block"'));
+assert.ok(at('id="account-altar-block"') < at('id="account-profile"'));
+assert.ok(at('id="account-profile"') < at('id="account-practice-block"'));
 assert.ok(at('id="account-altar"') < at('id="account-profile"'), "the altar is no longer inside profile");
-assert.ok(page.includes('<h2 id="account-title">Mindfulness Material</h2>'), "the page opens on Mindfulness Material, not a name");
+assert.ok(page.includes('<summary id="account-title">Mindfulness Material</summary>'), "the fold is Mindfulness Material, not a name");
 assert.ok(page.includes("<summary>Altar</summary>"));
 assert.ok(page.includes("meditation, enlightenment, power, and peace"));
 assert.ok(page.includes('id="home-altar" class="altar-photos"'));
