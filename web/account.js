@@ -26,7 +26,7 @@
     button.hidden = false;
   }
 
-  /* Practice, Reminders, Profile, and Settings start closed each time Settings opens.
+  /* Altar, Practice, Reminders, Profile, and Settings start closed each time Settings opens.
      A practice link arriving on this device opens Practice once. */
   function closeFolds() {
     document.querySelectorAll("#account details.account-fold").forEach((node) => {

@@ -40,9 +40,10 @@
     "bell.threeQuarterTone": "medium",
     "glow.levelDark": null,
     "glow.levelLight": null,
-    "motion.awakening": true,
+    "motion.inner": 0,
+    "motion.outer": 0,
   };
-  const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow"];
+  const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow", "yantra.awakening"];
   /* What a linked device shares. The look of each screen (theme), any leftover
      brightness keys, the access word, and this device's reminder id stay on the
      device. The page clears a saved brightness and draws the yantra at full light. */
@@ -129,7 +130,10 @@
       return Math.max(0, Math.min(1, level));
     }
     if (key === "theme.light" || key === "flags.accountSync" || key === "flags.accountSignOut") return !!value;
-    if (key === "motion.awakening") return value !== false && value !== "off";
+    if (key === "motion.inner" || key === "motion.outer") {
+      const level = Number(value);
+      return level === 1 || level === 2 || level === 3 ? level : 0;
+    }
     if (key === "glow.level" || key === "glow.levelLight" || key === "glow.levelDark") {
       if (value === null || value === undefined || value === "") return null;
       const level = Number(value);
@@ -192,6 +196,11 @@
     LEGACY.forEach((key) => {
       if (kept.getItem(key) != null) kept.removeItem(key);
     });
+    /* The old on/off switch is not carried forward. Both wheels start Off. */
+    if (raw["motion.awakening"]) {
+      delete raw["motion.awakening"];
+      changed = true;
+    }
     if (changed) write(kept, raw);
     return raw;
   }
