@@ -283,6 +283,14 @@
     return perfectLine(summary);
   }
 
+  /* Home shows Start Here until this device has three completed sits in its own
+     history. Pass the local record, not the merged view of linked devices. */
+  const START_HERE_SITS = 3;
+  function startHereDue(store) {
+    const sits = Math.max(0, Number(store && store.totals && store.totals.sits) || 0);
+    return sits < START_HERE_SITS;
+  }
+
   /* The line on the Meditation Complete screen: today's time, then the way to a perfect day. */
   function completeLine(summary, theme) {
     const todayMs = summary && summary.today ? summary.today.ms : 0;
@@ -497,6 +505,8 @@
     formatMinutes: formatMinutes,
     formatSpan: formatSpan,
     lead: lead,
+    START_HERE_SITS: START_HERE_SITS,
+    startHereDue: startHereDue,
     completeLine: completeLine,
     shapeLevels: shapeLevels,
     envelopeFromChannel: envelopeFromChannel,

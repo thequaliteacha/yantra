@@ -58,6 +58,30 @@ assert.strictEqual(on(both, "2026-10-14").streaks.perfect.current, 0);
 assert.strictEqual(P.lead(on(both, "2026-10-14")), "Sit at sunrise and sunset for a perfect day.");
 assert.strictEqual(P.lead(on(sit(both, "2026-10-13", "other"), "2026-10-13")), "Sit at sunrise and sunset for 4 perfect days in a row.", "a shelf sit is not half a perfect day");
 assert.ok(P.lead({ totals: { ms: 0, sits: 0 } }).startsWith("Sit at sunrise and sunset"));
+
+// Start Here on the home page stays until this device has three completed sits.
+assert.strictEqual(P.START_HERE_SITS, 3);
+assert.strictEqual(P.startHereDue(null), true);
+assert.strictEqual(P.startHereDue(P.empty()), true, "no sits yet");
+let newer = sit(P.empty(), "2026-10-01", "morning");
+assert.strictEqual(P.startHereDue(newer), true, "one sit still shows it");
+newer = sit(newer, "2026-10-02", "evening");
+assert.strictEqual(P.startHereDue(newer), true, "two sits still show it");
+const tooShort = P.record(newer, { date: "2026-10-03", theme: "morning", ms: P.MIN_MS - 1 }).store;
+assert.strictEqual(tooShort.totals.sits, 2);
+assert.strictEqual(P.startHereDue(tooShort), true, "under a minute does not count as a sit");
+newer = sit(newer, "2026-10-03", "morning");
+assert.strictEqual(newer.totals.sits, 3);
+assert.strictEqual(P.startHereDue(newer), false, "three completed sits hide it");
+newer = sit(newer, "2026-10-04", "evening");
+assert.strictEqual(P.startHereDue(newer), false, "it stays hidden after more sits");
+let oneDay = P.empty();
+oneDay = sit(oneDay, "2026-10-08", "morning");
+oneDay = sit(oneDay, "2026-10-08", "evening");
+oneDay = sit(oneDay, "2026-10-08", "other");
+assert.strictEqual(oneDay.totals.sits, 3);
+assert.strictEqual(P.startHereDue(oneDay), false, "three sits on one day are enough");
+
 const longer = sit(sit(sit(sit(P.empty(), "2026-09-01", "morning"), "2026-09-01", "evening"), "2026-09-02", "morning"), "2026-09-02", "evening");
 assert.strictEqual(P.lead(on(longer, "2026-09-02")), "2 perfect days in a row.");
 
@@ -138,6 +162,14 @@ assert.strictEqual(P.formatSpan(2 * 3600000 + 5 * 60000), "2 hours 5 minutes");
 const web = fs.readFileSync(path.join(__dirname, "web.js"), "utf8");
 const worker = fs.readFileSync(path.join(__dirname, "../deploy/cloudflare/worker.js"), "utf8");
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
+const home = page.slice(page.indexOf('id="home"'), page.indexOf('id="welcome"'));
+assert.ok(home.includes('id="home-start" data-room="guide" hidden>Start Here</button>'), "the home hint opens the sit guide");
+assert.ok(home.indexOf("Evening Meditation") < home.indexOf('id="home-start"'), "it sits below the morning and evening buttons");
+assert.ok(home.indexOf('id="home-altar"') < home.indexOf('id="home-start"'), "it is not in the altar row");
+assert.ok(home.indexOf('id="home-note"') < home.indexOf('id="home-start"'), "the week and the day line stay above it");
+assert.ok(page.includes("startHereDue(practice.load())"), "the count is this device's own history");
+assert.ok(!page.includes("startHereDue(summary)"), "linked devices' sits do not retire it");
+assert.ok(page.includes('data-room="guide">Sit Guidance</button>'), "the settings guide stays");
 const readme = fs.readFileSync(path.join(__dirname, "../README.md"), "utf8");
 const sw = fs.readFileSync(path.join(__dirname, "sw.js"), "utf8");
 assert.strictEqual(web.includes("getUserMedia"), false);
