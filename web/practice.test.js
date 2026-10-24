@@ -169,7 +169,7 @@ assert.ok(home.indexOf('id="home-altar"') < home.indexOf('id="home-start"'), "it
 assert.ok(home.indexOf('id="home-note"') < home.indexOf('id="home-start"'), "the week and the day line stay above it");
 assert.ok(page.includes("startHereDue(practice.load())"), "the count is this device's own history");
 assert.ok(!page.includes("startHereDue(summary)"), "linked devices' sits do not retire it");
-assert.ok(page.includes('data-room="guide">Sit Guidance</button>'), "the settings guide stays");
+assert.ok(page.includes('id="start-here" data-room="guide">Start Here</button>'), "the settings guide stays");
 const readme = fs.readFileSync(path.join(__dirname, "../README.md"), "utf8");
 const sw = fs.readFileSync(path.join(__dirname, "sw.js"), "utf8");
 assert.strictEqual(web.includes("getUserMedia"), false);
