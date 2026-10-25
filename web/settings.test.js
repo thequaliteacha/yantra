@@ -147,6 +147,7 @@ const order = [
   'id="account-settings"',
   'id="motion-inner"',
   'id="motion-outer"',
+  'id="motion-heart"',
   "<h3>Spotify</h3>",
   "<h3>Privacy</h3>",
   'id="install-app"',

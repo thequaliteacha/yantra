@@ -250,4 +250,31 @@ assert.ok(!spin.includes("spotify"), "the wheel spin draws the figure; it does n
 assert.ok(shell.indexOf('src="choose.js"') > 0);
 assert.ok(shell.indexOf('src="choose.js"') < shell.indexOf('src="web.js"'));
 
+const mystery = discById("mystery-school");
+assert.strictEqual(Choose.sitMinutes(mystery, 1), 7, "one song is a heart song, not the first track");
+assert.strictEqual(Choose.sitMinutes(mystery, 3), 27);
+assert.strictEqual(Choose.sitMinutes(mystery, 6), 54);
+assert.strictEqual(Choose.sitMinutes(mystery, 12), null, "twelve needs four songs in each third");
+const firstThree = mystery.tracks.slice(0, 3).reduce((sum, track) => sum + track.length, 0);
+assert.notStrictEqual(Choose.sitMinutes(mystery, 3), Math.round(firstThree / 60), "not the first three tracks");
+assert.strictEqual(Choose.sitMinutes({ tracks: [
+  { n: 1, length: 600, chakra: "heart" },
+  { n: 2, length: 60, chakra: "naval" },
+  { n: 3, length: 60, chakra: "eye" },
+] }, 1), 10, "a stored chakra band wins over track order");
+assert.strictEqual(Choose.sitMinutes({ tracks: [
+  { n: 1, length: 0, chakra: "naval" },
+  { n: 2, length: 0, chakra: "heart" },
+  { n: 3, length: 0, chakra: "eye" },
+] }, 3), null);
+assert.strictEqual(Choose.catalogMinutes([], 3), 12, "an empty catalog keeps the old four minutes a song");
+const measurable = discs.discs.map((disc) => Choose.sitSeconds(disc, 3)).filter((seconds) => seconds);
+const expectedAverage = Math.max(1, Math.round(measurable.reduce((sum, seconds) => sum + seconds, 0) / measurable.length / 60));
+assert.strictEqual(Choose.catalogMinutes(discs.discs, 3), expectedAverage);
+assert.ok(measurable.length > 1);
+assert.ok(page.includes("window.YantraChoose"));
+assert.ok(page.includes("choose.sitMinutes(chosen, count)"));
+assert.ok(page.includes("choose.catalogMinutes(discs, count)"));
+assert.ok(page.includes("· about "), "a new album each sit is marked as an average");
+
 console.log("choose.test.js ok");

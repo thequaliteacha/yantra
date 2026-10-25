@@ -1,14 +1,15 @@
 /* Petal motion for the yantra's wheels.
    Canvas angles grow clockwise, because y points down. The outer petals turn
-   that way. The inner petals turn counterclockwise, at half the outer pace
-   when both are at the same intensity: one calm turn while the outer wheel
-   makes two.
+   that way. The inner petals turn counterclockwise. The same level is the
+   same absolute speed on either wheel: Level 1, Level 2, and Level 3 are
+   1×, 2×, and 3×. Level 1 is the pace Level 2 used to keep — one turn in
+   about thirty seconds at the close of a song. Level 2 is twice that,
+   Level 3 three times. Each wheel still has its own level, so an inner
+   Level 1 does not follow an outer Level 3.
 
-   Each wheel has its own intensity: Off, or Level 1, 2, or 3. Level 2 is the
-   pace this page used to keep on — the outer wheel once around in about thirty
-   seconds at the close of a song, the inner wheel at half that, and a breath
-   of 1.2% to 1.8%. Level 1 is gentler. Level 3 is a little faster and the
-   breath a little wider. Off is still.
+   Each wheel has its own intensity: Off, or Level 1, 2, or 3. The breath
+   stays small. Level 2 sits inside 1.2% to 1.8%. Level 1 is gentler and
+   Level 3 a little wider. Off is still.
 
    The shapes run from root to crown. This page draws the navel, the heart, and
    the third eye. Ajna is the single ring: its two wings are left undrawn, so
@@ -20,17 +21,17 @@
    and the inner eight, and the eight is the inner wheel. */
 (function (root) {
   const TAU = Math.PI * 2;
-  // One clockwise turn of the outer wheel at full quiver, at Level 2, in seconds.
+  // One turn at Level 1 (1×), at full drive, in seconds. This is the pace Level 2 used to keep.
   const OUTER_PERIOD = 30;
-  // Counterclockwise, and slower: an octave under the outer wheel at the same level.
-  const INNER_RATIO = 0.5;
+  // Same level, same absolute speed. The sign alone turns the inner wheel the other way.
+  const INNER_RATIO = 1;
   // prefers-reduced-motion slows both wheels. It does not reverse them.
   const REDUCE_FACTOR = 0.25;
   // Level 2 breath stays inside 1.2% to 1.8%, widening a little with the music.
   const BREATH_LO = 0.012;
   const BREATH_HI = 0.018;
-  // Off, then gentle, then the old pace, then a little quicker and fuller.
-  const SPIN_FACTOR = [0, 0.55, 1, 1.65];
+  // Off, then 1×, 2×, 3×. Level 1 is the old Level 2 pace.
+  const SPIN_FACTOR = [0, 1, 2, 3];
   const BREATH_FACTOR = [0, 0.62, 1, 1.4];
   const BREATH_CAP = BREATH_HI * BREATH_FACTOR[3];
   const ORDER = ["root", "sacral", "naval", "heart", "throat", "eye", "crown"];
@@ -70,8 +71,8 @@
   }
 
   /* Negative is counterclockwise. Off when that wheel's intensity is Off.
-     Level 2 is half the Level 2 outer pace, not half of whatever the outer
-     wheel happens to be set to. */
+     The pace follows this wheel's own level. At the same level it matches
+     the outer wheel's absolute speed. */
   function innerRate(drive, reduce, level) {
     const spin = SPIN_FACTOR[levelOf(level)];
     if (!spin) return 0;

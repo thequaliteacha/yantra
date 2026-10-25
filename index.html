@@ -704,10 +704,10 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <select id="pick-album" aria-label="Album"><option value="">A new album each sit</option></select>
       </div>
     </div>
-    <button class="choice" type="button" data-count="1">1 song <span>· 4 min</span></button>
-    <button class="choice" type="button" data-count="3">3 songs <span>· 12 min</span></button>
-    <button class="choice" type="button" data-count="6">6 songs <span>· 24 min</span></button>
-    <button class="choice" type="button" data-count="12">12 songs <span>· 48 min</span></button>
+    <button class="choice" type="button" data-count="1">1 song <span>· about 4 min</span></button>
+    <button class="choice" type="button" data-count="3">3 songs <span>· about 12 min</span></button>
+    <button class="choice" type="button" data-count="6">6 songs <span>· about 24 min</span></button>
+    <button class="choice" type="button" data-count="12">12 songs <span>· about 48 min</span></button>
     <p id="pick-note" style="text-align:center;min-height:1.3rem;color:rgba(232,204,146,0.88);font-size:0.92rem"></p>
   </div>
   <button class="corner left" type="button" id="pick-help" aria-label="How many songs">?</button>
@@ -973,6 +973,14 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
               <button type="button" role="radio" data-level="3">Level 3</button>
             </div>
           </div>
+          <div class="motion-row">
+            <span id="motion-heart-label">Heart chakra</span>
+            <div class="segment" id="motion-heart" role="radiogroup" aria-labelledby="motion-heart-label">
+              <button type="button" role="radio" data-heart="off" aria-checked="true">Off</button>
+              <button type="button" role="radio" data-heart="triangles">Triangles</button>
+              <button type="button" role="radio" data-heart="pentagram">Pentagram</button>
+            </div>
+          </div>
           <p class="motion-guide">If you choose this more challenging practice, keep gazing with eyes open at the center bindu.</p>
         </div>
         <h3>Spotify</h3>
@@ -1183,15 +1191,30 @@ function arcPortion(ctx, cx, cy, r, portion) {
   ctx.arc(cx, cy, r, start, end);
 }
 
-function petalPoints(cx, cy, angle, rIn, rOut, half) {
+/* Angular half-width of a lotus petal. t is 0 at the root and 1 at the tip.
+   The inner eight are wide through the shoulder, then run to a point.
+   The outer ring is a slimmer spear with a finer tip. */
+function petalSpread(t, half, kind) {
+  if (kind === "sharp") {
+    const side = Math.pow(1 - t, 1.35);
+    const belly = Math.sin(Math.PI * t) * Math.pow(1 - t, 0.45) * 0.18;
+    return half * (side + belly);
+  }
+  const side = Math.pow(1 - t, 1.08);
+  const belly = Math.sin(Math.pow(t, 0.75) * Math.PI) * Math.pow(1 - t, 0.2) * 0.62;
+  return half * (0.58 * side + belly);
+}
+
+function petalPoints(cx, cy, angle, rIn, rOut, half, kind) {
   const steps = 56;
+  const wide = kind !== "sharp";
   const pts = [];
   const edge = (sign) => {
     for (let i = 0; i <= steps; i++) {
       const along = sign === 1 ? 1 - i / steps : i / steps;
-      const bulge = Math.sin(along * Math.PI) * half * 0.42;
-      const r = rIn + (rOut - rIn) * Math.pow(along, 0.72);
-      const a = angle + sign * (half * (1 - along) + bulge);
+      const spread = petalSpread(along, half, wide ? "wide" : "sharp");
+      const r = rIn + (rOut - rIn) * Math.pow(along, wide ? 1.05 : 1.22);
+      const a = angle + sign * spread;
       pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
     }
   };
@@ -1200,23 +1223,11 @@ function petalPoints(cx, cy, angle, rIn, rOut, half) {
   return pts;
 }
 
-function petal(ctx, cx, cy, angle, rIn, rOut, half) {
-  const steps = 16;
-  let started = false;
-  const edge = (sign) => {
-    for (let i = 0; i <= steps; i++) {
-      const along = sign === 1 ? 1 - i / steps : i / steps;
-      const bulge = Math.sin(along * Math.PI) * half * 0.42;
-      const r = rIn + (rOut - rIn) * Math.pow(along, 0.72);
-      const a = angle + sign * (half * (1 - along) + bulge);
-      const x = cx + Math.cos(a) * r;
-      const y = cy + Math.sin(a) * r;
-      if (!started) { ctx.moveTo(x, y); started = true; }
-      else ctx.lineTo(x, y);
-    }
-  };
-  edge(-1);
-  edge(1);
+function petal(ctx, cx, cy, angle, rIn, rOut, half, kind) {
+  const pts = petalPoints(cx, cy, angle, rIn, rOut, half, kind);
+  if (!pts.length) return;
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
   ctx.closePath();
 }
 
@@ -1225,43 +1236,52 @@ function circle(ctx, cx, cy, r) {
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
 }
 
+/* One square whose four sides open into T-shaped gates. half is the wall's
+   distance from the centre. open is the passage, bar the wider lintel.
+   stem and depth step outward to the crossbar. */
+function gateSquare(ctx, cx, cy, half, open, bar, stem, depth) {
+  const sides = [
+    { along: [1, 0], out: [0, -1] },
+    { along: [0, 1], out: [1, 0] },
+    { along: [-1, 0], out: [0, 1] },
+    { along: [0, -1], out: [-1, 0] },
+  ];
+  for (const side of sides) {
+    const ax = side.along[0], ay = side.along[1];
+    const ox = side.out[0], oy = side.out[1];
+    const p = (u, v) => [cx + ax * u + ox * v, cy + ay * u + oy * v];
+    const pts = [
+      p(-half, half),
+      p(-open, half),
+      p(-open, half + stem),
+      p(-bar, half + stem),
+      p(-bar, half + depth),
+      p(bar, half + depth),
+      p(bar, half + stem),
+      p(open, half + stem),
+      p(open, half),
+      p(half, half),
+    ];
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  }
+}
+
+/* Double-lined earth square. Both lines follow the T-shaped gates, a steady
+   gap apart, and the whole frame stays inside the ring of dots at 2.72 R. */
 function bhupura(ctx, cx, cy, R, grow) {
   if (grow <= 0) return;
-  const layers = [2.08, 2.2, 2.34];
-  const gap = R * 0.2;
-  const depth = R * 0.18 * grow;
-  for (const k of layers) {
-    const half = R * k;
-    const segs = [
-      [[-half, -half], [-gap, -half]],
-      [[gap, -half], [half, -half]],
-      [[half, -half], [half, -gap]],
-      [[half, gap], [half, half]],
-      [[half, half], [gap, half]],
-      [[-gap, half], [-half, half]],
-      [[-half, half], [-half, gap]],
-      [[-half, -gap], [-half, -half]],
-    ];
-    for (const [a, b] of segs) {
-      ctx.moveTo(cx + a[0], cy + a[1]);
-      ctx.lineTo(cx + a[0] + (b[0] - a[0]) * grow, cy + a[1] + (b[1] - a[1]) * grow);
-    }
-  }
-  const doors = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-  const half = R * 2.34;
-  for (const [dx, dy] of doors) {
-    if (dx !== 0) {
-      const x0 = cx + dx * half;
-      const x1 = cx + dx * (half + depth);
-      ctx.moveTo(x0, cy - gap); ctx.lineTo(x1, cy - gap);
-      ctx.lineTo(x1, cy + gap); ctx.lineTo(x0, cy + gap);
-    } else {
-      const y0 = cy + dy * half;
-      const y1 = cy + dy * (half + depth);
-      ctx.moveTo(cx - gap, y0); ctx.lineTo(cx - gap, y1);
-      ctx.lineTo(cx + gap, y1); ctx.lineTo(cx + gap, y0);
-    }
-  }
+  const gap = R * 0.09;
+  const half = R * 2.26;
+  const open = R * 0.24;
+  const bar = R * 0.5;
+  const stem = R * 0.055;
+  const depth = R * 0.15;
+  ctx.lineJoin = "miter";
+  ctx.lineCap = "butt";
+  ctx.miterLimit = 2;
+  gateSquare(ctx, cx, cy, half, open, bar, stem, depth);
+  gateSquare(ctx, cx, cy, half - gap, open - gap, bar - gap, stem, depth);
 }
 
 /* Each chakra's lotus, after the tradition: Manipura's ten petals, Anahata's twelve
@@ -1337,7 +1357,7 @@ function layer(ctx, alpha, draw) {
 function scaled(pts, cx, cy, k) {
   return pts.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]);
 }
-function bud(ctx, cx, cy, angle, rIn, rOut, half, grow, shape) {
+function bud(ctx, cx, cy, angle, rIn, rOut, half, grow, shape, kind) {
   if (grow <= 0) return;
   // A whole petal that swells out of its base point, longer first, then wider.
   const bx = cx + Math.cos(angle) * rIn;
@@ -1345,7 +1365,8 @@ function bud(ctx, cx, cy, angle, rIn, rOut, half, grow, shape) {
   const along = 0.2 + 0.8 * grow;
   const across = 0.2 + 0.8 * Math.pow(grow, 1.6);
   const ux = Math.cos(angle), uy = Math.sin(angle);
-  const pts = (shape || petalPoints)(cx, cy, angle, rIn, rOut, half).map(([x, y]) => {
+  const outline = shape || petalPoints;
+  const pts = outline(cx, cy, angle, rIn, rOut, half, kind).map(([x, y]) => {
     const dx = x - bx, dy = y - by;
     const l = dx * ux + dy * uy, t = -dx * uy + dy * ux;
     return [bx + ux * l * along - uy * t * across, by + uy * l * along + ux * t * across];
@@ -1357,17 +1378,32 @@ function ring(ctx, cx, cy, r, grow) {
   if (grow > 0) circle(ctx, cx, cy, r * (0.82 + 0.18 * grow));
 }
 
-function chakraFigure(ctx, cx, cy, r, figure, turn) {
+function pentagram(ctx, cx, cy, r, turn) {
+  const pts = [];
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + (turn || 0) + (i * Math.PI * 2) / 5;
+    pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+  }
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let k = 1; k <= 5; k++) {
+    const p = pts[(k * 2) % 5];
+    ctx.lineTo(p[0], p[1]);
+  }
+}
+
+function chakraFigure(ctx, cx, cy, r, figure, turn, heart) {
   turn = turn || 0;
   const tri = (start) => [0, 1, 2].map((i) => {
     const a = start + turn + (i * Math.PI * 2) / 3;
     return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
   });
   // Manipura's downward triangle and Ajna's triangle are not drawn.
-  if (figure === "air") {
+  // Anahata's mark follows the heart setting: triangles, a pentagram, or nothing.
+  if (figure === "air" && heart === "triangles") {
     partial(ctx, tri(Math.PI / 2), 1);
     partial(ctx, tri(-Math.PI / 2), 1);
   }
+  if (figure === "air" && heart === "pentagram") pentagram(ctx, cx, cy, r * 0.92, turn);
   if (figure === "mind") circle(ctx, cx, cy, r * 0.94);
 }
 
@@ -1414,9 +1450,9 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
     ring(ctx, cx, cy, R * 1.08, inner);
   });
   // A slow drift, about one turn in half an hour, only while that wheel is on.
-  // Off leaves the petals still. Level 2 is the old pace: the outer lotus
-  // clockwise, the inner wheel counterclockwise at half that, with a breath
-  // of a percent or two. Level 1 is gentler. Level 3 is a little quicker.
+  // Off leaves the petals still. The same level is the same absolute speed:
+  // Level 1 turns once in about thirty seconds, Level 2 twice that, Level 3
+  // three times. The outer lotus goes clockwise and the inner wheel the other way.
   const drift = lotus ? now * 0.0000035 : 0;
   const awake = window.YantraAwakening;
   const plan = motion && motion.plan;
@@ -1448,7 +1484,7 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
           tremor: innerLevel ? vibe.tremor : 0,
         })
         : -Math.PI / 2 + (i * Math.PI * 2) / 8;
-      bud(ctx, cx, cy, a, R * 1.12 * swell * eightBreath, R * 1.46 * swell * eightBreath, (Math.PI / 8) * 0.72, eight);
+      bud(ctx, cx, cy, a, R * 1.09 * swell * eightBreath, R * 1.485 * swell * eightBreath, (Math.PI / 8) * 1.22, eight, null, "wide");
     }
   });
   const mid = stage(reveal, 0.74, 0.8);
@@ -1462,9 +1498,12 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
     const figInner = innerTarget === "figure" && innerLevel;
     const figBreath = figInner && awake ? awake.innerScale(vibe) : 1;
     const figGlow = figInner && awake ? 1 + awake.innerGlow(vibe) : 1;
-    layer(ctx, mid * 0.32 * figGlow, () => {
-      chakraFigure(ctx, cx, cy, R * 1.5 * wheel * figBreath, lotus.figure, figInner ? innerSpin : 0);
-    });
+    const heart = lotus.figure === "air" ? (window.motionHeart || "off") : "off";
+    if (lotus.figure !== "air" || heart === "triangles" || heart === "pentagram") {
+      layer(ctx, mid * 0.32 * figGlow, () => {
+        chakraFigure(ctx, cx, cy, R * 1.5 * wheel * figBreath, lotus.figure, figInner ? innerSpin : 0, heart);
+      });
+    }
   }
 
   // The outer lotus: sixteen petals, or in a sitting the petals of the song's chakra.
@@ -1481,7 +1520,7 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
       const a = awake
         ? awake.outerPetalAngle(i, count, outerDrift, outerLevel ? spin : 0, 0)
         : -Math.PI / 2 + (i * Math.PI * 2) / count;
-      bud(ctx, cx, cy, a, R * 1.54 * swell * outerBreath, R * 1.9 * swell * outerBreath, (Math.PI / count) * 0.7, outerPetals);
+      bud(ctx, cx, cy, a, R * 1.525 * swell * outerBreath, R * 1.92 * swell * outerBreath, (Math.PI / count) * 0.58, outerPetals, null, "sharp");
     }
   });
   const outer = stage(reveal, 0.88, 0.92);
@@ -1978,7 +2017,8 @@ function frame(now) {
 window.pace = { key: "", pos: 0 };
 window.ink = { key: "", portion: 0 };
 window.drawEpoch = 0;
-// Both wheels start still. A stored level is kept. The old on/off keys are dropped.
+// Both wheels start still. The heart mark starts off. A stored choice is kept.
+// The old on/off keys are dropped.
 function motionLevel(which) {
   try {
     if (window.YantraSettings && window.YantraAwakening) {
@@ -1998,9 +2038,28 @@ function motionStore(which, level) {
   } catch (e) {}
   return clean;
 }
+function readHeart() {
+  const allow = (value) => (value === "triangles" || value === "pentagram" ? value : "off");
+  try {
+    if (window.YantraSettings) return allow(window.YantraSettings.get("motion.heart"));
+  } catch (e) {}
+  try {
+    return allow(localStorage.getItem("yantra.motion.heart"));
+  } catch (e) {}
+  return "off";
+}
+function heartStore(value) {
+  const clean = value === "triangles" || value === "pentagram" ? value : "off";
+  try {
+    if (window.YantraSettings) window.YantraSettings.set("motion.heart", clean);
+    else localStorage.setItem("yantra.motion.heart", clean);
+  } catch (e) {}
+  return clean;
+}
 try { localStorage.removeItem("yantra.awakening"); } catch (e) {}
 window.motionInner = motionLevel("inner");
 window.motionOuter = motionLevel("outer");
+window.motionHeart = readHeart();
 (function armPreview() {
   let params;
   try { params = new URLSearchParams(location.search); } catch (e) { return; }
@@ -2917,8 +2976,18 @@ function paintPick(rebuild) {
   if (pickAlbum && discs.length && !discs.some((disc) => disc.id === pickAlbum)) pickAlbum = "";
   select.value = pickAlbum;
   const chosen = discs.find((disc) => disc.id === pickAlbum);
+  const choose = window.YantraChoose;
   document.querySelectorAll("#pick [data-count]").forEach((button) => {
-    button.disabled = !!chosen && !fitsCount(chosen, Number(button.dataset.count));
+    const count = Number(button.dataset.count);
+    button.disabled = !!chosen && !fitsCount(chosen, count);
+    const span = button.querySelector("span");
+    if (!span || !choose || !choose.sitMinutes || !choose.catalogMinutes) return;
+    if (chosen) {
+      const minutes = choose.sitMinutes(chosen, count);
+      span.textContent = minutes ? "· " + minutes + " min" : "· —";
+    } else {
+      span.textContent = "· about " + choose.catalogMinutes(discs, count) + " min";
+    }
   });
   document.getElementById("pick-note").textContent = "";
 }
@@ -3013,6 +3082,7 @@ if (window.YANTRA_WEB) {
   menuAccount.hidden = false;
   menuAccount.addEventListener("click", () => {
     roomTrail = [];
+    roomFocus = "account-settings";
     showRoom("account");
   });
   document.getElementById("practice-export").addEventListener("click", () => {
@@ -3374,8 +3444,25 @@ forgetBrightness();
       paintGroup(id, level);
     });
   }
+  function bindHeart() {
+    const group = document.getElementById("motion-heart");
+    if (!group) return;
+    const paint = (value) => {
+      group.querySelectorAll("[data-heart]").forEach((button) => {
+        button.setAttribute("aria-checked", String(button.dataset.heart === value));
+      });
+    };
+    paint(window.motionHeart || "off");
+    group.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-heart]");
+      if (!button || !group.contains(button)) return;
+      window.motionHeart = heartStore(button.dataset.heart);
+      paint(window.motionHeart);
+    });
+  }
   bindGroup("motion-inner", "inner");
   bindGroup("motion-outer", "outer");
+  bindHeart();
 })();
 
 // Back, restart, next. The web edition moves its own players; the desktop app asks
