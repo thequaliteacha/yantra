@@ -2093,16 +2093,67 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
 
+# Chromium's --start-fullscreen is dropped on Wayland. Hyprland maps the
+# window tiled, and the shelf is cut off until Super+F. The class is known
+# before the window is mapped, so the rule can fullscreen it as it opens.
+OPEN_FULLSCREEN = r"""
+if yantra_open == nil then
+  yantra_open = hl.window_rule({
+    name = "yantra-open-fullscreen",
+    match = { class = "^[Yy]antra$" },
+    fullscreen = true,
+  })
+end
+yantra_open:set_enabled(true)
+"""
+
+# One shot once the window exists. "set" leaves a later Super+F free to
+# leave fullscreen. A window already fullscreen (the rule got there first)
+# is left alone, so this cannot toggle it back off.
+SETTLE_FULLSCREEN = r"""
+yantra_full = yantra_full or {}
+for _, w in ipairs(hl.get_windows()) do
+  local class = string.lower(tostring(w.class or ""))
+  local title = tostring(w.title or "")
+  if class == "yantra" or title == "Yantra" then
+    local address = "address:" .. tostring(w.address)
+    local mode = tonumber(w.fullscreen) or 0
+    local tries = yantra_full[address] or 0
+    if mode ~= 2 and tries < 1 then
+      yantra_full[address] = tries + 1
+      pcall(function()
+        hl.dispatch(hl.dsp.window.fullscreen({
+          mode = "fullscreen",
+          action = "set",
+          window = address,
+        }))
+      end)
+    end
+  end
+end
+"""
+
+
+def settle_fullscreen():
+    """Ask Hyprland again until the Yantra window has been mapped."""
+    deadline = time.monotonic() + 3.0
+    while time.monotonic() < deadline:
+        hypr_eval(SETTLE_FULLSCREEN)
+        time.sleep(0.4)
+
+
 def open_window(url):
     browser = shutil.which("chromium") or shutil.which("brave")
     if not browser:
         print(f"Open this in a browser: {url}", flush=True)
         return None
-    return subprocess.Popen(
+    hypr_eval(OPEN_FULLSCREEN)
+    window = subprocess.Popen(
         [
             browser,
             "--ozone-platform=wayland",
             "--app=" + url,
+            "--class=yantra",
             "--new-window",
             "--start-fullscreen",
             "--autoplay-policy=no-user-gesture-required",
@@ -2110,6 +2161,8 @@ def open_window(url):
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
+    threading.Thread(target=settle_fullscreen, daemon=True).start()
+    return window
 
 
 SEAT_LUA = r"""

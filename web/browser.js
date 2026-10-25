@@ -27,7 +27,7 @@
     const apple = ios || macos;
     const brave = !!nav.brave;
     const displayMode = String(nav.displayMode || "");
-    const standalone = nav.standalone === true || displayMode === "standalone";
+    const standalone = nav.standalone === true || displayMode === "standalone" || displayMode === "fullscreen";
     const other = brave || OTHER.test(ua);
     const safari = apple && /Safari\//.test(ua) && /Version\//.test(ua) && !other;
     return {

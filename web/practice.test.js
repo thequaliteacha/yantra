@@ -187,6 +187,17 @@ assert.ok(/never asks for the microphone/i.test(readme));
 assert.strictEqual(/through the microphone/i.test(readme), false);
 
 const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "manifest.webmanifest"), "utf8"));
+assert.strictEqual(manifest.display, "standalone", "a browser that cannot go fullscreen still opens as an app");
+assert.deepStrictEqual(manifest.display_override, ["fullscreen"], "an installed app opens fullscreen where the platform allows it");
+const loader = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+assert.ok(loader.includes('name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"'), "the first document reaches under the notch");
+assert.ok(loader.includes('name="apple-mobile-web-app-status-bar-style" content="black-translucent"'));
+const desktop = fs.readFileSync(path.join(__dirname, "../yantra.py"), "utf8");
+assert.ok(desktop.includes('"--class=yantra"'), "Hyprland can recognise the desktop window");
+assert.ok(desktop.includes('"--start-fullscreen"'));
+assert.ok(desktop.includes("fullscreen = true"));
+assert.ok(desktop.includes('mode = "fullscreen"'));
+assert.ok(desktop.includes('action = "set"'), "opening fullscreen does not toggle it back off");
 const origin = "https://yantramedi.app";
 const manifestUrl = new URL("/web/manifest.webmanifest", origin);
 const start = new URL(manifest.start_url, manifestUrl);

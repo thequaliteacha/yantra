@@ -191,7 +191,10 @@
     const nav = (root && root.navigator) || (typeof navigator !== "undefined" ? navigator : null) || globalNav || {};
     let displayMode = "";
     try {
-      if (root && root.matchMedia && root.matchMedia("(display-mode: standalone)").matches) displayMode = "standalone";
+      if (root && root.matchMedia) {
+        if (root.matchMedia("(display-mode: fullscreen)").matches) displayMode = "fullscreen";
+        else if (root.matchMedia("(display-mode: standalone)").matches) displayMode = "standalone";
+      }
     } catch (e) {}
     return {
       userAgent: nav.userAgent || "",
