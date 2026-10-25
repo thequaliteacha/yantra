@@ -96,6 +96,67 @@
     return pool[index];
   }
 
+  function trackBand(disc, track) {
+    const name = track && track.chakra;
+    if (name === "naval" || name === "heart" || name === "eye") return name;
+    return trackChakra(disc, track && track.n);
+  }
+
+  function bandBuckets(disc) {
+    const sizes = { naval: [], heart: [], eye: [] };
+    for (const track of (disc && disc.tracks) || []) {
+      const band = trackBand(disc, track);
+      if (!sizes[band]) continue;
+      const length = Number(track && track.length);
+      sizes[band].push(Number.isFinite(length) && length > 0 ? length : 0);
+    }
+    return sizes;
+  }
+
+  /* A sit takes an equal share from each third (one heart song, when the sit
+     is a single song). The minutes are the expected length of that draw:
+     the share times the average known length in the third. Tracks with no
+     length are left out of the average. Unknown thirds, or a disc that cannot
+     hold the sit, have no estimate. */
+  function sitSeconds(disc, count) {
+    const n = Number(count);
+    if (!disc || !COUNTS.includes(n)) return null;
+    const order = n === 1 ? ["heart"] : CHAKRAS;
+    const per = n === 1 ? 1 : n / 3;
+    const buckets = bandBuckets(disc);
+    let total = 0;
+    for (const chakra of order) {
+      const lengths = buckets[chakra] || [];
+      if (lengths.length < per) return null;
+      const known = lengths.filter((length) => length > 0);
+      if (!known.length) return null;
+      const mean = known.reduce((sum, length) => sum + length, 0) / known.length;
+      total += mean * per;
+    }
+    return total;
+  }
+
+  function sitMinutes(disc, count) {
+    const seconds = sitSeconds(disc, count);
+    if (!seconds) return null;
+    return Math.max(1, Math.round(seconds / 60));
+  }
+
+  /* "A new album each sit": the mean of the albums that can hold this sit
+     and whose lengths are known. With nothing to measure, four minutes a song. */
+  function catalogMinutes(discs, count) {
+    const n = Number(count);
+    if (!COUNTS.includes(n)) return null;
+    const rows = [];
+    for (const disc of discs || []) {
+      const seconds = sitSeconds(disc, n);
+      if (seconds) rows.push(seconds);
+    }
+    if (!rows.length) return n * 4;
+    const mean = rows.reduce((sum, seconds) => sum + seconds, 0) / rows.length;
+    return Math.max(1, Math.round(mean / 60));
+  }
+
   function sitTracks(disc, count, canPlay, rng) {
     if (!albumFits(disc, count, canPlay)) return null;
     const order = count === 1 ? ["heart"] : CHAKRAS;
@@ -161,6 +222,9 @@
     trackChakra: trackChakra,
     albumFits: albumFits,
     chooseAlbum: chooseAlbum,
+    sitSeconds: sitSeconds,
+    sitMinutes: sitMinutes,
+    catalogMinutes: catalogMinutes,
     sitTracks: sitTracks,
     announceSwap: announceSwap,
     planQuickSit: planQuickSit,

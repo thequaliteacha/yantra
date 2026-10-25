@@ -42,6 +42,7 @@
     "glow.levelLight": null,
     "motion.inner": 0,
     "motion.outer": 0,
+    "motion.heart": "off",
   };
   const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow", "yantra.awakening"];
   /* What a linked device shares. The look of each screen (theme), any leftover
@@ -133,6 +134,10 @@
     if (key === "motion.inner" || key === "motion.outer") {
       const level = Number(value);
       return level === 1 || level === 2 || level === 3 ? level : 0;
+    }
+    if (key === "motion.heart") {
+      const mark = String(value || "").trim().toLowerCase();
+      return mark === "triangles" || mark === "pentagram" ? mark : "off";
     }
     if (key === "glow.level" || key === "glow.levelLight" || key === "glow.levelDark") {
       if (value === null || value === undefined || value === "") return null;

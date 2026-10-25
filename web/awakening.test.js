@@ -31,9 +31,15 @@ assert.deepStrictEqual(A.levelOf("2"), 2);
 assert.deepStrictEqual(A.levelOf(3), 3);
 assert.deepStrictEqual(A.levelOf(4), 0);
 
+const base = A.outerRate(1, false, 1);
+assert.strictEqual(base, A.TAU / A.OUTER_PERIOD, "level 1 is one turn in about thirty seconds");
+assert.strictEqual(A.OUTER_PERIOD, 30);
+assert.deepStrictEqual(A.SPIN_FACTOR, [0, 1, 2, 3]);
+assert.strictEqual(A.INNER_RATIO, 1);
 const full = A.outerRate(1, false, 2);
 assert.ok(full > 0, "level 2 outer wheel stays clockwise");
-assert.strictEqual(full, A.TAU / A.OUTER_PERIOD);
+assert.strictEqual(full, 2 * base, "level 2 is 2×");
+assert.strictEqual(A.outerRate(1, false, 3), 3 * base, "level 3 is 3×");
 assert.strictEqual(A.outerRate(1, true, 2), full * A.REDUCE_FACTOR);
 assert.ok(A.outerRate(1, true, 2) > 0, "reduced motion slows the outer wheel and does not reverse it");
 assert.strictEqual(A.outerRate(0, false, 2), 0);
@@ -41,22 +47,26 @@ assert.strictEqual(A.outerRate(2, false, 2), full);
 assert.strictEqual(A.outerRate(1, false, 0), 0, "outer off is still");
 assert.ok(A.outerRate(1, false, 1) > 0 && A.outerRate(1, false, 1) < full, "level 1 is gentler than level 2");
 assert.ok(A.outerRate(1, false, 3) > full, "level 3 is faster than level 2");
-assert.strictEqual(A.SPIN_FACTOR[2], 1);
-assert.ok(A.SPIN_FACTOR[1] < 1 && A.SPIN_FACTOR[3] > 1);
 
 const inner = A.innerRate(1, false, 2);
 assert.ok(inner < 0, "the inner wheel turns counterclockwise");
-assert.strictEqual(inner, -A.INNER_RATIO * full);
-assert.strictEqual(A.INNER_RATIO, 0.5);
-assert.ok(Math.abs(inner) < full, "the inner wheel is the slower of the two");
-assert.strictEqual(A.innerRate(1, true, 2), -A.INNER_RATIO * A.outerRate(1, true, 2));
+assert.strictEqual(inner, -full, "the same level has the same absolute speed");
+assert.strictEqual(A.innerRate(1, false, 1), -base);
+assert.strictEqual(A.innerRate(1, false, 3), -A.outerRate(1, false, 3));
+assert.strictEqual(A.innerRate(1, true, 2), -A.outerRate(1, true, 2));
 assert.ok(A.innerRate(1, true, 2) < 0, "reduced motion keeps the inner wheel counterclockwise");
 assert.ok(Math.abs(A.innerRate(1, true, 2)) < Math.abs(inner));
 assert.strictEqual(A.innerRate(1, false, 0), 0, "inner off is still");
 assert.strictEqual(A.innerRate(1, true, 0), 0);
 assert.ok(Math.abs(A.innerRate(1, false, 1)) < Math.abs(inner), "level 1 inner is slower");
 assert.ok(Math.abs(A.innerRate(1, false, 3)) > Math.abs(inner), "level 3 inner is faster");
-assert.strictEqual(A.innerRate(1, false, 2), -0.5 * A.outerRate(1, false, 2), "level 2 inner is half the level 2 outer pace");
+[1, 2, 3].forEach((level) => {
+  assert.strictEqual(
+    Math.abs(A.innerRate(1, false, level)),
+    A.outerRate(1, false, level),
+    "level " + level + " matches on both wheels"
+  );
+});
 
 const stepped = A.step({ outer: 0, inner: 0 }, 2, {
   drive: 1, reduce: false, inner: 2, outer: 2, now: 1000, energy: 0.4, lotus: "naval",
@@ -200,6 +210,13 @@ assert.strictEqual(S.set("motion.outer", "3", store), 3);
 assert.strictEqual(S.set("motion.outer", "on", store), 0);
 assert.strictEqual(S.set("motion.inner", false, store), 0);
 assert.strictEqual(S.get("motion.outer", store), 0);
+assert.strictEqual(S.get("motion.heart", mem()), "off", "the heart mark defaults to off");
+assert.strictEqual(S.set("motion.heart", "triangles", store), "triangles");
+assert.strictEqual(S.get("motion.heart", store), "triangles");
+assert.strictEqual(S.set("motion.heart", "Pentagram", store), "pentagram");
+assert.strictEqual(S.set("motion.heart", "star", store), "off");
+assert.strictEqual(S.get("motion.heart", store), "off");
+assert.ok(S.SHARED.indexOf("motion.heart") < 0, "the heart mark stays on this device");
 
 const legacy = mem({
   "yantra.settings.v1": JSON.stringify({ "motion.awakening": { value: true, updatedAt: 5 } }),
@@ -215,18 +232,26 @@ const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 assert.ok(page.includes('src="/web/awakening.js"'));
 assert.ok(page.includes('id="motion-inner"'));
 assert.ok(page.includes('id="motion-outer"'));
+assert.ok(page.includes('id="motion-heart"'));
+assert.ok(page.includes(">Triangles<"));
+assert.ok(page.includes(">Pentagram<"));
 assert.ok(page.includes("Inner petals (counterclockwise)"));
 assert.ok(page.includes("Outer petals (clockwise)"));
 assert.ok(page.includes("For intermediate and advanced students."));
 assert.ok(page.includes("keep gazing with eyes open at the center bindu"));
 assert.ok(page.includes('YantraSettings.get("motion." + which)'), "a stored choice is kept");
 assert.ok(page.includes('YantraSettings.set("motion." + which, clean)'));
+assert.ok(page.includes('YantraSettings.get("motion.heart")'), "the heart mark is read with the other motion settings");
+assert.ok(page.includes('YantraSettings.set("motion.heart", clean)'));
+assert.ok(page.includes("window.motionHeart"));
 assert.ok(page.includes('removeItem("yantra.awakening")'), "the older key is cleared");
 assert.strictEqual(page.includes('id="awakening"'), false, "the single on/off switch is gone");
 assert.strictEqual(page.includes("motion.awakening"), false, "the page does not read the old switch");
 const settingsFold = page.slice(page.indexOf('id="account-settings"'), page.indexOf('id="account-logout"'));
 assert.ok(settingsFold.includes('id="motion-inner"'), "inner petals live in Settings");
 assert.ok(settingsFold.includes('id="motion-outer"'), "outer petals live in Settings");
+assert.ok(settingsFold.includes('id="motion-heart"'), "the heart mark lives in Settings");
+assert.ok(settingsFold.includes('data-heart="off"'), "the heart mark defaults to off");
 assert.ok(settingsFold.includes("Level 1") && settingsFold.includes("Level 2") && settingsFold.includes("Level 3"));
 assert.ok(settingsFold.indexOf('id="motion-inner"') < settingsFold.indexOf("<h3>Spotify</h3>"));
 assert.strictEqual(page.includes("glowbar"), false, "it is not on the brightness bar");
@@ -238,7 +263,9 @@ assert.ok(page.includes("reduce: reduceMotion"));
 assert.ok(page.includes("prefers-reduced-motion"));
 assert.ok(page.includes('lotus.figure !== "fire"'), "Manipura's triangle is not drawn");
 assert.strictEqual(page.includes('figure === "fire"'), false, "the fire triangle stroke is gone");
-assert.ok(page.includes('figure === "air"'), "Anahata's star stays");
+assert.ok(page.includes('figure === "air" && heart === "triangles"'), "Anahata's triangles stay behind the Triangles choice");
+assert.ok(page.includes('heart === "pentagram"'), "a pentagram can take the heart's place");
+assert.ok(page.includes('heart === "triangles" || heart === "pentagram"'), "off draws no heart mark");
 assert.ok(page.includes("circle(ctx, cx, cy, r * 0.94)"), "Ajna's circle stays");
 assert.ok(fs.readFileSync(path.join(__dirname, "../yantra.py"), "utf8").includes('"/web/awakening.js"'));
 
