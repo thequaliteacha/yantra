@@ -183,10 +183,11 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .room[hidden], body.sitting .room, body.watching .room { display: none; }
   .room .inner { width: min(26rem, 100%); display: flex; flex-direction: column; gap: 0.9rem; }
   /* Home and the sit menu can grow past the button column so altar photos use the width.
-     safe center keeps a short page in the middle; a tall one starts at the top and scrolls,
-     so the title is never pushed off the screen. */
+     Auto margins center a short page in every browser. safe center does the same
+     where it is understood. A tall page starts at the top and scrolls, so the
+     title and the last button are never left off the screen. */
   #home, #pick {
-    justify-content: center;
+    justify-content: flex-start;
     justify-content: safe center;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
@@ -195,6 +196,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     width: min(100%, 72rem);
     flex-shrink: 0;
     align-items: center;
+    margin-top: auto;
+    margin-bottom: auto;
   }
   #home .inner > :not(.altar-photos),
   #pick .inner > :not(#pick-altar) { width: min(26rem, 100%); }
@@ -613,6 +616,27 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #remind-status:empty { display: none; }
   #remind-save { margin-top: 0.2rem; }
 
+  /* Installed only: Home Screen, and the desktop window Chromium opens with --app.
+     A browser tab stays as it is. The home page and the album shelf use the
+     visible screen, inside the notch and the gesture bar. */
+  @media (display-mode: fullscreen), (display-mode: standalone) {
+    html, body { height: 100%; height: 100dvh; }
+    #gate {
+      box-sizing: border-box;
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: auto;
+      padding: max(4vh, env(safe-area-inset-top)) max(4vw, env(safe-area-inset-right))
+               max(4vh, env(safe-area-inset-bottom)) max(4vw, env(safe-area-inset-left));
+    }
+    .shelf {
+      max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2.4rem);
+      min-height: min(37rem, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 3rem));
+    }
+    #discs, #saved { max-height: min(68vh, calc(100dvh - 14rem)); }
+    .room { box-sizing: border-box; height: 100dvh; max-height: 100dvh; }
+  }
+
   /* Phones and narrow windows: one column, room for thumbs, nothing under the notch. */
   @media (max-width: 760px) {
     #gate {
@@ -650,6 +674,22 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     #playlist-name { width: 100%; }
     #end { top: max(1rem, env(safe-area-inset-top)); right: max(1rem, env(safe-area-inset-right)); padding: 0.6rem 0.9rem; }
     #caption { bottom: max(6vh, calc(env(safe-area-inset-bottom) + 2rem)); padding: 0 1.2rem; }
+  }
+
+  /* An installed phone: the shelf fills the screen and scrolls, instead of
+     running under the gesture bar. A narrow browser tab keeps the rules above. */
+  @media (max-width: 760px) and (display-mode: fullscreen),
+         (max-width: 760px) and (display-mode: standalone) {
+    #gate { flex-direction: column; align-items: stretch; overflow: hidden; }
+    .shelf {
+      flex: 1 1 auto;
+      align-self: stretch;
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      max-height: none;
+      overflow: auto;
+    }
   }
 </style>
 </head>

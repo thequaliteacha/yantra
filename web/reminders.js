@@ -72,7 +72,9 @@ function iosDevice() {
 }
 
 function standalone() {
-  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  return window.matchMedia("(display-mode: standalone)").matches
+    || window.matchMedia("(display-mode: fullscreen)").matches
+    || window.navigator.standalone === true;
 }
 
 function bytesFromKey(text) {

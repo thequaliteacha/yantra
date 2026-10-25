@@ -5,6 +5,9 @@
   "start_url": "/web/",
   "scope": "/web/",
   "display": "standalone",
+  "display_override": [
+    "fullscreen"
+  ],
   "background_color": "#05040a",
   "theme_color": "#05040a",
   "orientation": "any",

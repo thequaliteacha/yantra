@@ -138,6 +138,9 @@ assert.strictEqual(home.hold, false, "the Home Screen app keeps today's import")
 const display = Browser.handoff(Object.assign({}, iphoneChrome, { displayMode: "standalone" }), PAGE);
 assert.strictEqual(display.info.standalone, true);
 assert.strictEqual(display.hold, false);
+const fullscreen = Browser.handoff(Object.assign({}, iphoneChrome, { displayMode: "fullscreen" }), PAGE);
+assert.strictEqual(fullscreen.info.standalone, true, "fullscreen is the installed app, not a browser tab");
+assert.strictEqual(fullscreen.hold, false);
 
 assert.strictEqual(Browser.handoff(android, PAGE).hold, false);
 assert.strictEqual(Browser.handoff(windows, PAGE).hold, false);
