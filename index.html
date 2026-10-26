@@ -845,7 +845,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       </div>
     </details>
     <details class="account-fold" id="account-practice-block" data-fold="practice">
-      <summary>Practice</summary>
+      <summary>Practice settings</summary>
       <div class="fold-body">
       <div class="week" id="account-week"></div>
     <p id="practice-lead"></p>
@@ -864,6 +864,28 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
         <button class="quiet" type="button" id="practice-erase-yes">Erase</button>
       </div>
     </div>
+        <div class="motion-block">
+          <p class="motion-note">For intermediate and advanced students.</p>
+          <div class="motion-row">
+            <span id="motion-inner-label">Inner petals (counterclockwise)</span>
+            <div class="segment" id="motion-inner" role="radiogroup" aria-labelledby="motion-inner-label">
+              <button type="button" role="radio" data-level="0" aria-checked="true">Off</button>
+              <button type="button" role="radio" data-level="1">Level 1</button>
+              <button type="button" role="radio" data-level="2">Level 2</button>
+              <button type="button" role="radio" data-level="3">Level 3</button>
+            </div>
+          </div>
+          <div class="motion-row">
+            <span id="motion-outer-label">Outer petals (clockwise)</span>
+            <div class="segment" id="motion-outer" role="radiogroup" aria-labelledby="motion-outer-label">
+              <button type="button" role="radio" data-level="0" aria-checked="true">Off</button>
+              <button type="button" role="radio" data-level="1">Level 1</button>
+              <button type="button" role="radio" data-level="2">Level 2</button>
+              <button type="button" role="radio" data-level="3">Level 3</button>
+            </div>
+          </div>
+          <p class="motion-guide">If you choose this more challenging practice, keep gazing with eyes open at the center bindu.</p>
+        </div>
       </div>
     </details>
     <details class="account-fold" id="account-devices-block" data-fold="devices">
@@ -993,36 +1015,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <details class="account-fold" id="account-settings" data-fold="settings">
       <summary>Settings</summary>
       <div class="fold-body">
-        <div class="motion-block">
-          <p class="motion-note">For intermediate and advanced students.</p>
-          <div class="motion-row">
-            <span id="motion-inner-label">Inner petals (counterclockwise)</span>
-            <div class="segment" id="motion-inner" role="radiogroup" aria-labelledby="motion-inner-label">
-              <button type="button" role="radio" data-level="0" aria-checked="true">Off</button>
-              <button type="button" role="radio" data-level="1">Level 1</button>
-              <button type="button" role="radio" data-level="2">Level 2</button>
-              <button type="button" role="radio" data-level="3">Level 3</button>
-            </div>
-          </div>
-          <div class="motion-row">
-            <span id="motion-outer-label">Outer petals (clockwise)</span>
-            <div class="segment" id="motion-outer" role="radiogroup" aria-labelledby="motion-outer-label">
-              <button type="button" role="radio" data-level="0" aria-checked="true">Off</button>
-              <button type="button" role="radio" data-level="1">Level 1</button>
-              <button type="button" role="radio" data-level="2">Level 2</button>
-              <button type="button" role="radio" data-level="3">Level 3</button>
-            </div>
-          </div>
-          <div class="motion-row">
-            <span id="motion-heart-label">Heart chakra</span>
-            <div class="segment" id="motion-heart" role="radiogroup" aria-labelledby="motion-heart-label">
-              <button type="button" role="radio" data-heart="off" aria-checked="true">Off</button>
-              <button type="button" role="radio" data-heart="triangles">Triangles</button>
-              <button type="button" role="radio" data-heart="pentagram">Pentagram</button>
-            </div>
-          </div>
-          <p class="motion-guide">If you choose this more challenging practice, keep gazing with eyes open at the center bindu.</p>
-        </div>
         <h3>Spotify</h3>
         <p id="account-spotify"></p>
         <p id="account-spotify-note" hidden></p>
@@ -1350,10 +1342,10 @@ function bhupura(ctx, cx, cy, R, grow) {
   gateSquare(ctx, cx, cy, half - gap, open - gap, bar - gap, stem, depth);
 }
 
-/* Each chakra's lotus, after the tradition: Manipura's ten petals, Anahata's twelve
-   around the interlaced triangles of air, Ajna's open circle of the mind, its wings
-   left undrawn. The large triangles that used to sit in the navel and the third eye
-   are left undrawn. Each wheel has its own light: Manipura the yellow-gold of the sun,
+/* Each chakra's lotus, after the tradition: Manipura's ten petals, Anahata's twelve,
+   Ajna's open circle of the mind, its wings left undrawn. The large triangles that
+   used to sit in the navel and the third eye are left undrawn, and Anahata draws
+   no background mark. Each wheel has its own light: Manipura the yellow-gold of the sun,
    Anahata the living green of the heart, Ajna the violet of the mind's eye. The lines
    carry the tint, the halo and field carry the glow. The gold leans toward
    the song's chakra over a few breaths, and the night stays dark. */
@@ -1444,32 +1436,9 @@ function ring(ctx, cx, cy, r, grow) {
   if (grow > 0) circle(ctx, cx, cy, r * (0.82 + 0.18 * grow));
 }
 
-function pentagram(ctx, cx, cy, r, turn) {
-  const pts = [];
-  for (let i = 0; i < 5; i++) {
-    const a = -Math.PI / 2 + (turn || 0) + (i * Math.PI * 2) / 5;
-    pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
-  }
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for (let k = 1; k <= 5; k++) {
-    const p = pts[(k * 2) % 5];
-    ctx.lineTo(p[0], p[1]);
-  }
-}
-
-function chakraFigure(ctx, cx, cy, r, figure, turn, heart) {
-  turn = turn || 0;
-  const tri = (start) => [0, 1, 2].map((i) => {
-    const a = start + turn + (i * Math.PI * 2) / 3;
-    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
-  });
-  // Manipura's downward triangle and Ajna's triangle are not drawn.
-  // Anahata's mark follows the heart setting: triangles, a pentagram, or nothing.
-  if (figure === "air" && heart === "triangles") {
-    partial(ctx, tri(Math.PI / 2), 1);
-    partial(ctx, tri(-Math.PI / 2), 1);
-  }
-  if (figure === "air" && heart === "pentagram") pentagram(ctx, cx, cy, r * 0.92, turn);
+function chakraFigure(ctx, cx, cy, r, figure) {
+  // Manipura's downward triangle and Anahata's background mark are not drawn.
+  // Ajna keeps its open circle.
   if (figure === "mind") circle(ctx, cx, cy, r * 0.94);
 }
 
@@ -1558,18 +1527,15 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
   const wheel = swell;
   layer(ctx, mid, () => ring(ctx, cx, cy, R * 1.5, mid));
   // The chakra's own figure rests faintly behind the petals, inscribed in that ring.
-  // Anahata's six-pointed star is the inner wheel and turns counterclockwise.
+  // Anahata's star is still the inner wheel, but its background mark is not drawn.
   // Ajna keeps only its circle, which has no corners to show a turn, and shares the breath.
-  if (lotus && lotus.figure !== "fire") {
+  if (lotus && lotus.figure !== "fire" && lotus.figure !== "air") {
     const figInner = innerTarget === "figure" && innerLevel;
     const figBreath = figInner && awake ? awake.innerScale(vibe) : 1;
     const figGlow = figInner && awake ? 1 + awake.innerGlow(vibe) : 1;
-    const heart = lotus.figure === "air" ? (window.motionHeart || "off") : "off";
-    if (lotus.figure !== "air" || heart === "triangles" || heart === "pentagram") {
-      layer(ctx, mid * 0.32 * figGlow, () => {
-        chakraFigure(ctx, cx, cy, R * 1.5 * wheel * figBreath, lotus.figure, figInner ? innerSpin : 0, heart);
-      });
-    }
+    layer(ctx, mid * 0.32 * figGlow, () => {
+      chakraFigure(ctx, cx, cy, R * 1.5 * wheel * figBreath, lotus.figure);
+    });
   }
 
   // The outer lotus: sixteen petals, or in a sitting the petals of the song's chakra.
@@ -2083,8 +2049,8 @@ function frame(now) {
 window.pace = { key: "", pos: 0 };
 window.ink = { key: "", portion: 0 };
 window.drawEpoch = 0;
-// Both wheels start still. The heart mark starts off. A stored choice is kept.
-// The old on/off keys are dropped.
+// Both wheels start still. A stored choice is kept.
+// The old on/off keys, and any leftover heart-mark choice, are dropped.
 function motionLevel(which) {
   try {
     if (window.YantraSettings && window.YantraAwakening) {
@@ -2104,28 +2070,12 @@ function motionStore(which, level) {
   } catch (e) {}
   return clean;
 }
-function readHeart() {
-  const allow = (value) => (value === "triangles" || value === "pentagram" ? value : "off");
-  try {
-    if (window.YantraSettings) return allow(window.YantraSettings.get("motion.heart"));
-  } catch (e) {}
-  try {
-    return allow(localStorage.getItem("yantra.motion.heart"));
-  } catch (e) {}
-  return "off";
-}
-function heartStore(value) {
-  const clean = value === "triangles" || value === "pentagram" ? value : "off";
-  try {
-    if (window.YantraSettings) window.YantraSettings.set("motion.heart", clean);
-    else localStorage.setItem("yantra.motion.heart", clean);
-  } catch (e) {}
-  return clean;
-}
-try { localStorage.removeItem("yantra.awakening"); } catch (e) {}
+try {
+  localStorage.removeItem("yantra.awakening");
+  localStorage.removeItem("yantra.motion.heart");
+} catch (e) {}
 window.motionInner = motionLevel("inner");
 window.motionOuter = motionLevel("outer");
-window.motionHeart = readHeart();
 (function armPreview() {
   let params;
   try { params = new URLSearchParams(location.search); } catch (e) { return; }
@@ -3510,25 +3460,8 @@ forgetBrightness();
       paintGroup(id, level);
     });
   }
-  function bindHeart() {
-    const group = document.getElementById("motion-heart");
-    if (!group) return;
-    const paint = (value) => {
-      group.querySelectorAll("[data-heart]").forEach((button) => {
-        button.setAttribute("aria-checked", String(button.dataset.heart === value));
-      });
-    };
-    paint(window.motionHeart || "off");
-    group.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-heart]");
-      if (!button || !group.contains(button)) return;
-      window.motionHeart = heartStore(button.dataset.heart);
-      paint(window.motionHeart);
-    });
-  }
   bindGroup("motion-inner", "inner");
   bindGroup("motion-outer", "outer");
-  bindHeart();
 })();
 
 // Back, restart, next. The web edition moves its own players; the desktop app asks

@@ -42,9 +42,8 @@
     "glow.levelLight": null,
     "motion.inner": 0,
     "motion.outer": 0,
-    "motion.heart": "off",
   };
-  const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow", "yantra.awakening"];
+  const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow", "yantra.awakening", "yantra.motion.heart"];
   /* What a linked device shares. The look of each screen (theme), any leftover
      brightness keys, the access word, and this device's reminder id stay on the
      device. The page clears a saved brightness and draws the yantra at full light. */
@@ -135,10 +134,6 @@
       const level = Number(value);
       return level === 1 || level === 2 || level === 3 ? level : 0;
     }
-    if (key === "motion.heart") {
-      const mark = String(value || "").trim().toLowerCase();
-      return mark === "triangles" || mark === "pentagram" ? mark : "off";
-    }
     if (key === "glow.level" || key === "glow.levelLight" || key === "glow.levelDark") {
       if (value === null || value === undefined || value === "") return null;
       const level = Number(value);
@@ -201,9 +196,14 @@
     LEGACY.forEach((key) => {
       if (kept.getItem(key) != null) kept.removeItem(key);
     });
-    /* The old on/off switch is not carried forward. Both wheels start Off. */
+    /* The old on/off switch is not carried forward. Both wheels start Off.
+       The heart mark (triangles or a pentagram) is gone; a stored choice is dropped. */
     if (raw["motion.awakening"]) {
       delete raw["motion.awakening"];
+      changed = true;
+    }
+    if (raw["motion.heart"]) {
+      delete raw["motion.heart"];
       changed = true;
     }
     if (changed) write(kept, raw);
@@ -220,6 +220,12 @@
   }
 
   function set(key, value, store) {
+    /* The heart mark is no longer a setting. Drop a leftover and do not store a new one. */
+    if (key === "motion.heart") {
+      const kept = store || browserStore();
+      if (kept) migrate(kept);
+      return undefined;
+    }
     if (!KEY_RE.test(key)) return get(key, store);
     const kept = store || browserStore();
     const clean = known(key, value);
