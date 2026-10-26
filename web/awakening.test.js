@@ -210,13 +210,8 @@ assert.strictEqual(S.set("motion.outer", "3", store), 3);
 assert.strictEqual(S.set("motion.outer", "on", store), 0);
 assert.strictEqual(S.set("motion.inner", false, store), 0);
 assert.strictEqual(S.get("motion.outer", store), 0);
-assert.strictEqual(S.get("motion.heart", mem()), "off", "the heart mark defaults to off");
-assert.strictEqual(S.set("motion.heart", "triangles", store), "triangles");
-assert.strictEqual(S.get("motion.heart", store), "triangles");
-assert.strictEqual(S.set("motion.heart", "Pentagram", store), "pentagram");
-assert.strictEqual(S.set("motion.heart", "star", store), "off");
-assert.strictEqual(S.get("motion.heart", store), "off");
-assert.ok(S.SHARED.indexOf("motion.heart") < 0, "the heart mark stays on this device");
+assert.ok(!("motion.heart" in S.DEFAULTS), "the heart mark is not a setting");
+assert.strictEqual(S.get("motion.heart", mem()), undefined);
 
 const legacy = mem({
   "yantra.settings.v1": JSON.stringify({ "motion.awakening": { value: true, updatedAt: 5 } }),
@@ -228,32 +223,45 @@ assert.strictEqual(JSON.parse(legacy.getItem(S.KEY))["motion.awakening"], undefi
 assert.strictEqual(S.get("motion.inner", legacy), 0, "an old on choice becomes off");
 assert.strictEqual(S.get("motion.outer", legacy), 0);
 
+const marked = mem({
+  "yantra.settings.v1": JSON.stringify({ "motion.heart": { value: "triangles", updatedAt: 9 } }),
+  "yantra.motion.heart": "pentagram",
+});
+S.migrate(marked);
+assert.strictEqual(marked.getItem("yantra.motion.heart"), null, "the loose heart key is dropped");
+assert.strictEqual(JSON.parse(marked.getItem(S.KEY))["motion.heart"], undefined, "a stored heart mark is dropped");
+assert.strictEqual(S.get("motion.heart", marked), undefined);
+
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 assert.ok(page.includes('src="/web/awakening.js"'));
 assert.ok(page.includes('id="motion-inner"'));
 assert.ok(page.includes('id="motion-outer"'));
-assert.ok(page.includes('id="motion-heart"'));
-assert.ok(page.includes(">Triangles<"));
-assert.ok(page.includes(">Pentagram<"));
+assert.strictEqual(page.includes('id="motion-heart"'), false, "the heart mark control is gone");
+assert.strictEqual(page.includes(">Triangles<"), false);
+assert.strictEqual(page.includes(">Pentagram<"), false);
+assert.strictEqual(page.includes("data-heart"), false);
 assert.ok(page.includes("Inner petals (counterclockwise)"));
 assert.ok(page.includes("Outer petals (clockwise)"));
 assert.ok(page.includes("For intermediate and advanced students."));
 assert.ok(page.includes("keep gazing with eyes open at the center bindu"));
 assert.ok(page.includes('YantraSettings.get("motion." + which)'), "a stored choice is kept");
 assert.ok(page.includes('YantraSettings.set("motion." + which, clean)'));
-assert.ok(page.includes('YantraSettings.get("motion.heart")'), "the heart mark is read with the other motion settings");
-assert.ok(page.includes('YantraSettings.set("motion.heart", clean)'));
-assert.ok(page.includes("window.motionHeart"));
+assert.strictEqual(page.includes('get("motion.heart")'), false, "the page does not read the heart mark");
+assert.strictEqual(page.includes('set("motion.heart"'), false);
+assert.strictEqual(page.includes("motionHeart"), false);
 assert.ok(page.includes('removeItem("yantra.awakening")'), "the older key is cleared");
+assert.ok(page.includes('removeItem("yantra.motion.heart")'), "a leftover heart key is cleared");
 assert.strictEqual(page.includes('id="awakening"'), false, "the single on/off switch is gone");
 assert.strictEqual(page.includes("motion.awakening"), false, "the page does not read the old switch");
+const practiceFold = page.slice(page.indexOf('id="account-practice-block"'), page.indexOf('id="account-devices-block"'));
+assert.ok(practiceFold.includes("<summary>Practice settings</summary>"));
+assert.ok(practiceFold.includes('id="motion-inner"'), "inner petals live in Practice settings");
+assert.ok(practiceFold.includes('id="motion-outer"'), "outer petals live in Practice settings");
+assert.ok(practiceFold.indexOf('id="practice-erase"') < practiceFold.indexOf('id="motion-inner"'), "petal controls sit at the bottom");
+assert.ok(practiceFold.includes("Level 1") && practiceFold.includes("Level 2") && practiceFold.includes("Level 3"));
 const settingsFold = page.slice(page.indexOf('id="account-settings"'), page.indexOf('id="account-logout"'));
-assert.ok(settingsFold.includes('id="motion-inner"'), "inner petals live in Settings");
-assert.ok(settingsFold.includes('id="motion-outer"'), "outer petals live in Settings");
-assert.ok(settingsFold.includes('id="motion-heart"'), "the heart mark lives in Settings");
-assert.ok(settingsFold.includes('data-heart="off"'), "the heart mark defaults to off");
-assert.ok(settingsFold.includes("Level 1") && settingsFold.includes("Level 2") && settingsFold.includes("Level 3"));
-assert.ok(settingsFold.indexOf('id="motion-inner"') < settingsFold.indexOf("<h3>Spotify</h3>"));
+assert.strictEqual(settingsFold.includes('id="motion-inner"'), false, "petal motion left Settings");
+assert.strictEqual(settingsFold.includes('id="motion-heart"'), false);
 assert.strictEqual(page.includes("glowbar"), false, "it is not on the brightness bar");
 assert.strictEqual(page.includes("window.awakeningOn"), false, "the old on flag is gone");
 assert.ok(page.includes("YantraAwakening.step"));
@@ -262,10 +270,10 @@ assert.ok(page.includes("awake.innerPetalAngle"));
 assert.ok(page.includes("reduce: reduceMotion"));
 assert.ok(page.includes("prefers-reduced-motion"));
 assert.ok(page.includes('lotus.figure !== "fire"'), "Manipura's triangle is not drawn");
+assert.ok(page.includes('lotus.figure !== "air"'), "Anahata's background mark is not drawn");
 assert.strictEqual(page.includes('figure === "fire"'), false, "the fire triangle stroke is gone");
-assert.ok(page.includes('figure === "air" && heart === "triangles"'), "Anahata's triangles stay behind the Triangles choice");
-assert.ok(page.includes('heart === "pentagram"'), "a pentagram can take the heart's place");
-assert.ok(page.includes('heart === "triangles" || heart === "pentagram"'), "off draws no heart mark");
+assert.strictEqual(page.includes("pentagram"), false, "the heart pentagram is gone");
+assert.strictEqual(page.includes('heart === "triangles"'), false);
 assert.ok(page.includes("circle(ctx, cx, cy, r * 0.94)"), "Ajna's circle stays");
 assert.ok(fs.readFileSync(path.join(__dirname, "../yantra.py"), "utf8").includes('"/web/awakening.js"'));
 
