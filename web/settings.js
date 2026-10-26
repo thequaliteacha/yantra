@@ -220,6 +220,12 @@
   }
 
   function set(key, value, store) {
+    /* The heart mark is no longer a setting. Drop a leftover and do not store a new one. */
+    if (key === "motion.heart") {
+      const kept = store || browserStore();
+      if (kept) migrate(kept);
+      return undefined;
+    }
     if (!KEY_RE.test(key)) return get(key, store);
     const kept = store || browserStore();
     const clean = known(key, value);

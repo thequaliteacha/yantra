@@ -231,6 +231,9 @@ S.migrate(marked);
 assert.strictEqual(marked.getItem("yantra.motion.heart"), null, "the loose heart key is dropped");
 assert.strictEqual(JSON.parse(marked.getItem(S.KEY))["motion.heart"], undefined, "a stored heart mark is dropped");
 assert.strictEqual(S.get("motion.heart", marked), undefined);
+assert.strictEqual(S.set("motion.heart", "triangles", marked), undefined, "a new heart mark is not stored");
+assert.strictEqual(JSON.parse(marked.getItem(S.KEY))["motion.heart"], undefined);
+assert.strictEqual(S.get("motion.heart", marked), undefined);
 
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 assert.ok(page.includes('src="/web/awakening.js"'));
