@@ -54,6 +54,6 @@ assert.ok(web.includes("yantraMusicOffer"));
 assert.ok(web.includes("noteUnlisted"));
 assert.strictEqual(web.includes("The music did not start here"), false);
 assert.ok(page.includes("offer.js"));
-assert.ok(fs.readFileSync(path.join(__dirname, "sw.js"), "utf8").includes("yantra-v5"));
+assert.ok(fs.readFileSync(path.join(__dirname, "sw.js"), "utf8").includes("yantra-v6"));
 
 console.log("offer.test.js ok");

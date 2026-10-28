@@ -18,6 +18,9 @@
   let links = {};
   let sets = null;
   let recordings = {};
+  let cachedIds = new Set();
+  let packState = {};
+  const offlineJobs = {};
   const config = { spotifyClientId: "", appleDeveloperToken: "", audioBase: "audio/" };
 
   const ready = Promise.all([
@@ -28,8 +31,13 @@
     realFetch("audio.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
     realFetch("/access", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
   ]).then(async ([discs, songs, settings, sessionSets, files, access]) => {
-    const level = (access && access.level) || "";
+    let level = access && (access.level === "zazen" || access.level === "sangha") ? access.level : "";
+    if (!level && window.YantraSettings) {
+      const saved = window.YantraSettings.get("access.level");
+      if (saved === "zazen" || saved === "sangha") level = saved;
+    }
     window.YANTRA_LEVEL = level;
+    if (level && window.YantraSettings) window.YantraSettings.set("access.level", level);
     window.yantraQuotes = [];
     window.yantraQuoteFile = null;
     if (level === "sangha") {
@@ -62,6 +70,8 @@
       if (talks && talks.ok) window.yantraTalks = await talks.json().catch(() => null);
     }
     if (typeof window.paintTalks === "function") window.paintTalks();
+    await refreshPacks();
+    try { paintOffline(); } catch (e) {}
   });
 
   /* ---- the shelf ---- */
@@ -951,6 +961,8 @@
       failed: playerDown,
       failedKeys: failedKeys,
       level: window.YANTRA_LEVEL || "",
+      offline: offlineNow(),
+      cachedAlbums: cachedIds,
     };
   }
 
@@ -959,6 +971,7 @@
     if (closedDisc(disc)) return false;
     return Playback.trackOffered({
       key: item.discId + "#" + item.n,
+      discId: item.discId,
       circle: disc.circle,
       hosted: !!recordingOf(item.discId, item.n),
       spotify: !!songKey(item, "spotify"),
@@ -1895,7 +1908,249 @@
   window.addEventListener("pagehide", rememberSit);
   setInterval(rememberSit, 15000);
 
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  function offlineNow() {
+    return typeof navigator !== "undefined" && navigator.onLine === false;
+  }
+
+  async function refreshPacks() {
+    const Offline = window.YantraOffline;
+    if (!Offline || !recordings || typeof location === "undefined") return;
+    try {
+      const found = await Offline.inventory(recordings, { origin: location.origin });
+      cachedIds = new Set(found.cachedAlbumIds || []);
+      const albums = found.albums || {};
+      Object.keys(albums).forEach((id) => {
+        const prev = packState[id] || {};
+        packState[id] = Object.assign({}, albums[id], {
+          busy: !!prev.busy,
+          error: !!prev.error && !albums[id].complete,
+        });
+      });
+    } catch (e) {}
+  }
+
+  function packInfo(id) {
+    const Offline = window.YantraOffline;
+    const paths = Offline ? Offline.albumPaths(recordings, id) : [];
+    const known = packState[id] || { have: 0, total: paths.length, bytes: 0, complete: cachedIds.has(id), busy: false, error: false };
+    if (!known.total) known.total = paths.length;
+    return known;
+  }
+
+  async function keepAlbum(id) {
+    const Offline = window.YantraOffline;
+    if (!Offline || !id || offlineNow() || offlineJobs[id]) return;
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    offlineJobs[id] = controller;
+    const paths = Offline.albumPaths(recordings, id);
+    packState[id] = Object.assign({ have: 0, total: paths.length, bytes: 0, complete: false }, packState[id], { busy: true, error: false, total: paths.length });
+    paintOffline();
+    try {
+      await Offline.storeAlbum(id, recordings, {
+        origin: location.origin,
+        signal: controller ? controller.signal : undefined,
+        onProgress: (progress) => {
+          packState[id] = {
+            have: progress.done,
+            total: progress.total,
+            bytes: progress.bytes,
+            complete: false,
+            busy: true,
+            error: false,
+          };
+          paintOffline();
+        },
+      });
+      await refreshPacks();
+      if (packState[id]) packState[id].busy = false;
+    } catch (err) {
+      await refreshPacks();
+      if (packState[id]) {
+        packState[id].busy = false;
+        if (!err || err.name !== "AbortError") packState[id].error = true;
+      }
+    }
+    delete offlineJobs[id];
+    paintOffline();
+    dispatchEvent(new Event("yantra:shelf"));
+  }
+
+  async function removeAlbum(id) {
+    const Offline = window.YantraOffline;
+    if (!Offline || !id) return;
+    if (offlineJobs[id]) offlineJobs[id].abort();
+    delete offlineJobs[id];
+    await Offline.removeAlbum(id, recordings, { origin: location.origin }).catch(() => {});
+    delete packState[id];
+    await refreshPacks();
+    paintOffline();
+    dispatchEvent(new Event("yantra:shelf"));
+  }
+
+  function renderPack(parent, id) {
+    const Offline = window.YantraOffline;
+    parent.replaceChildren();
+    if (!Offline) return;
+    const view = Offline.packView(packInfo(id), offlineNow());
+    if (view.detail) {
+      const detail = document.createElement("span");
+      detail.className = "offline-detail";
+      detail.textContent = view.detail;
+      parent.append(detail);
+    }
+    if (view.meter != null) {
+      const meter = document.createElement("span");
+      meter.className = "offline-meter";
+      meter.setAttribute("role", "progressbar");
+      meter.setAttribute("aria-valuenow", String(view.meter));
+      meter.setAttribute("aria-valuemin", "0");
+      meter.setAttribute("aria-valuemax", "100");
+      const bar = document.createElement("span");
+      bar.style.width = view.meter + "%";
+      meter.append(bar);
+      parent.append(meter);
+    }
+    const actions = document.createElement("span");
+    actions.className = "offline-actions";
+    const press = (label) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "quiet";
+      button.textContent = label;
+      button.addEventListener("click", () => {
+        if (label === "Stop" && offlineJobs[id]) offlineJobs[id].abort();
+        else if (label === "Remove") removeAlbum(id);
+        else keepAlbum(id);
+      });
+      actions.append(button);
+    };
+    if (view.action) press(view.action);
+    if (view.secondary) press(view.secondary);
+    if (actions.childNodes.length) parent.append(actions);
+  }
+
+  function keepableDiscs() {
+    const Offline = window.YantraOffline;
+    if (!Offline || !collection) return [];
+    return (collection.discs || []).filter((disc) => Offline.albumPaths(recordings, disc.id).length > 0);
+  }
+
+  function ensureOfflineUI() {
+    const fold = document.querySelector("#account-settings .fold-body");
+    if (fold && !document.getElementById("offline-albums-block")) {
+      const block = document.createElement("div");
+      block.id = "offline-albums-block";
+      const title = document.createElement("h3");
+      title.textContent = "For a flight";
+      const lead = document.createElement("p");
+      lead.id = "offline-lead";
+      const list = document.createElement("div");
+      list.id = "offline-albums";
+      block.append(title, lead, list);
+      const spotify = fold.querySelector("h3");
+      if (spotify) fold.insertBefore(block, spotify);
+      else fold.append(block);
+    }
+    const face = document.getElementById("album-face");
+    if (face && !document.getElementById("offline-pack")) {
+      const pack = document.createElement("div");
+      pack.id = "offline-pack";
+      pack.hidden = true;
+      const actions = face.querySelector(".actions");
+      if (actions && actions.insertAdjacentElement) actions.insertAdjacentElement("afterend", pack);
+      else face.append(pack);
+    }
+  }
+
+  function paintOfflineAlbums() {
+    ensureOfflineUI();
+    const list = document.getElementById("offline-albums");
+    const lead = document.getElementById("offline-lead");
+    if (!list) return;
+    if (lead) {
+      lead.textContent = offlineNow()
+        ? "Offline. Kept albums can play. Spotify does not. Connect to keep another."
+        : "Keep an album on this device before a flight. The first visit needs the network. A sit can play from this phone after that. Spotify does not play offline.";
+    }
+    list.replaceChildren();
+    const discs = keepableDiscs().slice().sort((a, b) => {
+      const circles = (collection.circles || []).map((circle) => circle.id);
+      const ai = circles.indexOf(a.circle);
+      const bi = circles.indexOf(b.circle);
+      const order = (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+      if (order) return order;
+      return String(a.title).localeCompare(String(b.title));
+    });
+    const several = new Set(discs.map((disc) => disc.circle)).size > 1;
+    let circle = "";
+    discs.forEach((disc) => {
+      if (several && disc.circle !== circle) {
+        circle = disc.circle;
+        const named = (collection.circles || []).find((item) => item.id === circle);
+        if (named) {
+          const label = document.createElement("p");
+          label.className = "offline-circle";
+          label.textContent = named.name;
+          list.append(label);
+        }
+      }
+      const row = document.createElement("div");
+      row.className = "offline-row";
+      const title = document.createElement("span");
+      title.className = "offline-title";
+      title.textContent = disc.title;
+      const controls = document.createElement("span");
+      controls.className = "offline-controls";
+      renderPack(controls, disc.id);
+      row.append(title, controls);
+      list.append(row);
+    });
+  }
+
+  function paintOfflineAlbum() {
+    ensureOfflineUI();
+    const pack = document.getElementById("offline-pack");
+    if (!pack) return;
+    const selected = document.querySelector("#discs button.on");
+    const id = selected && selected.dataset.id;
+    const Offline = window.YantraOffline;
+    if (!id || !Offline || !Offline.albumPaths(recordings, id).length) {
+      pack.hidden = true;
+      pack.replaceChildren();
+      return;
+    }
+    pack.hidden = false;
+    renderPack(pack, id);
+  }
+
+  function paintOffline() {
+    paintOfflineAlbums();
+    paintOfflineAlbum();
+  }
+
+  window.paintOfflineAlbum = paintOfflineAlbum;
+  window.paintOfflineAlbums = paintOfflineAlbums;
+  window.addEventListener("offline", () => {
+    paintOffline();
+    dispatchEvent(new Event("yantra:shelf"));
+  });
+  window.addEventListener("online", () => {
+    paintOffline();
+    dispatchEvent(new Event("yantra:shelf"));
+  });
+  if (window.paintAccount) {
+    const paintAccount = window.paintAccount;
+    window.paintAccount = function () {
+      paintAccount();
+      paintOfflineAlbums();
+    };
+  }
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/web/sw.js", { scope: "/" }).catch(() => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
 
   function sit(on) {
     const root = document.documentElement;
@@ -1985,6 +2240,22 @@
     "#music-offer [data-keep] { display: block; margin: 0 auto 0.95rem; padding: 0.55rem 0.95rem;",
     "  letter-spacing: 0.1em; }",
     "#music-offer [data-keep][hidden] { display: none; }",
+    "#offline-albums-block { margin: 0 0 1.5rem; }",
+    "#offline-lead { color: rgba(232, 204, 146, 0.62); font-size: 0.92rem; line-height: 1.55; margin: 0.2rem 0 0.85rem; padding-right: 2.6rem; }",
+    ".offline-circle { margin: 0.9rem 0 0.15rem; letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.72rem; color: rgba(232, 204, 146, 0.45); }",
+    ".offline-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; align-items: baseline;",
+    "  padding: 0.45rem 0; border-top: 1px solid rgba(230, 201, 138, 0.12); color: rgba(243, 230, 200, 0.78); }",
+    ".offline-title { color: rgba(247, 237, 212, 0.9); }",
+    ".offline-detail { color: rgba(232, 204, 146, 0.55); font-size: 0.86rem; }",
+    ".offline-controls, #offline-pack { display: flex; flex-wrap: wrap; gap: 0.3rem 0.85rem; align-items: baseline; }",
+    ".offline-actions { display: inline-flex; gap: 0.9rem; }",
+    ".offline-actions button, #offline-pack button { background: transparent; border: 0; font: inherit; cursor: pointer;",
+    "  padding: 0.15rem 0; color: rgba(232, 204, 146, 0.72); text-decoration: underline; text-underline-offset: 0.22em; font-size: 0.9rem; }",
+    ".offline-actions button:hover, #offline-pack button:hover { color: #f7edd4; }",
+    "#offline-pack { margin: 0.55rem 0 0; color: rgba(232, 204, 146, 0.62); font-size: 0.9rem; }",
+    "#offline-pack[hidden] { display: none; }",
+    ".offline-meter { display: block; flex-basis: 100%; height: 2px; margin: 0.15rem 0; background: rgba(230, 201, 138, 0.12); }",
+    ".offline-meter > span { display: block; height: 100%; background: rgba(230, 201, 138, 0.5); }",
   ].join("\n");
   document.head.appendChild(style);
 })();

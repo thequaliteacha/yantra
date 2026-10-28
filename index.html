@@ -2312,6 +2312,7 @@ function renderShelf() {
     tracks.append(li);
   }
   paintActions();
+  if (window.paintOfflineAlbum) window.paintOfflineAlbum();
 }
 
 function chakraLabel(id) {

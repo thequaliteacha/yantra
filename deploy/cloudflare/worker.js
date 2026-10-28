@@ -7,7 +7,8 @@ import { sanitizeSchedule } from "../../web/schedule.js";
  *
  * The page, discs.json and web/ are static assets. Requests under /web/audio/
  * stream the sangha's mp3s from the private R2 bucket, with byte ranges so the
- * player can seek.
+ * player can seek. The service worker at /web/sw.js is allowed to control the
+ * whole origin so an offline sit can reuse the shell it already loaded.
  *
  * No accounts: a listener types the sangha word once, and the phone keeps a
  * signed cookie for a year. SANGHA_WORD opens Vayu meditations only. ZAZEN_WORD,
@@ -130,12 +131,26 @@ export async function route(request, env) {
     if (url.pathname.startsWith(PREFIX)) return recording(request, env, url, level);
     // The web loader fetches ../index.html. Assets would redirect that to "/", which
     // points back at the loader, so serve the page itself.
+    if (url.pathname === "/web/sw.js" && (request.method === "GET" || request.method === "HEAD")) {
+      return serviceWorkerScript(request, env);
+    }
     if (url.pathname === "/index.html") return env.ASSETS.fetch(new Request(new URL("/", url), request));
     return env.ASSETS.fetch(request);
   }
 }
 
 /* ---- What each listener sees ---- */
+
+/* Scope "/" lets the worker cache /index.html, /discs.json, and /access.
+   The script itself stays behind the word gate. no-cache so a new shell
+   name reaches the phone on the next online open. */
+async function serviceWorkerScript(request, env) {
+  const response = await env.ASSETS.fetch(request);
+  const headers = new Headers(response.headers);
+  headers.set("service-worker-allowed", "/");
+  headers.set("cache-control", "no-cache");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 
 async function loadDiscs(request, env) {
   return (await env.ASSETS.fetch(new Request(new URL("/discs.json", request.url)))).json();

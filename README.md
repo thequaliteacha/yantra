@@ -80,6 +80,16 @@ skipped after a few seconds, and that song is left off the lists for the rest
 of the visit. The next song that can play starts on its own. When a section or
 the mix has nothing left that can play, that section or mix is not shown.
 
+A plane sit needs one visit on the network first. That visit saves the app.
+In Settings, under *For a flight*, or on a self-hosted album, *Keep offline*
+stores that album's recordings on the phone. The line shows progress and the
+size, and *Remove* deletes them. After that, morning and evening sits, the
+yantra, and the practice record work with the connection off, for albums that
+were kept in full. Spotify cannot play offline, so those albums leave the
+shelf, as does any self-hosted album that is not fully kept. The sangha word
+still opens only Vayu. The Zazen word still opens the rest, including
+Lumikara. Talks and quotes are not kept for the plane.
+
 Each listener's forms are their own. On the web they are kept in that browser
 under the listener's Spotify account, and every saved form also becomes a
 private playlist in the listener's own Spotify library, named "Yantra · " and

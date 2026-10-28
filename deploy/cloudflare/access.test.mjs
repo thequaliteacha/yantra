@@ -205,4 +205,10 @@ assert.strictEqual(access.level, "sangha");
 const accessZazen = await (await route(withCookie("https://yantramedi.app/access", zazen), env)).json();
 assert.strictEqual(accessZazen.level, "zazen");
 
+const script = await route(withCookie("https://yantramedi.app/web/sw.js", zazen), env);
+assert.strictEqual(script.headers.get("service-worker-allowed"), "/");
+assert.strictEqual(script.headers.get("cache-control"), "no-cache");
+const anonScript = await route(new Request("https://yantramedi.app/web/sw.js"), env);
+assert.strictEqual(anonScript.status, 401, "the service worker stays behind the word gate");
+
 console.log("access.test.mjs ok");

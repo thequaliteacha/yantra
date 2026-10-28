@@ -252,4 +252,32 @@ const quotes = Array.isArray(quoteFile) ? quoteFile : quoteFile.quotes;
 assert.ok(quotes.some((row) => row.text.includes("You decide to be happy") && row.href.includes("/balance/")));
 assert.ok(quotes.every((row) => row.by === "Rama" && row.href && row.talk && row.text));
 
+const plane = Object.assign({}, desktop, { offline: true, level: "zazen", cachedAlbums: { samurai: true } });
+assert.strictEqual(P.trackOffered(samurai, plane), true, "a fully kept album still plays on a plane");
+assert.strictEqual(P.trackOffered(maha, plane), false, "Spotify stays off the shelf offline");
+assert.strictEqual(P.trackOffered(asTrack(discById("tantra"), 1), plane), false, "a hosted album that was not kept is left off");
+assert.strictEqual(P.trackOffered(gems, Object.assign({}, plane, { level: "zazen" })), false, "Lumikara on Spotify is not offered offline");
+const planeShelf = P.filterDiscs(catalog, plane);
+assert.deepStrictEqual(planeShelf.map((disc) => disc.id), ["samurai"]);
+assert.ok(!planeShelf.some((disc) => disc.id === "big-island"), "a partial download is not a shelf");
+assert.ok(!planeShelf.some((disc) => disc.id === "india-dream"));
+assert.deepStrictEqual(P.visibleCircles(circles, planeShelf).map((circle) => circle.id), ["zazen"]);
+
+const sanghaPlane = Object.assign({}, phone, { offline: true, level: "sangha", cachedAlbums: new Set(["napa", "samurai"]) });
+const sanghaPlaneShelf = P.filterDiscs(catalog, sanghaPlane);
+assert.deepStrictEqual(sanghaPlaneShelf.map((disc) => disc.id), ["napa"]);
+assert.ok(sanghaPlaneShelf.every((disc) => disc.circle === "vayu"));
+assert.deepStrictEqual(P.visibleCircles(circles, sanghaPlaneShelf).map((circle) => circle.id), ["vayu"]);
+
+const keptIsland = P.filterDiscs(catalog, Object.assign({}, phone, { offline: true, level: "sangha", cachedAlbums: { "big-island": true } }));
+const kept = keptIsland.find((disc) => disc.id === "big-island");
+assert.ok(kept, "a fully kept Vayu album stays for the sangha word");
+assert.ok(kept.tracks.some((track) => track.n === 1));
+assert.ok(!kept.tracks.some((track) => track.title === "Ocean Sunset"), "the song with no file is removed, not greyed");
+assert.ok(!keptIsland.some((disc) => disc.circle !== "vayu"));
+
+const failedPlane = P.filterDiscs(catalog, Object.assign({}, plane, { failedKeys: { "samurai#1": true } })).find((disc) => disc.id === "samurai");
+assert.ok(failedPlane && failedPlane.tracks.length > 0);
+assert.ok(!failedPlane.tracks.some((track) => track.n === 1));
+
 console.log("playback.test.js ok");
