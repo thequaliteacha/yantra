@@ -292,6 +292,9 @@
       await window.YantraSync.unlink({ force: true }).catch(() => {});
     }
     await forgetPush();
+    if (window.YantraOffline && window.YantraOffline.clearKept) {
+      await window.YantraOffline.clearKept().catch(() => {});
+    }
     const api = profile();
     if (api) {
       api.clearYantra(localStorage);

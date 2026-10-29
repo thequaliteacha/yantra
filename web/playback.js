@@ -1,6 +1,8 @@
 /* What can actually play on this device, and when a sit should give up on a song.
    Hosted mp3s play in the page. Spotify plays only where its in-page player is
-   supported and the account is connected. Anything else is left off the shelf.
+   supported and the account is connected. Offline, Spotify is hidden, and a
+   self-hosted album is shown only when every one of its recordings is kept
+   on the device. Anything else is left off the shelf.
    A song that never starts is skipped, then left off the lists for the rest of the visit.
    The Sangha word sees only Vayu. Lumikara is for the Zazen word only.
    Hidden by access stays hidden. */
@@ -36,15 +38,26 @@
     return circle !== LUMAKARA || level === "zazen";
   }
 
-  function trackOffered(track, session) {
-    if (!track) return false;
-    if (!circleOpen(track.circle, session && session.level)) return false;
-    const key = trackKey(track);
-    if (key && session && session.failedKeys && session.failedKeys[key]) return false;
-    if (track.hosted) return true;
-    if (track.spotify && spotifyUsable(session)) return true;
-    return false;
-  }
+function albumCached(track, session) {
+  const cached = session && session.cachedAlbums;
+  if (!cached || !track) return false;
+  const id = track.discId || String(track.key || "").split("#")[0];
+  if (!id) return false;
+  if (typeof cached.has === "function") return cached.has(id);
+  if (Array.isArray(cached)) return cached.indexOf(id) >= 0;
+  return !!cached[id];
+}
+
+function trackOffered(track, session) {
+  if (!track) return false;
+  if (!circleOpen(track.circle, session && session.level)) return false;
+  const key = trackKey(track);
+  if (key && session && session.failedKeys && session.failedKeys[key]) return false;
+  if (session && session.offline) return !!(track.hosted && albumCached(track, session));
+  if (track.hosted) return true;
+  if (track.spotify && spotifyUsable(session)) return true;
+  return false;
+}
 
   function filterTracks(tracks, session) {
     return (tracks || []).filter((track) => trackOffered(track, session));
@@ -54,10 +67,10 @@
     const out = [];
     for (const disc of discs || []) {
       if (!disc || !circleOpen(disc.circle, session && session.level)) continue;
-      const tracks = (disc.tracks || []).filter((track) => trackOffered(
-        Object.assign({ circle: disc.circle }, track),
-        session,
-      ));
+const tracks = (disc.tracks || []).filter((track) => trackOffered(
+      Object.assign({ circle: disc.circle, discId: disc.id }, track),
+      session,
+    ));
       if (!tracks.length) continue;
       out.push(Object.assign({}, disc, { tracks: tracks }));
     }
