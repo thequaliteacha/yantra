@@ -150,6 +150,57 @@ const tracks = (disc.tracks || []).filter((track) => trackOffered(
     return -1;
   }
 
+  /* The same recording or Spotify track, whether one side is a relative
+     path and the other is the absolute address the player reports. */
+  function sameSource(intended, actual) {
+    const want = String(intended || "").trim();
+    const heard = String(actual || "").trim();
+    if (!want || !heard) return false;
+    if (want === heard) return true;
+    const idOf = (value) => {
+      const uri = value.match(/spotify:track:([A-Za-z0-9]+)/);
+      if (uri) return uri[1];
+      const link = value.match(/\/track\/([A-Za-z0-9]+)/);
+      return link ? link[1] : "";
+    };
+    const wantId = idOf(want);
+    const heardId = idOf(heard);
+    if (wantId || heardId) return !!wantId && wantId === heardId;
+    const pathOf = (value) => {
+      const cut = value.split("?")[0].split("#")[0];
+      if (/^https?:/i.test(cut)) {
+        try { return decodeURIComponent(new URL(cut).pathname); } catch (e) { return cut; }
+      }
+      return cut.charAt(0) === "/" ? cut : "/" + cut.replace(/^\.?\//, "");
+    };
+    const a = pathOf(want);
+    const b = pathOf(heard);
+    return a === b || a.endsWith(b) || b.endsWith(a);
+  }
+
+  /* What the player is doing relative to the sit that should be starting.
+     open: the first planned track. later: another track of this sit.
+     foreign: a leftover from some other album. wait: nothing reported yet. */
+  function openingVerdict(actual, intendedKeys) {
+    const heard = String(actual || "").trim();
+    const keys = (intendedKeys || []).filter(Boolean);
+    if (!heard || !keys.length) return "wait";
+    if (sameSource(keys[0], heard)) return "open";
+    if (keys.some((key) => sameSource(key, heard))) return "later";
+    return "foreign";
+  }
+
+  /* A new queue always starts at its first track. An offset already chosen
+     by the caller is kept. expect/allow are local and must not reach Spotify. */
+  function primeQueue(body) {
+    if (!body || typeof body !== "object") return {};
+    const next = Object.assign({}, body);
+    delete next.expect;
+    delete next.allow;
+    if (!next.offset && (next.uris || next.context_uri)) next.offset = { position: 0 };
+    return next;
+  }
+
   const api = {
     LUMAKARA: LUMAKARA,
     STALL_MS: STALL_MS,
@@ -165,6 +216,9 @@ const tracks = (disc.tracks || []).filter((track) => trackOffered(
     presentState: presentState,
     calmLine: calmLine,
     nextPlayable: nextPlayable,
+    sameSource: sameSource,
+    openingVerdict: openingVerdict,
+    primeQueue: primeQueue,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.YantraPlayback = api;

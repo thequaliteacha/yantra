@@ -730,6 +730,62 @@
       const usable = devices.filter((device) => !device.is_restricted && device.name !== "Yantra");
       return usable.find((device) => device.type === "Smartphone") || usable.find((device) => device.is_active) || usable[0] || null;
     },
+    chain: Promise.resolve(),
+    /* Pause and play share one queue, so a pause from the sit that just ended
+       cannot arrive after the next sit has already started. */
+    enqueue(job) {
+      const run = this.chain.then(() => job(), () => job());
+      this.chain = run.then(() => {}, () => {});
+      return run;
+    },
+    async volume(level) {
+      if (this.player && this.player.setVolume) {
+        try { await this.player.setVolume(level); } catch (e) {}
+      }
+    },
+    /* Stop whatever the player still has armed, and keep it silent until the
+       sit's own first track is the one sounding. A paused Web Playback SDK
+       otherwise resumes the previous album on the next tap. */
+    async quietDevice() {
+      if (this.player && this.player.setVolume) {
+        try { await this.player.setVolume(0); } catch (e) {}
+      }
+      if (this.player && this.player.pause) {
+        try { await this.player.pause(); } catch (e) {}
+      }
+      await this.pause();
+      return true;
+    },
+    async confirmHeard(expect, allow, payload) {
+      const keys = allow && allow.length ? allow : [expect];
+      let replayed = false;
+      let stray = false;
+      for (let i = 0; i < 8; i += 1) {
+        const state = await this.state();
+        const verdict = Playback.openingVerdict(state && state.key, keys);
+        if (verdict === "open") {
+          await this.volume(0.8);
+          return true;
+        }
+        if (verdict === "foreign" || verdict === "later") {
+          stray = true;
+          if (!replayed && i >= 1) {
+            replayed = true;
+            await this.quietDevice();
+            const again = await this.enqueue(() => this.sendPlay(payload));
+            if (!again) break;
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      if (stray) {
+        await this.quietDevice();
+        this.lastFailure = "failed";
+        return false;
+      }
+      await this.volume(0.8);
+      return true;
+    },
     async play(body) {
       this.elsewhere = "";
       this.lastFailure = "";
@@ -741,6 +797,19 @@
         this.lastFailure = "sdk";
         return false;
       }
+      const expect = body && body.expect ? String(body.expect) : "";
+      const allow = body && Array.isArray(body.allow) ? body.allow.filter(Boolean) : [];
+      const payload = Playback.primeQueue(body);
+      await this.quietDevice();
+      const opened = await this.enqueue(() => this.sendPlay(payload));
+      if (!opened) return false;
+      if (!expect) {
+        await this.volume(0.8);
+        return true;
+      }
+      return this.confirmHeard(expect, allow.length ? allow : [expect], payload);
+    },
+    async sendPlay(body) {
       // Phones cannot host the in-page player. Never register it there: that device
       // accepts play() and then sits at position 0 with no sound. Use a real
       // Spotify app that is already open, the phone first.
@@ -770,8 +839,8 @@
         this.deviceId = pick.id;
         this.elsewhere = pick.name;
         const device = "&" + target.slice(1);
-        this.api("PUT", "/me/player/shuffle?state=false" + device);
-        this.api("PUT", "/me/player/repeat?state=off" + device);
+        await this.api("PUT", "/me/player/shuffle?state=false" + device);
+        await this.api("PUT", "/me/player/repeat?state=off" + device);
         return true;
       }
       // A tap soon after the page opens can come before the in-page player is ready.
@@ -818,8 +887,8 @@
         return false;
       }
       const device = target ? "&" + target.slice(1) : "";
-      this.api("PUT", "/me/player/shuffle?state=false" + device);
-      this.api("PUT", "/me/player/repeat?state=off" + device);
+      await this.api("PUT", "/me/player/shuffle?state=false" + device);
+      await this.api("PUT", "/me/player/repeat?state=off" + device);
       return true;
     },
     async state() {
@@ -834,7 +903,10 @@
         playing: !!data.is_playing,
       };
     },
-    pause() { this.api("PUT", "/me/player/pause" + (this.deviceId ? "?device_id=" + this.deviceId : "")); },
+    pause() {
+      const url = "/me/player/pause" + (this.deviceId ? "?device_id=" + this.deviceId : "");
+      return this.enqueue(() => this.api("PUT", url));
+    },
   };
 
   const apple = {
@@ -912,6 +984,7 @@
         this.audio = new Audio();
         this.audio.preload = "auto";
         this.audio.addEventListener("ended", () => {
+          if (this.switching) return;
           const next = this.index + 1;
           if (next >= this.keys.length) return;
           this.start(next).then((ok) => {
@@ -925,13 +998,50 @@
       }
       return this.audio;
     },
+    /* Drop a file the element still has loaded. play() on a paused element
+       otherwise resumes that file, which is how a previous album starts a new sit. */
+    detach() {
+      const audio = this.audio;
+      if (!audio) return;
+      this.switching = true;
+      this.index = -1;
+      this.keys = [];
+      audio.pause();
+      audio.removeAttribute("src");
+      try { audio.load(); } catch (e) {}
+      this.switching = false;
+    },
     start(index) {
       const audio = this.element();
-      this.index = index;
+      const next = this.keys[index];
+      if (!next) return Promise.resolve(false);
       const token = ++this.token;
-      audio.src = this.keys[index];
-      studyRecording(this.keys[index]);
-      return audio.play().then(() => this.token === token, () => false);
+      this.switching = true;
+      const heard = audio.currentSrc || "";
+      if (heard && !Playback.sameSource(next, heard)) {
+        audio.pause();
+        audio.removeAttribute("src");
+        try { audio.load(); } catch (e) {}
+      }
+      this.index = index;
+      audio.src = next;
+      studyRecording(next);
+      let played;
+      try { played = audio.play(); } catch (e) { played = Promise.reject(e); }
+      return Promise.resolve(played).then(() => {
+        this.switching = false;
+        if (this.token !== token) return false;
+        const now = audio.currentSrc || "";
+        const armed = now || audio.getAttribute("src") || audio.src || "";
+        if (!Playback.sameSource(next, armed)) {
+          audio.pause();
+          return false;
+        }
+        return true;
+      }, () => {
+        this.switching = false;
+        return false;
+      });
     },
     play(keys) {
       this.keys = keys.slice();
@@ -939,9 +1049,11 @@
     },
     state() {
       const audio = this.audio;
-      if (!audio || this.index < 0) return null;
+      if (!audio || this.index < 0 || this.switching) return null;
+      const key = audio.currentSrc || audio.getAttribute("src") || "";
+      if (!key) return null;
       return {
-        key: this.keys[this.index],
+        key: key,
         position: audio.currentTime || 0,
         length: Number.isFinite(audio.duration) ? audio.duration : 0,
         playing: !audio.paused && !audio.ended,
@@ -1026,7 +1138,9 @@
   }
 
   function liveStop(pause) {
-    if (live.service && pause) services[live.service].pause();
+    const service = live.service;
+    if (service && pause) services[service].pause();
+    if (service === "recordings") recorded.detach();
     clearInterval(live.timer);
     clearTimeout(live.endTimer);
     live.endTimer = 0;
@@ -1105,7 +1219,7 @@
             const uri = songKey(live.items[i], "spotify");
             if (uri) uris.push(uri);
           }
-          ok = uris.length > 0 && await spotify.play({ uris });
+          ok = uris.length > 0 && await spotify.play({ uris, expect: uris[0], allow: uris });
           if (!ok) {
             if (spotify.lastFailure === "sdk" || spotify.sdkFailed) spotify.sessionFailed = true;
             giveUp(Playback.calmLine(false));
@@ -1130,8 +1244,14 @@
     const state = await services[live.service].state();
     if (!live.service || !state) return;
     noteListening(!!state.playing, { discId: state.key, n: "" }, state.position, state.key);
-    const index = live.keys.indexOf(state.key);
+    const index = live.keys.findIndex((key) => Playback.sameSource(key, state.key));
     if (index < 0) {
+      // A leftover track is still armed. Stop it. The sit has not started on it.
+      if (!live.seen && Playback.openingVerdict(state.key, live.keys) === "foreign") {
+        services[live.service].pause();
+        if (live.service === "recordings") recorded.detach();
+        return;
+      }
       // The list has finished and the service went on to something else.
       if (live.seen) {
         services[live.service].pause();
@@ -1300,16 +1420,62 @@
 
   /* Starts the list in the page. Resolves true only once sound is actually going,
      so a sit is never opened on a player that stayed silent. */
+  function spotifyQueue(extra) {
+    return Object.assign({}, extra, { expect: live.keys[0] || "", allow: live.keys.slice() });
+  }
+
+  /* The caption follows the sit that was asked for, before any player reports
+     a leftover track from the previous album. */
+  function showOpening() {
+    const item = live.items && live.items[0];
+    const disc = item && DISCS[item.discId];
+    const track = disc && disc.tracks.find((row) => row.n === item.n);
+    if (!disc || !track) return;
+    Object.assign(NOW, {
+      connected: true,
+      status: "Starting",
+      moving: false,
+      notice: "",
+      title: track.title,
+      artist: disc.artist,
+      album: disc.title,
+      track: item.n,
+      length: track.length || 0,
+      position: 0,
+      discId: disc.id,
+      allowed: true,
+      source: live.service,
+      form: live.form ? live.name : "",
+      formIndex: 0,
+      formTotal: live.form ? live.items.length : 0,
+      chakra: live.form ? ((live.chakras && live.chakras[0]) || chakraOf(disc, item.n)) : "",
+      formPlan: live.form ? planOf(live.items) : [],
+    });
+  }
+
+  /* Starts the list in the page. Resolves true only once sound is actually going,
+     so a sit is never opened on a player that stayed silent. */
   async function liveStart(name, items, prefer, form, albumOptions, formId, chakras) {
     const service = serviceFor(items, prefer);
     if (!service) return false;
+    // The previous file and the Spotify device are both disarmed before the new
+    // queue. Otherwise play() resumes whichever album was left armed.
+    recorded.detach();
     liveStop(true);
+    // A hosted sit must quiet Spotify too. The Spotify path pauses inside play(),
+    // on the same queue as that play, so the pause cannot land after the new tracks.
+    if (service !== "spotify") spotify.quietDevice();
     stopQueue();
     Object.assign(live, {
       service, name, items, keys: items.map((item) => songKey(item, service)), seen: false, form,
       chakras: chakras || null, lastHeard: false,
     });
-    // Unlocks audio for the in-page player; it has to run inside the tap.
+    showOpening();
+    // Unlocks audio for the in-page player. Volume stays down until that player's
+    // queue is the sit itself, so the unlock cannot sound the previous track.
+    if (service === "spotify" && spotify.player && spotify.player.setVolume) {
+      try { spotify.player.setVolume(0); } catch (e) {}
+    }
     if (service === "spotify" && spotify.player && spotify.player.activateElement) spotify.player.activateElement();
     let started;
     if (service === "recordings") {
@@ -1337,13 +1503,14 @@
         }
       })();
     } else if (service === "spotify" && albumOptions && albumOptions.spotify) {
-      started = spotify.play(albumOptions.spotify);
+      started = spotify.play(spotifyQueue(albumOptions.spotify));
     } else if (service === "spotify") {
       // A saved form plays from its own private Spotify playlist, so the songs keep
       // going in order on Spotify even if this page is closed or the phone sleeps.
       started = (async () => {
         const playlist = formId ? await syncPlaylist({ id: formId, name, items }).catch(() => "") : "";
-        return spotify.play(playlist ? { context_uri: "spotify:playlist:" + playlist } : { uris: live.keys });
+        const queueBody = playlist ? { context_uri: "spotify:playlist:" + playlist } : { uris: live.keys };
+        return spotify.play(spotifyQueue(queueBody));
       })();
     } else {
       started = apple.play(albumOptions && albumOptions.apple ? albumOptions.apple : { songs: live.keys });
