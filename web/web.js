@@ -1883,9 +1883,36 @@
       lock.addEventListener("release", () => { if (screenLock === lock) screenLock = null; });
     }).catch(() => {});
   }
-  window.yantraHold = function () {
+  /* An installed app, or a Chromium --app window, already has its own frame.
+     display-mode fullscreen is the manifest; standalone is that app window or
+     an iPad home screen. Ending a sit steps a browser tab back out of
+     fullscreen and leaves the app window as it is. */
+  function appDisplay() {
+    try {
+      if (navigator.standalone === true) return true;
+      const mq = window.matchMedia;
+      if (!mq) return false;
+      return mq("(display-mode: fullscreen)").matches
+        || mq("(display-mode: standalone)").matches
+        || mq("(display-mode: minimal-ui)").matches
+        || mq("(display-mode: window-controls-overlay)").matches;
+    } catch (e) {
+      return false;
+    }
+  }
+  function enterFullscreen() {
+    try {
+      if (window.matchMedia("(display-mode: fullscreen)").matches) return;
+    } catch (e) {}
     const root = document.documentElement;
     if (!document.fullscreenElement && root.requestFullscreen) root.requestFullscreen().catch(() => {});
+  }
+  function leaveFullscreen() {
+    if (appDisplay()) return;
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  }
+  window.yantraHold = function () {
+    enterFullscreen();
     holdScreen(true);
   };
   document.addEventListener("visibilitychange", () => {
@@ -1898,17 +1925,16 @@
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
   function sit(on) {
-    const root = document.documentElement;
     holdScreen(on);
     if (on) {
       listening.begin(sitTheme);
-      if (!document.fullscreenElement && root.requestFullscreen) root.requestFullscreen().catch(() => {});
+      enterFullscreen();
     } else {
       if (Practice) Practice.commit(listening.end());
       sitTheme = "";
       liveStop(true);
       stopQueue();
-      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      leaveFullscreen();
     }
     return [{ ok: true, sitting: on }];
   }
