@@ -2112,7 +2112,8 @@ const capPlace = document.getElementById("cap-place");
 const capFill = document.getElementById("cap-fill");
 
 let collection = null;
-let selectedId = "samurai";
+/* Nothing is armed until the shelf or a sit names an album. */
+let selectedId = "";
 let circleId = "zazen";
 let following = true;
 let heardId = "";
@@ -3075,7 +3076,11 @@ if (window.YANTRA_WEB) {
     });
   });
   document.querySelectorAll("#pick [data-count]").forEach((button) => {
-    button.addEventListener("click", () => playSession(sessionTheme, Number(button.dataset.count)));
+    button.addEventListener("click", () => {
+      const picked = document.getElementById("pick-album");
+      // The control on screen wins. An empty choice is a new album, never the shelf highlight.
+      playSession(sessionTheme, Number(button.dataset.count), { album: picked ? picked.value : "" });
+    });
   });
   document.getElementById("pick-album").addEventListener("change", (event) => {
     pickAlbum = event.target.value;
