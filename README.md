@@ -197,8 +197,10 @@ audio files and the silenced notifications belong to the desktop app.
 
 Open the link and add Yantra to the home screen: on Android, Chrome's menu ›
 *Add to Home screen* (or *Install app*); on iPhone, Safari's Share › *Add to
-Home Screen*. It then opens full screen like an app, keeps the screen awake
-during a sitting, and a tap shows *End sitting*. The in-page Spotify player
+Home Screen*. The installed app asks for fullscreen. Android and a Chromium
+install open fullscreen. iPhone and iPad draw edge to edge under the clock;
+Safari keeps that bar. A sitting keeps the screen awake, and a tap shows *End
+sitting*. The in-page Spotify player
 cannot play on a phone, so sits use the hosted recordings. Spotify plays only
 when the Spotify app is already available. A song that never starts is skipped.
 
@@ -246,7 +248,13 @@ python3 yantra.py
 
 This opens the yantra in a Chromium window at `http://127.0.0.1:8765`. It needs
 Python 3 and Chromium, plus the Spotify desktop app, or `mpv` for
-your own files. There are no Python packages to install.
+your own files. There are no Python packages to install. On Hyprland that
+window is class `yantra`, and the script asks Hyprland to open it fullscreen.
+
+Super+Shift+Y on Omarchy is a different door. It runs `~/.local/bin/yantra-sit`
+and opens https://yantramedi.app/web/ rather than the local server. The launcher
+and the Hyprland rule live in `deploy/omarchy/`. Copy the script over the one
+already bound to that chord.
 
 ## Files
 
@@ -258,3 +266,4 @@ your own files. There are no Python packages to install.
 | `playlists.json` | The desktop app's saved forms (kept on your computer, not in this repo) |
 | `web/` | The browser edition: loads `index.html` and answers in place of `yantra.py`; `tracks.json` holds each song's direct link (rebuild with `python3 web/build_tracks.py`), and `audio.json` lists the recordings |
 | `deploy/cloudflare/` | The Worker behind yantramedi.app, plus scripts to build, upload recordings and save the API token |
+| `deploy/omarchy/yantra-sit` | Omarchy launcher for Super+Shift+Y: the site, fullscreen under Hyprland |

@@ -1,0 +1,91 @@
+#!/bin/sh
+# Open https://yantramedi.app/web/ as a Chromium or Brave app window and ask
+# Hyprland to fullscreen it. Super+Shift+Y on Omarchy runs this script from
+# ~/.local/bin/yantra-sit. It does not start yantra.py.
+#
+# Chromium drops --start-fullscreen on Wayland, and --class is ignored once a
+# browser is already running. The window class comes from the app URL. For the
+# Default profile that class is:
+#
+#   chrome-yantramedi.app__web-Default
+#
+# Chrome 156 on X11 reports the instance as yantramedi.app__web (the trailing
+# slash is dropped). Wayland adds the chrome- prefix and the -Default profile.
+# A build that keeps the slash as a final underscore still matches the rule.
+# Confirm after it opens: hyprctl clients
+# Read class and initialClass. Install notes: deploy/omarchy/README.md
+
+set -eu
+
+URL="https://yantramedi.app/web/"
+
+# host + "__" + path (slashes at the ends dropped, others become "_") + "-" + profile.
+# https://yantramedi.app/web/  →  chrome-yantramedi.app__web-Default
+# The pattern also covers Chromium, Chrome, and Brave, a leftover trailing
+# underscore, and a profile other than Default.
+CLASS='^(chrome|chromium|google-chrome|brave|brave-browser)-yantramedi\.app__web_?-'
+
+browser=""
+for candidate in chromium chromium-browser google-chrome google-chrome-stable brave brave-browser; do
+  if command -v "$candidate" >/dev/null 2>&1; then
+    browser=$candidate
+    break
+  fi
+done
+
+if [ -z "$browser" ]; then
+  printf '%s\n' "yantra-sit: install Chromium or Brave, then try again." >&2
+  exit 1
+fi
+
+if command -v hyprctl >/dev/null 2>&1; then
+  hyprctl eval '
+if yantra_sit_full == nil then
+  yantra_sit_full = hl.window_rule({
+    name = "yantra-sit-fullscreen",
+    match = { class = [['"$CLASS"']] },
+    fullscreen = true,
+  })
+end
+yantra_sit_full:set_enabled(true)
+' >/dev/null 2>&1 || true
+
+  # The rule is enough when it exists before the window maps. This asks once
+  # more if the window landed tiled. "set" does not toggle a window that is
+  # already fullscreen.
+  (
+    i=0
+    while [ "$i" -lt 8 ]; do
+      hyprctl eval '
+yantra_sit_seen = yantra_sit_seen or {}
+for _, w in ipairs(hl.get_windows()) do
+  local class = tostring(w.class or "")
+  if string.find(class, "yantramedi.app__web", 1, true) then
+    local address = "address:" .. tostring(w.address)
+    local mode = tonumber(w.fullscreen) or 0
+    local tries = yantra_sit_seen[address] or 0
+    if mode ~= 2 and tries < 1 then
+      yantra_sit_seen[address] = tries + 1
+      pcall(function()
+        hl.dispatch(hl.dsp.window.fullscreen({
+          mode = "fullscreen",
+          action = "set",
+          window = address,
+        }))
+      end)
+    end
+  end
+end
+' >/dev/null 2>&1 || true
+      i=$((i + 1))
+      sleep 0.4
+    done
+  ) >/dev/null 2>&1 &
+fi
+
+exec "$browser" \
+  --ozone-platform=wayland \
+  --app="$URL" \
+  --new-window \
+  --start-fullscreen \
+  --autoplay-policy=no-user-gesture-required
