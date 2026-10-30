@@ -88,6 +88,8 @@ assert.ok(page.includes("talks.hidden = !shown"));
 assert.ok(!/Rama|Frederick Lenz/.test(page), "the shared page carries no Rama text for the Sangha word");
 assert.ok(page.includes('window.YANTRA_LEVEL !== "zazen"'));
 assert.ok(loader.includes('src="talks.js"'));
+assert.ok(loader.includes('src="listening.js"'));
+assert.strictEqual(fs.readFileSync(path.join(__dirname, "talks.js"), "utf8").includes("YantraPractice"), false);
 assert.ok(sw.includes('"/talks.json"'), "the service worker never caches the talk list");
 assert.ok(page.includes("z-index: 6"), "the back arrow stays above the room");
 
@@ -131,3 +133,39 @@ console.log("talks.test.js ok");
   delete globalThis.YantraSettings;
 }
 console.log("talks progress ok");
+
+{
+  const seen = [];
+  globalThis.YantraListening = {
+    observeTalk(sample) { seen.push(sample); },
+    endTalk() { seen.push("end"); },
+    talkLine() { return ""; },
+  };
+  const practice = { commits: 0 };
+  globalThis.YantraPractice = { commit() { practice.commits += 1; } };
+  const handlers = {};
+  const player = {
+    attrs: {}, currentTime: 0, duration: 1800, hidden: true, paused: false,
+    getAttribute(name) { return this.attrs[name] || null; },
+    setAttribute(name, value) { this.attrs[name] = value; },
+    removeAttribute(name) { delete this.attrs[name]; },
+    addEventListener(name, fn) { (handlers[name] = handlers[name] || []).push(fn); },
+    removeEventListener(name, fn) { handlers[name] = (handlers[name] || []).filter((f) => f !== fn); },
+    play() { return Promise.resolve(); },
+    pause() { this.paused = true; },
+  };
+  const fire = (name) => (handlers[name] || []).slice().forEach((fn) => fn());
+  const section = { querySelector: (sel) => (sel === "audio" ? player : null) };
+  assert.ok(T.play(section, "/talks/meditation.mp3", "Meditation"));
+  player.currentTime = 70;
+  fire("timeupdate");
+  player.currentTime = 140;
+  player.paused = true;
+  fire("pause");
+  assert.ok(seen.some((sample) => sample && sample.key === "/talks/meditation.mp3" && sample.position === 70));
+  assert.ok(seen.includes("end"));
+  assert.strictEqual(practice.commits, 0, "a talk does not commit a formal sit");
+  delete globalThis.YantraListening;
+  delete globalThis.YantraPractice;
+}
+console.log("talks listening ok");

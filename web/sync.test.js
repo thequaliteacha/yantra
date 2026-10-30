@@ -180,9 +180,9 @@ function snapshotBlob(deviceId) {
   const sameDay = Practice.mergeDays([morning, evening, shelf]);
   assert.strictEqual(sameDay["2026-10-22"].morning, 1);
   assert.strictEqual(sameDay["2026-10-22"].evening, 1);
-  assert.strictEqual(sameDay["2026-10-22"].other, 1);
-  assert.strictEqual(sameDay["2026-10-22"].sits, 3);
-  assert.strictEqual(sameDay["2026-10-22"].ms, 240000);
+  assert.strictEqual(sameDay["2026-10-22"].other, undefined);
+  assert.strictEqual(sameDay["2026-10-22"].sits, 2);
+  assert.strictEqual(sameDay["2026-10-22"].ms, 180000);
   assert.deepStrictEqual(sameDay, Practice.mergeDays([evening, shelf, morning, morning, evening]));
   assert.deepStrictEqual(sameDay, Practice.mergeDays([shelf, morning, evening]));
   assert.strictEqual(Practice.mergeDays([morning, morning])["2026-10-22"].sits, 1, "the same device is counted once");
@@ -532,6 +532,47 @@ function snapshotBlob(deviceId) {
   await Sync.sync();
   assert.strictEqual(Sync.linked(), false, "the removed device drops the key");
   resetNav();
+
+  const Listening = require("./listening.js");
+  const ear = memory();
+  const pod = memory();
+  use(ear);
+  const madeListen = Sync.linkNew({ name: "Ear" });
+  await Sync.sync();
+  const practiceBefore = Practice.load().totals.ms;
+  Listening.commit({ kind: "album", parts: { samurai: 2 * 60000 }, lastAt: Date.parse("2026-10-28T21:00:00") });
+  await Sync.settled();
+  assert.strictEqual(Practice.load().totals.ms, practiceBefore, "album time stays out of the formal total");
+  use(pod);
+  Sync.join(madeListen.practiceKey, { name: "Pod" });
+  await Sync.sync();
+  Listening.commit({
+    kind: "talk",
+    parts: { "/talks/dharma/balance.mp3": 3 * 60000 },
+    lastAt: Date.parse("2026-10-29T21:00:00"),
+  });
+  await Sync.settled();
+  use(ear);
+  await Sync.sync();
+  const sharedListen = Listening.loadView();
+  assert.strictEqual(sharedListen.totals.ms, 5 * 60000);
+  assert.strictEqual(sharedListen.albums.samurai.ms, 2 * 60000);
+  assert.strictEqual(sharedListen.talks["/talks/dharma/balance.mp3"].ms, 3 * 60000);
+  assert.strictEqual(Practice.summary().totals.ms, practiceBefore);
+  assert.strictEqual(Listening.load().talks["/talks/dharma/balance.mp3"], undefined, "the other device's talk stays out of the local log");
+  const lastPut = net.seen.filter((entry) => entry.method === "PUT").pop();
+  const body = JSON.parse(lastPut.body);
+  assert.strictEqual(body.days, undefined);
+  assert.strictEqual(body.listening, undefined);
+  assert.strictEqual(body.albums, undefined);
+  assert.ok(body.iv && body.ct);
+  const materialListen = await Sync.derive(madeListen.practiceKey);
+  const own = net.blobs.get(materialListen.lookupId + "/" + Sync.loadState().deviceId);
+  const plainListen = await Sync.decrypt(materialListen.aesKey, own, Sync.loadState().deviceId);
+  assert.ok(plainListen.days);
+  assert.ok(plainListen.listening);
+  assert.strictEqual(plainListen.listening.albums.samurai.ms, 2 * 60000);
+  assert.strictEqual(plainListen.totals, undefined);
 
   console.log("sync.test.js ok");
 })().catch((error) => {

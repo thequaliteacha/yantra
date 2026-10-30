@@ -103,19 +103,27 @@ Without Spotify set up at all the web edition still works: the album or song ope
 second tab, and a form waits on *Next* at the bottom of the yantra. The yantra
 breathes slowly on its own. Forms you save stay in that browser.
 
-Practice time and days in a row stay in the browser, under *Your practice*.
-A sit counts after one minute of listening; paused time
-does not. A perfect day holds a Morning Meditation (sunrise) and an Evening
-Meditation (sunset); perfect days in a row are the main streak, and the page
-nudges toward the next one. Morning and evening also keep their own runs. The
-day is the device's own date. On its own, a device keeps that record to itself.
+Two times stay in the browser, and they are never added together. Formal
+meditation time is a Morning Meditation or an Evening Meditation, under
+*Practice settings*. A formal sit counts after one minute of playback; paused
+time does not. A perfect day holds a Morning Meditation (sunrise) and an
+Evening Meditation (sunset); perfect days in a row are the main streak, and
+the page nudges toward the next one. Morning and evening also keep their own
+runs. Album listening and Dharma talks do not extend those runs, the week
+circles, or the daily run. Their time is a second total, mindfulness practice,
+under *Mindfulness Material*, with the time and last listen for each album and
+each talk. The day is the device's own date. On its own, a device keeps both
+records to itself.
 *Link my devices* makes a private practice key. The QR code stays hidden until
 you ask to see it, drawn in muted gold on deep indigo, and the link is there too.
 Its key sits in the fragment (`https://yantramedi.app/web/#link=…`),
 so the key never reaches the server. Another device opens the link or pastes
-the key. Each device encrypts its own days (HKDF for a lookup id and an
-AES-GCM key) and uploads only the lookup id and the ciphertext. The shared
-streak is the sum of those days, once per device. Offline sits stay on the
+the key. Each device encrypts its own formal days and its own listening record (HKDF
+for a lookup id and an AES-GCM key) and uploads only the lookup id and the
+ciphertext. The shared streak is the sum of the formal days, once per device.
+The shared mindfulness total is the sum of album time, talk time, and any
+earlier shelf time that had no album name. Formal minutes are not part of that
+sum. Offline sits stay on the
 device and upload when it can. *Unlink this device*, *Remove a device*, and
 *Forget this practice key everywhere* are on the same page. Tap a linked device
 to give it a short name; that name travels with the shared list. No account, no

@@ -78,9 +78,13 @@ assert.strictEqual(P.startHereDue(newer), false, "it stays hidden after more sit
 let oneDay = P.empty();
 oneDay = sit(oneDay, "2026-10-08", "morning");
 oneDay = sit(oneDay, "2026-10-08", "evening");
-oneDay = sit(oneDay, "2026-10-08", "other");
+oneDay = sit(oneDay, "2026-10-08", "morning");
 assert.strictEqual(oneDay.totals.sits, 3);
-assert.strictEqual(P.startHereDue(oneDay), false, "three sits on one day are enough");
+assert.strictEqual(P.startHereDue(oneDay), false, "three formal sits on one day are enough");
+const shelved = P.record(oneDay, { date: "2026-10-08", theme: "other", ms: 120000 });
+assert.strictEqual(shelved.counted, false);
+assert.strictEqual(shelved.store.totals.sits, 3);
+assert.strictEqual(shelved.store.totals.ms, oneDay.totals.ms);
 
 const longer = sit(sit(sit(sit(P.empty(), "2026-09-01", "morning"), "2026-09-01", "evening"), "2026-09-02", "morning"), "2026-09-02", "evening");
 assert.strictEqual(P.lead(on(longer, "2026-09-02")), "2 perfect days in a row.");
@@ -91,11 +95,16 @@ assert.strictEqual(picture.streaks.morning.current, 1, "a second sit the same da
 assert.strictEqual(picture.today.sits, 2);
 assert.strictEqual(picture.totals.sits, 5);
 
-store = sit(store, "2026-10-04", "", 60000);
-picture = on(store, "2026-10-04");
-assert.strictEqual(store.days["2026-10-04"].other, 1);
+const beforeShelf = store.totals.ms;
+const beforeToday = on(store, "2026-10-04").today.ms;
+const shelf = P.record(store, { date: "2026-10-04", theme: "", ms: 60000 });
+assert.strictEqual(shelf.counted, false);
+assert.strictEqual(shelf.store.totals.ms, beforeShelf);
+assert.strictEqual(shelf.store.days["2026-10-04"].other, undefined);
+picture = on(shelf.store, "2026-10-04");
 assert.strictEqual(picture.streaks.morning.current, 1, "a shelf sit does not extend the morning run");
 assert.strictEqual(picture.streaks.daily.current, 4);
+assert.strictEqual(picture.today.ms, beforeToday, "album time stays out of today");
 
 store = P.empty();
 store = sit(store, "2026-10-31", "evening");
@@ -159,6 +168,62 @@ assert.strictEqual(
 assert.ok(!P.completeLine(first, "morning").toLowerCase().includes("streak"));
 assert.strictEqual(P.formatSpan(2 * 3600000 + 5 * 60000), "2 hours 5 minutes");
 
+function memoryStore() {
+  const map = new Map();
+  return {
+    getItem(key) { return map.has(key) ? map.get(key) : null; },
+    setItem(key, value) { map.set(String(key), String(value)); },
+    removeItem(key) { map.delete(key); },
+  };
+}
+const legacy = {
+  version: 1,
+  totals: { ms: 300000, sits: 4 },
+  days: {
+    "2026-10-01": { ms: 60000, sits: 1, morning: 1, evening: 0, other: 0 },
+    "2026-10-02": { ms: 90000, sits: 1, morning: 0, evening: 0, other: 1 },
+    "2026-10-03": { ms: 120000, sits: 2, morning: 1, evening: 0, other: 1 },
+  },
+  open: { ms: 30000, theme: "", date: "2026-10-04", at: 1 },
+};
+const moved = P.migrate(legacy);
+assert.strictEqual(moved.earlierMs, 120000, "pure album time and an open shelf sit leave the formal record");
+assert.strictEqual(moved.store.days["2026-10-02"], undefined);
+assert.strictEqual(moved.store.days["2026-10-01"].ms, 60000);
+assert.strictEqual(moved.store.days["2026-10-03"].ms, 120000, "a mixed day stays in the formal total");
+assert.strictEqual(moved.store.days["2026-10-03"].sits, 1);
+assert.strictEqual(moved.store.days["2026-10-03"].other, undefined);
+assert.strictEqual(moved.store.totals.ms, 180000);
+assert.strictEqual(moved.store.totals.sits, 2);
+assert.strictEqual(moved.store.open, null);
+assert.strictEqual(P.migrate(moved.store).earlierMs, 0, "migrating again does not invent more earlier time");
+global.localStorage = memoryStore();
+localStorage.setItem(P.KEY, JSON.stringify(legacy));
+const loaded = P.load();
+assert.strictEqual(loaded.totals.ms, 180000);
+assert.strictEqual(loaded.days["2026-10-02"], undefined);
+assert.strictEqual(Number(localStorage.getItem(P.PENDING_KEY)), 120000);
+P.load();
+assert.strictEqual(Number(localStorage.getItem(P.PENDING_KEY)), 120000, "a second load does not move the album time again");
+const formalOpen = {
+  version: 1,
+  totals: { ms: 0, sits: 0 },
+  days: {},
+  open: { ms: 80000, theme: "morning", date: "2026-10-01", at: 2 },
+};
+assert.strictEqual(P.migrate(formalOpen).earlierMs, 0);
+assert.strictEqual(P.migrate(formalOpen).store.open.theme, "morning");
+const albumRun = {
+  version: 1,
+  totals: { ms: 120000, sits: 2 },
+  days: {
+    "2026-10-04": { ms: 60000, sits: 1, morning: 0, evening: 0, other: 1 },
+    "2026-10-05": { ms: 60000, sits: 1, morning: 1, evening: 0, other: 0 },
+  },
+};
+const dropped = P.migrate(albumRun).store;
+assert.strictEqual(P.streaks(dropped, "2026-10-05").daily.current, 1, "an album-only day does not extend the daily run");
+
 const web = fs.readFileSync(path.join(__dirname, "web.js"), "utf8");
 const worker = fs.readFileSync(path.join(__dirname, "../deploy/cloudflare/worker.js"), "utf8");
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
@@ -179,7 +244,8 @@ assert.strictEqual(web.includes("captureStream"), false);
 assert.ok(worker.includes("microphone=()"));
 assert.strictEqual(worker.includes("microphone=(self)"), false);
 assert.strictEqual(/Naval/.test(web + page), false);
-assert.ok(sw.includes("yantra-v6"));
+assert.ok(sw.includes("yantra-v7"));
+assert.ok(sw.includes('"/web/listening.js"'));
 assert.ok(readme.includes("36"));
 assert.ok(readme.includes("Twenty albums are hosted"));
 assert.strictEqual(readme.includes("34 albums"), false);

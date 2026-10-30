@@ -8,6 +8,7 @@
  */
 (function (root) {
   const Practice = (root && root.YantraPractice) || require("./practice.js");
+  const Listening = (root && root.YantraListening) || require("./listening.js");
   const Browser = (root && root.YantraBrowser) || require("./browser.js");
   const STATE_KEY = "yantra.practice.sync.v1";
   const NOTE_KEY = "yantra.practice.sync.note";
@@ -226,6 +227,7 @@
         name: cleanName(row.name),
         namedAt: stampOf(row.namedAt),
         days: Practice.normalize({ days: row.days }).days,
+        listening: Listening.syncPayload(row.listening || {}),
         labels: labelsFrom(row.labels),
       };
     });
@@ -312,7 +314,9 @@
   }
 
   function ruleLine() {
-    return linked() ? "A minute of listening counts as a sit. Linked devices share the days." : Practice.RULE;
+    return linked()
+      ? "A minute of a morning or evening sit counts. Linked devices share the days."
+      : Practice.RULE;
   }
 
   /* The streaks and the practice page read this. Local days stay untouched. */
@@ -332,13 +336,25 @@
     });
     const days = Practice.mergeDays(logs);
     return {
-      version: 1,
+      version: 2,
       totals: Practice.totalsFromDays(days),
       days: days,
       milestones: (local && local.milestones) || [],
       reminders: local ? local.reminders : null,
       open: local ? local.open : null,
     };
+  }
+
+  /* Merged mindfulness time. Formal days are not an input. */
+  function listeningViewOf(local) {
+    const state = loadState();
+    if (!state.practiceKey || !state.deviceId) return null;
+    const logs = [{ deviceId: state.deviceId, listening: local || {} }];
+    Object.keys(state.peers).forEach((id) => {
+      if (id === state.deviceId) return;
+      logs.push({ deviceId: id, listening: (state.peers[id] && state.peers[id].listening) || {} });
+    });
+    return Listening.merge(logs);
   }
 
   async function derive(practiceKey) {
@@ -528,6 +544,7 @@
             name: cleanName(plain.name),
             namedAt: stampOf(plain.namedAt),
             days: Practice.normalize({ days: plain.days }).days,
+            listening: Listening.syncPayload(plain.listening || {}),
             labels: labelsFrom(plain.labels),
           };
           if (plain.settings) peerSettings.push(plain.settings);
@@ -813,6 +830,7 @@
       name: state.name || "",
       namedAt: stampOf(state.namedAt) || 0,
       days: (local && local.days) || {},
+      listening: Listening.syncPayload(Listening.load()),
       labels: labelsFrom(state.labels),
       removed: tombstonesFrom(state.removed),
       settings: sharedSettings(),
@@ -1430,6 +1448,15 @@
     return sync();
   });
   Practice.onErase(() => {
+    markPending();
+    return sync();
+  });
+  Listening.setView(listeningViewOf);
+  Listening.onCommit(() => {
+    markPending();
+    return sync();
+  });
+  Listening.onErase(() => {
     markPending();
     return sync();
   });

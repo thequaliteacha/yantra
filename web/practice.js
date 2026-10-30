@@ -1,9 +1,10 @@
 /* Practice record for the web edition.
  *
- * A sit counts after one minute of playback. Paused time is not included.
- * Morning and evening are the sits the listener chose on the home screen;
- * a sit from the shelf counts only toward the daily run. The day is the
- * device's local calendar. Missing a morning ends the morning run only.
+ * A formal sit is a Morning Meditation or an Evening Meditation. It counts
+ * after one minute of playback. Paused time is not included. Album listening
+ * and Dharma talks stay in yantra.listening.v1 and never enter these totals
+ * or streaks. The day is the device's local calendar. Missing a morning ends
+ * the morning run only.
  *
  * The days themselves stay in this browser. A device with no practice key
  * reads only those days. A linked device still records only its own sits
@@ -17,12 +18,14 @@
  */
 (function (root) {
   const KEY = "yantra.practice.v1";
+  const PENDING_KEY = "yantra.listening.pendingEarlier";
   const MIN_MS = 60 * 1000;
-  const RULE = "A minute of listening counts as a sit. Kept on this device only.";
+  const RULE = "A minute of a morning or evening sit counts. Kept on this device only.";
+  let pendingEarlier = 0;
 
   function empty() {
     return {
-      version: 1,
+      version: 2,
       totals: { ms: 0, sits: 0 },
       days: {},
       milestones: [],
@@ -53,7 +56,7 @@
     return Math.round((b - a) / 86400000);
   }
 
-  function normalizeDay(day) {
+  function readDay(day) {
     const src = day || {};
     return {
       ms: Math.max(0, Number(src.ms) || 0),
@@ -64,29 +67,84 @@
     };
   }
 
+  /* Formal shape of one day. A shelf-only day drops out. A mixed day keeps its
+     unsplit milliseconds here and forgets the shelf count. */
+  function projectDay(day) {
+    const src = readDay(day);
+    const formal = src.morning + src.evening;
+    if (formal <= 0) return null;
+    return {
+      ms: src.ms,
+      sits: formal,
+      morning: src.morning,
+      evening: src.evening,
+    };
+  }
+
+  function normalizeDay(day) {
+    return projectDay(day) || { ms: 0, sits: 0, morning: 0, evening: 0 };
+  }
+
   function normalize(raw) {
     const store = empty();
     if (!raw || typeof raw !== "object") return store;
-    store.totals.ms = Math.max(0, Number(raw.totals && raw.totals.ms) || 0);
-    store.totals.sits = Math.max(0, Number(raw.totals && raw.totals.sits) || 0);
     const days = raw.days && typeof raw.days === "object" ? raw.days : {};
     Object.keys(days).forEach((key) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return;
-      store.days[key] = normalizeDay(days[key]);
+      const day = projectDay(days[key]);
+      if (day) store.days[key] = day;
     });
+    store.totals = totalsFromDays(store.days);
     store.milestones = Array.isArray(raw.milestones) ? raw.milestones.slice() : [];
     store.reminders = raw.reminders && typeof raw.reminders === "object" ? raw.reminders : null;
     if (raw.open && typeof raw.open === "object") {
       const theme = raw.open.theme === "morning" || raw.open.theme === "evening" ? raw.open.theme : "";
       const date = /^\d{4}-\d{2}-\d{2}$/.test(raw.open.date || "") ? raw.open.date : "";
-      store.open = {
-        ms: Math.max(0, Number(raw.open.ms) || 0),
-        theme,
-        date,
-        at: Number(raw.open.at) || 0,
-      };
+      if (theme) {
+        store.open = {
+          ms: Math.max(0, Number(raw.open.ms) || 0),
+          theme,
+          date,
+          at: Number(raw.open.at) || 0,
+        };
+      }
     }
     return store;
+  }
+
+  /* Milliseconds that belonged only to shelf listening, including an open
+     album sit the page did not close. Mixed days stay in the formal total. */
+  function earlierFrom(raw) {
+    if (!raw || typeof raw !== "object") return 0;
+    let ms = 0;
+    const days = raw.days && typeof raw.days === "object" ? raw.days : {};
+    Object.keys(days).forEach((key) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return;
+      const src = readDay(days[key]);
+      if (src.morning + src.evening <= 0) ms += src.ms;
+    });
+    const open = raw.open;
+    if (open && typeof open === "object") {
+      const theme = open.theme === "morning" || open.theme === "evening" ? open.theme : "";
+      if (!theme) ms += Math.max(0, Number(open.ms) || 0);
+    }
+    return ms;
+  }
+
+  function needsMigration(raw) {
+    if (!raw || typeof raw !== "object") return false;
+    if (Number(raw.version) !== 2) return true;
+    if (earlierFrom(raw) > 0) return true;
+    const days = raw.days && typeof raw.days === "object" ? raw.days : {};
+    return Object.keys(days).some((key) => readDay(days[key]).other > 0);
+  }
+
+  function migrate(raw) {
+    return {
+      store: normalize(raw),
+      earlierMs: earlierFrom(raw),
+      changed: needsMigration(raw),
+    };
   }
 
   function clone(store) {
@@ -107,14 +165,15 @@
       const days = log.days && typeof log.days === "object" ? log.days : {};
       Object.keys(days).forEach((date) => {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-        const src = normalizeDay(days[date]);
-        const dst = out[date] ? normalizeDay(out[date]) : normalizeDay(null);
-        dst.ms += src.ms;
-        dst.sits += src.sits;
-        dst.morning += src.morning;
-        dst.evening += src.evening;
-        dst.other += src.other;
-        out[date] = dst;
+        const src = projectDay(days[date]);
+        if (!src) return;
+        const dst = out[date] ? projectDay(out[date]) : null;
+        const next = dst || { ms: 0, sits: 0, morning: 0, evening: 0 };
+        next.ms += src.ms;
+        next.sits += src.sits;
+        next.morning += src.morning;
+        next.evening += src.evening;
+        out[date] = next;
       });
     });
     return out;
@@ -125,7 +184,8 @@
     const clean = days && typeof days === "object" ? days : {};
     Object.keys(clean).forEach((date) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-      const day = normalizeDay(clean[date]);
+      const day = projectDay(clean[date]);
+      if (!day) return;
       totals.ms += day.ms;
       totals.sits += day.sits;
     });
@@ -160,7 +220,7 @@
     const dates = Object.keys(days).filter((date) => {
       const day = days[date];
       if (!day) return false;
-      if (kind === "daily") return day.sits > 0;
+      if (kind === "daily") return day.morning > 0 || day.evening > 0;
       // A perfect day holds both sits: one at sunrise (morning) and one at sunset (evening).
       if (kind === "perfect") return day.morning > 0 && day.evening > 0;
       return (day[kind] || 0) > 0;
@@ -201,16 +261,15 @@
     const next = clone(store || empty());
     next.open = null;
     const ms = Math.max(0, Number(heard && heard.ms) || 0);
-    if (ms < MIN_MS) return { store: next, counted: false };
+    const theme = heard && (heard.theme === "morning" || heard.theme === "evening") ? heard.theme : "";
+    if (!theme || ms < MIN_MS) return { store: next, counted: false };
     const date = (heard && /^\d{4}-\d{2}-\d{2}$/.test(heard.date || "")) ? heard.date : localDate(new Date());
-    const theme = heard && (heard.theme === "morning" || heard.theme === "evening") ? heard.theme : "other";
-    const day = normalizeDay(next.days[date]);
+    const day = projectDay(next.days[date]) || { ms: 0, sits: 0, morning: 0, evening: 0 };
     day.ms += ms;
-    day.sits += 1;
     day[theme] += 1;
+    day.sits = day.morning + day.evening;
     next.days[date] = day;
-    next.totals.ms += ms;
-    next.totals.sits += 1;
+    next.totals = totalsFromDays(next.days);
     return { store: next, counted: true };
   }
 
@@ -402,10 +461,50 @@
     }
   }
 
+  function handoffEarlier(ms) {
+    const add = Math.max(0, Number(ms) || 0);
+    if (!add) return;
+    const Listening = root && root.YantraListening;
+    if (Listening && typeof Listening.absorbEarlier === "function") {
+      Listening.absorbEarlier(add);
+      return;
+    }
+    const kept = storage();
+    if (!kept) {
+      pendingEarlier += add;
+      return;
+    }
+    const prev = Math.max(0, Number(kept.getItem(PENDING_KEY) || "0") || 0);
+    try { kept.setItem(PENDING_KEY, String(prev + add)); }
+    catch (e) { pendingEarlier += add; }
+  }
+
+  function takeMigratedEarlier() {
+    let ms = pendingEarlier;
+    pendingEarlier = 0;
+    const kept = storage();
+    if (kept) {
+      ms += Math.max(0, Number(kept.getItem(PENDING_KEY) || "0") || 0);
+      try { kept.removeItem(PENDING_KEY); } catch (e) {}
+    }
+    return ms;
+  }
+
   function load() {
     const kept = storage();
     if (!kept) return empty();
-    try { return normalize(JSON.parse(kept.getItem(KEY) || "null")); } catch (e) { return empty(); }
+    try {
+      const raw = JSON.parse(kept.getItem(KEY) || "null");
+      if (!raw || typeof raw !== "object") return empty();
+      if (needsMigration(raw)) {
+        const earlierMs = earlierFrom(raw);
+        const store = normalize(raw);
+        save(store);
+        handoffEarlier(earlierMs);
+        return store;
+      }
+      return normalize(raw);
+    } catch (e) { return empty(); }
   }
 
   function save(store) {
@@ -425,10 +524,12 @@
 
   function checkpoint(heard) {
     if (!heard) return;
+    const theme = heard.theme === "morning" || heard.theme === "evening" ? heard.theme : "";
+    if (!theme) return;
     const store = load();
     store.open = {
       ms: Math.max(0, Number(heard.ms) || 0),
-      theme: heard.theme === "morning" || heard.theme === "evening" ? heard.theme : "",
+      theme: theme,
       date: /^\d{4}-\d{2}-\d{2}$/.test(heard.date || "") ? heard.date : localDate(new Date()),
       at: Date.now(),
     };
@@ -478,7 +579,7 @@
       rules: {
         minimumMs: MIN_MS,
         listening: "Playback time only. Paused time is not counted.",
-        streaks: "A perfect day has a morning sit and an evening sit; the perfect run counts those days. Morning and evening are separate runs. A missed morning ends only the morning run. The daily run counts a day with either. Shelf sits count toward the daily run only. Dates are the device's local calendar.",
+        streaks: "A perfect day has a morning sit and an evening sit; the perfect run counts those days. Morning and evening are separate runs. A missed morning ends only the morning run. The daily run counts a day with a morning or an evening sit. Album and talk listening are a separate total and do not extend a run. Dates are the device's local calendar.",
         milestones: "Reserved. Empty until a later version marks them.",
         reminders: "Reserved. This version does not notify.",
       },
@@ -487,10 +588,14 @@
 
   const api = {
     KEY: KEY,
+    PENDING_KEY: PENDING_KEY,
     MIN_MS: MIN_MS,
     RULE: RULE,
     empty: empty,
     normalize: normalize,
+    migrate: migrate,
+    earlierFrom: earlierFrom,
+    takeMigratedEarlier: takeMigratedEarlier,
     localDate: localDate,
     addDays: addDays,
     record: record,

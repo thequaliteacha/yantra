@@ -1864,22 +1864,31 @@
     return startDisc(payload);
   }
 
-  /* Listening time for the on-device practice record. Theme is the morning or
-     evening the listener chose; a shelf sit leaves it blank. */
+  /* Formal sits write the practice record. Album and playlist playback write
+     the listening record, split by the album under the playhead. */
   const Practice = window.YantraPractice || null;
+  const Listening = window.YantraListening || null;
   if (Practice) Practice.recover();
+  if (Listening) Listening.recover();
   const listening = Practice
     ? Practice.createListeningClock()
     : { begin() {}, active() { return false; }, observe() {}, snapshot() { return null; }, end() { return { ms: 0, theme: "", date: "" }; } };
   let sitTheme = "";
 
+  function formalSit() {
+    return sitTheme === "morning" || sitTheme === "evening";
+  }
+
   noteListening = function (playing, item, position, key) {
     const id = key || (item ? item.discId + "#" + item.n : "");
-    listening.observe({ key: id, position: Number(position) || 0, playing: !!playing, at: Date.now() });
+    const sample = { key: id, position: Number(position) || 0, playing: !!playing, at: Date.now() };
+    if (formalSit() && listening.active()) listening.observe(sample);
+    else if (Listening && Listening.albumActive()) Listening.observeAlbum(sample);
   };
 
   function rememberSit() {
     if (Practice && listening.active()) Practice.checkpoint(listening.snapshot());
+    if (Listening) Listening.checkpointAlbum();
   }
 
   /* Keeps a phone's screen from sleeping while a sitting runs. */
@@ -2182,10 +2191,12 @@
   function sit(on) {
     holdScreen(on);
     if (on) {
-      listening.begin(sitTheme);
+      if (formalSit()) listening.begin(sitTheme);
+      else if (Listening) Listening.beginAlbum();
       enterFullscreen();
     } else {
-      if (Practice) Practice.commit(listening.end());
+      if (Practice && listening.active()) Practice.commit(listening.end());
+      if (Listening) Listening.endAlbum();
       sitTheme = "";
       liveStop(true);
       stopQueue();

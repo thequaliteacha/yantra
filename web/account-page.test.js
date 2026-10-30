@@ -20,6 +20,8 @@ assert.ok(mindful.includes(">Dharma Talks<"));
 assert.ok(mindful.includes(">Albums + Playlists<"));
 assert.ok(mindful.includes('id="open-talks" data-room="talks" hidden'));
 assert.ok(mindful.includes('id="open-shelf"'));
+assert.ok(mindful.includes('id="mindful-stats" hidden'));
+assert.ok(mindful.includes('id="mindful-total"'));
 assert.ok(!mindful.includes("Sit Guidance"));
 assert.ok(!mindful.includes("How to sit"), "the guide title stays on the guide page");
 assert.ok(!mindful.includes("Albums and forms"));
@@ -61,6 +63,7 @@ assert.ok(practice.includes("center bindu"));
 assert.ok(practice.indexOf('id="practice-erase"') < practice.indexOf('id="motion-inner"'), "petal controls sit below the practice record");
 assert.ok(practice.indexOf('id="motion-inner"') < practice.indexOf('id="motion-outer"'));
 assert.ok(!practice.includes('id="motion-heart"'), "the heart mark control is gone");
+assert.ok(!practice.includes('id="mindful-total"'), "mindfulness time stays out of the formal practice block");
 assert.ok(!practice.includes(">Triangles<"));
 assert.ok(!practice.includes(">Pentagram<"));
 
@@ -137,6 +140,9 @@ assert.ok(!page.includes('id="listen"'), "the shelf has no Listen on / Connected
 assert.ok(page.includes('id="account-spotify-connect"'), "Spotify still connects from Settings");
 assert.ok(!account.includes("textContent = mark"), "the corner never shows a profile initial");
 assert.ok(page.includes("grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr)"), "the iPad shelf stays two columns");
+assert.ok(account.includes("mindfulness: mindfulness"), "export keeps the mindfulness total beside the formal record");
+assert.ok(account.includes("YantraListening"));
+assert.ok(page.includes("YantraListening.erase()"));
 assert.strictEqual(page.includes('id="account-bell"'), false);
 assert.strictEqual(page.includes('id="account-glow"'), false);
 
