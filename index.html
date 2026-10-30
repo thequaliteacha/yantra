@@ -395,6 +395,17 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     color: rgba(247, 237, 212, 0.9); text-align: left;
   }
   #account .account-jump:hover, #account .account-jump:focus-visible { color: #f7edd4; }
+  #mindful-stats[hidden], #disc-listened[hidden], .talk-heard[hidden] { display: none; }
+  #mindful-stats { margin-top: 0.85rem; }
+  .mindful-total {
+    text-align: center; color: rgba(243, 230, 200, 0.72); font-size: 0.98rem; margin: 0.2rem 0 0.45rem;
+  }
+  .mindful-row {
+    margin: 0; padding: 0.28rem 0; color: rgba(232, 204, 146, 0.5); font-size: 0.88rem;
+  }
+  #disc-listened, .talk-heard {
+    color: rgba(232, 204, 146, 0.45); font-size: 0.82rem;
+  }
   .mindful-links { display: flex; justify-content: space-between; align-items: baseline; gap: 0.35rem 0.4rem; margin: 0.5rem 0 0.15rem; }
   .mindful-links .quiet {
     flex: 1 1 0; min-width: 0; text-align: center; padding: 0.4rem 0.05rem 0.5rem;
@@ -1010,6 +1021,10 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
           <button class="quiet" type="button" id="open-talks" data-room="talks" hidden>Dharma Talks</button>
           <button class="quiet" type="button" id="open-shelf">Albums + Playlists</button>
         </div>
+        <div id="mindful-stats" hidden>
+          <p id="mindful-total" class="mindful-total"></p>
+          <div id="mindful-rows"></div>
+        </div>
       </div>
     </details>
     <details class="account-fold" id="account-settings" data-fold="settings">
@@ -1081,6 +1096,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <h1 id="disc-title"></h1>
       <p class="year" id="disc-meta"></p>
       <p class="line" id="disc-line"></p>
+      <p id="disc-listened" hidden></p>
       <p id="now"></p>
       <p id="note"></p>
       <ol id="tracks"></ol>
@@ -2232,6 +2248,7 @@ function renderShelf() {
     discTitle.textContent = "";
     discMeta.textContent = "";
     discLine.textContent = "";
+    paintDiscListened("");
     circles.replaceChildren();
     discs.replaceChildren();
     tracks.replaceChildren();
@@ -2247,6 +2264,7 @@ function renderShelf() {
   discTitle.textContent = disc.title;
   discMeta.textContent = disc.artist + "  ·  " + disc.year;
   discLine.textContent = collection.line;
+  paintDiscListened(disc.id);
   circles.replaceChildren();
   for (const circle of sections) {
     const button = document.createElement("button");
@@ -2313,6 +2331,7 @@ function renderShelf() {
   }
   paintActions();
   if (window.paintOfflineAlbum) window.paintOfflineAlbum();
+  paintMindfulness();
 }
 
 function chakraLabel(id) {
@@ -2848,6 +2867,68 @@ function paintWeek(node, week) {
   });
   node.replaceChildren(svg);
 }
+function paintDiscListened(id) {
+  const node = document.getElementById("disc-listened");
+  if (!node) return;
+  const line = id && window.YantraListening ? window.YantraListening.albumLine(id) : "";
+  node.textContent = line;
+  node.hidden = !line;
+}
+function paintTalkHeard() {
+  if (!window.YantraListening) return;
+  document.querySelectorAll("#talks-list button.talk").forEach((button) => {
+    const heard = button.querySelector(".talk-heard");
+    if (!heard) return;
+    const line = window.YantraListening.talkLine(button.getAttribute("data-src") || "");
+    heard.textContent = line;
+    heard.hidden = !line;
+  });
+}
+function talkTitles() {
+  const titles = {};
+  const data = window.yantraTalks;
+  const sets = data && Array.isArray(data.sets) ? data.sets : [];
+  sets.forEach((set) => {
+    (set.talks || []).forEach((talk) => {
+      if (talk && talk.key) titles["/" + talk.key] = talk.title || "";
+    });
+  });
+  return titles;
+}
+function paintMindfulness() {
+  const node = document.getElementById("mindful-stats");
+  const total = document.getElementById("mindful-total");
+  const rows = document.getElementById("mindful-rows");
+  if (!node || !window.YantraListening) return;
+  const discs = ((collection && collection.discs) || []).map((disc) => ({ id: disc.id, title: disc.title }));
+  const view = window.YantraListening.rowsFor(window.YantraListening.loadView(), {
+    level: window.YANTRA_LEVEL,
+    discs: discs,
+    talkTitles: talkTitles(),
+  });
+  if (!view.totalLine) {
+    node.hidden = true;
+    if (total) total.textContent = "";
+    if (rows) rows.replaceChildren();
+    return;
+  }
+  node.hidden = false;
+  if (total) total.textContent = view.totalLine;
+  if (!rows) return;
+  rows.replaceChildren();
+  view.items.forEach((item) => {
+    const row = document.createElement("p");
+    row.className = "mindful-row";
+    row.textContent = item.title + "  ·  " + item.detail;
+    rows.append(row);
+  });
+  if (view.earlier) {
+    const row = document.createElement("p");
+    row.className = "mindful-row";
+    row.textContent = "Earlier listening  ·  " + window.YantraListening.formatSpan(view.earlier);
+    rows.append(row);
+  }
+}
 function paintPractice() {
   const practice = window.YantraPractice;
   if (!practice) return;
@@ -2897,6 +2978,7 @@ function paintPractice() {
   document.getElementById("practice-actions").hidden = false;
   paintWeek(document.getElementById("home-week"), summary.week);
   paintWeek(document.getElementById("account-week"), summary.week);
+  paintMindfulness();
   const homeDay = document.getElementById("home-day");
   if (homeDay) homeDay.textContent = practice.lead(summary);
   const startHere = document.getElementById("home-start");
@@ -2904,6 +2986,13 @@ function paintPractice() {
   paintTalks();
 }
 window.paintPractice = paintPractice;
+if (window.YantraListening && window.YantraListening.onCommit) {
+  window.YantraListening.onCommit(() => {
+    paintMindfulness();
+    paintDiscListened(typeof selectedId === "string" ? selectedId : "");
+    paintTalkHeard();
+  });
+}
 /* Dharma Talks: the room and its home link show for the Zazen word only, filled by talks.js from talks.json. */
 function paintTalks() {
   const section = document.getElementById("talks-list");
@@ -3127,6 +3216,7 @@ if (window.YANTRA_WEB) {
     const finish = () => {
       if (window.YantraSettings) window.YantraSettings.erase();
       if (window.YantraPractice) window.YantraPractice.erase();
+      if (window.YantraListening) window.YantraListening.erase();
       document.getElementById("practice-actions").hidden = false;
       paintPractice();
       if (window.paintAccount) window.paintAccount();

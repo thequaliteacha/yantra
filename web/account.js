@@ -306,8 +306,9 @@
 
   function exportBundle() {
     const practice = window.YantraPractice ? window.YantraPractice.exportData() : {};
+    const mindfulness = window.YantraListening ? window.YantraListening.exportData() : {};
     const stored = settings() ? settings().entries() : {};
-    return Object.assign({}, practice, { settings: stored });
+    return Object.assign({}, practice, { mindfulness: mindfulness, settings: stored });
   }
 
   function boot() {

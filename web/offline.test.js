@@ -66,13 +66,13 @@ const failed = O.packView({ error: true, have: 1, total: 6, bytes: 1000 }, false
 assert.strictEqual(failed.action, "Try again");
 assert.strictEqual(failed.secondary, "Remove");
 
-assert.strictEqual(SW.SHELL, "yantra-v6");
+assert.strictEqual(SW.SHELL, "yantra-v7");
 assert.strictEqual(SW.AUDIO, O.AUDIO);
 assert.notStrictEqual(SW.SHELL, SW.AUDIO);
-assert.strictEqual(SW.retainCache("yantra-v6"), true);
+assert.strictEqual(SW.retainCache("yantra-v7"), true);
 assert.strictEqual(SW.retainCache("yantra-audio-v1"), true);
-assert.strictEqual(SW.retainCache("yantra-v5"), false);
-for (const file of ["/web/", "/web/index.html", "/index.html", "/discs.json", "/access", "/web/audio.json", "/web/config.json", "/web/sets.json", "/web/awakening.js", "/web/field.js", "/web/choose.js", "/web/sit.js", "/web/settings.js", "/web/practice.js", "/web/offline.js", "/web/icons/icon-192.png"]) {
+assert.strictEqual(SW.retainCache("yantra-v6"), false);
+for (const file of ["/web/", "/web/index.html", "/index.html", "/discs.json", "/access", "/web/audio.json", "/web/config.json", "/web/sets.json", "/web/awakening.js", "/web/field.js", "/web/choose.js", "/web/sit.js", "/web/settings.js", "/web/practice.js", "/web/listening.js", "/web/offline.js", "/web/icons/icon-192.png"]) {
   assert.ok(SW.SHELL_FILES.includes(file), file);
 }
 assert.ok(!SW.SHELL_FILES.includes("/web/sw.js"));

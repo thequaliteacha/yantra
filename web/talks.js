@@ -78,7 +78,24 @@
     if (keeping && !keeping.has(player) && typeof player.addEventListener === "function") {
       keeping.add(player);
       let last = 0;
+      const noteTalk = () => {
+        const Listening = root && root.YantraListening;
+        const here = player.getAttribute("src") || "";
+        if (!Listening || !here || typeof Listening.observeTalk !== "function") return;
+        Listening.observeTalk({
+          key: here,
+          position: player.currentTime || 0,
+          playing: !player.paused,
+          at: Date.now(),
+        });
+      };
+      const finishTalk = () => {
+        noteTalk();
+        const Listening = root && root.YantraListening;
+        if (Listening && typeof Listening.endTalk === "function") Listening.endTalk();
+      };
       player.addEventListener("timeupdate", () => {
+        noteTalk();
         const at = player.currentTime;
         if (Math.abs(at - last) < 10) return;
         last = at;
@@ -88,10 +105,12 @@
       player.addEventListener("pause", () => {
         const here = player.getAttribute("src") || "";
         if (here && player.currentTime > 0) keepProgress(here, player.currentTime, false);
+        finishTalk();
       });
       player.addEventListener("ended", () => {
         const here = player.getAttribute("src") || "";
         if (here) keepProgress(here, 0, true);
+        finishTalk();
       });
     }
     const started = player.play();
@@ -175,8 +194,15 @@
         const length = d.createElement("span");
         const entry = progressAll()[talk.src];
         length.textContent = stateLabel(talk.length, 0, entry);
+        const heard = d.createElement("span");
+        heard.className = "talk-heard";
+        const Listening = root && root.YantraListening;
+        const heardLine = Listening && typeof Listening.talkLine === "function" ? Listening.talkLine(talk.src) : "";
+        heard.textContent = heardLine || "";
+        heard.hidden = !heardLine;
         if (entry && entry.done) button.classList.add("heard");
-        button.append(name, length);
+        button.setAttribute("data-src", talk.src);
+        button.append(name, length, heard);
         button.addEventListener("click", () => {
           if (!player) return;
           start(player, talk.src, talk.title, set.title, now);
