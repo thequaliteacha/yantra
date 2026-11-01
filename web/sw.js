@@ -4,7 +4,7 @@
    chooses Keep offline. A partial response is never kept. Spotify, talks,
    quotes, and ambient audio stay on the network. */
 const YantraSW = (function () {
-  const SHELL = "yantra-v7";
+  const SHELL = "yantra-v8";
   const AUDIO = "yantra-audio-v1";
   const SHELL_FILES = [
     "/web/",
@@ -36,6 +36,7 @@ const YantraSW = (function () {
     "/web/resources.js",
     "/web/account.js",
     "/web/sit.js",
+    "/web/immersive.js",
     "/web/web.js",
     "/web/reminders.js",
     "/web/places.js",
