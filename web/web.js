@@ -1905,37 +1905,88 @@
       lock.addEventListener("release", () => { if (screenLock === lock) screenLock = null; });
     }).catch(() => {});
   }
-  /* An installed app, or a Chromium --app window, already has its own frame.
-     display-mode fullscreen is the manifest; standalone is that app window or
-     an iPad home screen. Ending a sit steps a browser tab back out of
-     fullscreen and leaves the app window as it is. */
-  function appDisplay() {
+  /* A sit asks for the whole screen. YantraImmersive decides when that
+     request is real: Android and desktop installs that are already
+     display-mode fullscreen are left alone, and iPhone and iPad still ask,
+     because WebKit leaves the status bar up in that mode. The request has
+     to start inside the tap (yantraHold). Ending the sit, or a play that
+     never becomes a sit, exits only the fullscreen this sit opened. */
+  let sitWantsFullscreen = false;
+  let sitOwnsFullscreen = false;
+  let sitFullscreenPending = false;
+  function displayMode() {
     try {
-      if (navigator.standalone === true) return true;
       const mq = window.matchMedia;
-      if (!mq) return false;
-      return mq("(display-mode: fullscreen)").matches
-        || mq("(display-mode: standalone)").matches
-        || mq("(display-mode: minimal-ui)").matches
-        || mq("(display-mode: window-controls-overlay)").matches;
-    } catch (e) {
-      return false;
-    }
+      if (!mq) return "";
+      if (mq("(display-mode: fullscreen)").matches) return "fullscreen";
+      if (mq("(display-mode: standalone)").matches) return "standalone";
+      if (mq("(display-mode: minimal-ui)").matches) return "minimal-ui";
+      if (mq("(display-mode: window-controls-overlay)").matches) return "window-controls-overlay";
+    } catch (e) {}
+    return "";
+  }
+  function fullscreenState() {
+    const root = document.documentElement;
+    const Immersive = window.YantraImmersive;
+    return {
+      want: sitWantsFullscreen,
+      pending: sitFullscreenPending,
+      canRequest: !!(root && (root.requestFullscreen || root.webkitRequestFullscreen)),
+      fullscreenElement: !!(document.fullscreenElement || document.webkitFullscreenElement),
+      displayMode: displayMode(),
+      appleMobile: Immersive ? Immersive.appleMobile(navigator) : navigator.standalone === true,
+      owned: sitOwnsFullscreen,
+    };
+  }
+  function settleFullscreen(result) {
+    if (result && typeof result.catch === "function") result.catch(() => {});
   }
   function enterFullscreen() {
-    try {
-      if (window.matchMedia("(display-mode: fullscreen)").matches) return;
-    } catch (e) {}
+    sitWantsFullscreen = true;
+    const Immersive = window.YantraImmersive;
+    const state = fullscreenState();
+    const ask = Immersive
+      ? Immersive.shouldRequest(state)
+      : state.want && !state.pending && state.canRequest && !state.fullscreenElement && state.displayMode !== "fullscreen";
+    if (!ask) return;
     const root = document.documentElement;
-    if (!document.fullscreenElement && root.requestFullscreen) root.requestFullscreen().catch(() => {});
+    if (!root) return;
+    sitFullscreenPending = true;
+    const fullscreenOptions = Immersive ? Immersive.options() : { navigationUI: "hide" };
+    let pending = null;
+    try {
+      if (root.requestFullscreen) pending = root.requestFullscreen(fullscreenOptions);
+      else if (root.webkitRequestFullscreen) pending = root.webkitRequestFullscreen();
+    } catch (e) {
+      sitFullscreenPending = false;
+      return;
+    }
+    Promise.resolve(pending).then(() => {
+      if (document.fullscreenElement || document.webkitFullscreenElement) sitOwnsFullscreen = true;
+      if (!sitWantsFullscreen) leaveFullscreen();
+    }).catch(() => {}).then(() => { sitFullscreenPending = false; });
   }
   function leaveFullscreen() {
-    if (appDisplay()) return;
-    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    sitWantsFullscreen = false;
+    const Immersive = window.YantraImmersive;
+    const state = fullscreenState();
+    const exit = Immersive ? Immersive.shouldExit(state) : !state.want && state.owned && state.fullscreenElement;
+    if (!exit) return;
+    sitOwnsFullscreen = false;
+    try {
+      if (document.exitFullscreen && (document.fullscreenElement || document.webkitFullscreenElement)) {
+        settleFullscreen(document.exitFullscreen());
+      } else if (document.webkitExitFullscreen) {
+        settleFullscreen(document.webkitExitFullscreen());
+      }
+    } catch (e) {}
   }
   window.yantraHold = function () {
     enterFullscreen();
     holdScreen(true);
+  };
+  window.yantraRelease = function () {
+    leaveFullscreen();
   };
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") rememberSit();

@@ -77,20 +77,30 @@ assert.ok(page.includes('name="viewport" content="width=device-width, initial-sc
 assert.ok(page.includes('name="apple-mobile-web-app-status-bar-style" content="black-translucent"'));
 assert.strictEqual(web.includes("getUserMedia"), false);
 
+const immersive = fs.readFileSync(path.join(root, "web/immersive.js"), "utf8");
 const enterAt = web.indexOf("function enterFullscreen()");
 const leaveAt = web.indexOf("function leaveFullscreen()");
-const appAt = web.indexOf("function appDisplay()");
-assert.ok(appAt !== -1 && enterAt !== -1 && leaveAt !== -1);
-assert.ok(web.includes("if (appDisplay()) return;"));
-assert.ok(web.includes('if (window.matchMedia("(display-mode: fullscreen)").matches) return;'));
-assert.strictEqual(web.split("requestFullscreen()").length - 1, 1, "fullscreen is requested in one place, on a sit, not when the page opens");
+assert.ok(enterAt !== -1 && leaveAt !== -1);
+assert.ok(web.includes("window.YantraImmersive"));
+assert.ok(web.includes("Immersive.shouldRequest"));
+assert.ok(web.includes("Immersive.shouldExit"));
+assert.ok(web.includes("Immersive.options()"));
+assert.strictEqual(web.split("requestFullscreen(").length - 1, 1, "fullscreen is requested in one place, on a sit, not when the page opens");
 assert.ok(web.includes("navigator.standalone === true"));
 for (const mode of ["fullscreen", "standalone", "minimal-ui", "window-controls-overlay"]) {
   assert.ok(web.includes(`(display-mode: ${mode})`), mode);
 }
 assert.ok(web.indexOf("enterFullscreen();") < web.indexOf("function sit(on)"));
 assert.ok(web.includes("leaveFullscreen();"));
-assert.ok(!/^\s*enterFullscreen\(\);/m.test(web.slice(0, appAt)));
+assert.ok(web.includes("window.yantraRelease"));
+assert.ok(!/^\s*enterFullscreen\(\);/m.test(web.slice(0, enterAt)));
+assert.ok(page.includes('src="immersive.js"'));
+assert.ok(page.indexOf('src="immersive.js"') < page.indexOf('src="web.js"'));
+assert.ok(immersive.includes('navigationUI: "hide"'));
+assert.ok(immersive.includes("appleMobile"));
+const shell = fs.readFileSync(path.join(root, "index.html"), "utf8");
+assert.ok(shell.includes("html:fullscreen canvas"), "a sit's fullscreen surface is the yantra, edge to edge");
+assert.ok(shell.split("yantraRelease").length - 1 >= 6, "a play that never becomes a sit leaves fullscreen");
 
 assert.ok(desktop.includes('"--class=yantra"'));
 assert.ok(desktop.includes("fullscreen = true"));

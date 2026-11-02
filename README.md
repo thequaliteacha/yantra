@@ -206,8 +206,13 @@ audio files and the silenced notifications belong to the desktop app.
 Open the link and add Yantra to the home screen: on Android, Chrome's menu ›
 *Add to Home screen* (or *Install app*); on iPhone, Safari's Share › *Add to
 Home Screen*. The installed app asks for fullscreen. Android and a Chromium
-install open fullscreen. iPhone and iPad draw edge to edge under the clock;
-Safari keeps that bar. A sitting keeps the screen awake, and a tap shows *End
+install open fullscreen. A sit, on every device, also asks the browser to hide
+its bars and restores them when the sit ends. iPhone and iPad still draw the
+clock, Wi-Fi, and battery over a Home Screen web app and over Safari: WebKit
+paints that status bar above the page, and neither the Fullscreen API nor a
+stylesheet can cover the glyphs. On iPad the same request can hide the home
+indicator for the length of the sit. The page draws edge to edge underneath
+(`black-translucent`). A sitting keeps the screen awake, and a tap shows *End
 sitting*. The in-page Spotify player
 cannot play on a phone, so sits use the hosted recordings. Spotify plays only
 when the Spotify app is already available. A song that never starts is skipped.
