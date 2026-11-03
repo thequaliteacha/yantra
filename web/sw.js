@@ -1,10 +1,11 @@
 /* Keeps a sit available after the network is gone.
    The shell is saved on install and refreshed when the network answers.
-   Self-hosted albums are stored whole, in their own cache, only when someone
-   chooses Keep offline. A partial response is never kept. Spotify, talks,
-   quotes, and ambient audio stay on the network. */
+   Self-hosted albums and Dharma talks are stored whole, in the audio cache,
+   only when someone chooses Keep offline. A partial response is never kept.
+   Spotify, quotes, talk word timings, and ambient audio stay on the network.
+   The talk list is not part of the shell. */
 const YantraSW = (function () {
-  const SHELL = "yantra-v8";
+  const SHELL = "yantra-v9";
   const AUDIO = "yantra-audio-v1";
   const SHELL_FILES = [
     "/web/",
@@ -51,10 +52,16 @@ const YantraSW = (function () {
     "/web/icons/icon-512.png",
   ];
 
+  function isTalkAudio(pathname) {
+    const path = String(pathname || "");
+    return /^\/talks\/[a-z0-9][a-z0-9./_-]{0,160}\.mp3$/i.test(path) && path.indexOf("..") < 0;
+  }
+
   function routeKind(url, method) {
     if ((method || "GET") !== "GET") return "skip";
     if (url.pathname === "/web/sw.js") return "skip";
     if (url.pathname.includes("/audio/") && /\.mp3$/i.test(url.pathname)) return "audio";
+    if (isTalkAudio(url.pathname)) return "audio";
     if (url.pathname.startsWith("/push") || url.pathname.startsWith("/api/") || url.pathname === "/logout") return "skip";
     if (url.pathname.endsWith("/quotes.json") || url.pathname.endsWith("/talks.json") || url.pathname.startsWith("/talks") || url.pathname.startsWith("/ambient")) return "skip";
     return "shell";
@@ -106,6 +113,7 @@ const YantraSW = (function () {
     SHELL: SHELL,
     AUDIO: AUDIO,
     SHELL_FILES: SHELL_FILES,
+    isTalkAudio: isTalkAudio,
     routeKind: routeKind,
     parseByteRange: parseByteRange,
     sliceBody: sliceBody,
@@ -169,20 +177,44 @@ if (typeof ServiceWorkerGlobalScope !== "undefined" && self instanceof ServiceWo
     try {
       const cache = await caches.open(YantraSW.AUDIO);
       const cached = await cache.match(url.href);
-      const size = cached ? Number(cached.headers.get("content-length")) : 0;
-      if (cached && cached.status === 200 && (!cached.headers.has("content-length") || size > 0)) {
+      const headerSize = cached ? Number(cached.headers.get("content-length")) : 0;
+      if (cached && cached.status === 200 && (!cached.headers.has("content-length") || headerSize > 0)) {
+        const type = cached.headers.get("content-type") || "audio/mpeg";
+        const blob = await cached.blob();
+        const size = blob.size || headerSize;
+        if (!size) return fetch(request);
         const range = request.headers.get("range");
-        if (!range) return cached;
-        const bytes = new Uint8Array(await cached.arrayBuffer());
-        const piece = YantraSW.sliceBody(bytes, range);
-        const headers = {
-          "content-type": cached.headers.get("content-type") || "audio/mpeg",
-          "content-length": String(piece.body.byteLength),
-          "accept-ranges": "bytes",
-        };
-        if (piece.status === 206) headers["content-range"] = "bytes " + piece.start + "-" + piece.end + "/" + piece.size;
-        if (piece.status === 416) headers["content-range"] = "bytes */" + piece.size;
-        return new Response(piece.body, { status: piece.status, headers: headers });
+        if (!range) {
+          return new Response(blob, {
+            status: 200,
+            headers: {
+              "content-type": type,
+              "content-length": String(size),
+              "accept-ranges": "bytes",
+            },
+          });
+        }
+        const parsed = YantraSW.parseByteRange(range, size);
+        if (!parsed || parsed.status === 416) {
+          return new Response(null, {
+            status: 416,
+            headers: {
+              "content-type": type,
+              "content-range": "bytes */" + size,
+              "accept-ranges": "bytes",
+            },
+          });
+        }
+        const body = blob.slice(parsed.start, parsed.end + 1, type);
+        return new Response(body, {
+          status: 206,
+          headers: {
+            "content-type": type,
+            "content-length": String(parsed.end - parsed.start + 1),
+            "content-range": "bytes " + parsed.start + "-" + parsed.end + "/" + size,
+            "accept-ranges": "bytes",
+          },
+        });
       }
     } catch (e) {}
     return fetch(request);

@@ -381,6 +381,21 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
           font: inherit; text-align: left; color: inherit; background: transparent; border: 0;
           border-bottom: 1px solid rgba(230, 201, 138, 0.18); cursor: pointer; }
   .talk span:nth-child(2) { color: rgba(232, 204, 146, 0.69); font-size: 0.88rem; white-space: nowrap; }
+  .talk-row { border-bottom: 1px solid rgba(230, 201, 138, 0.18); }
+  .talk-row .talk { border-bottom: 0; }
+  .talk-keep {
+    display: flex; flex-wrap: wrap; gap: 0.15rem 0.85rem; align-items: baseline;
+    margin: 0; padding: 0 0.2rem 0.55rem;
+    color: rgba(232, 204, 146, 0.55); font-size: 0.86rem;
+  }
+  .talk-keep .quiet {
+    background: transparent; border: 0; font: inherit; cursor: pointer; padding: 0;
+    color: rgba(232, 204, 146, 0.62); text-decoration: underline; text-underline-offset: 3px;
+    font-size: inherit;
+  }
+  .talk-keep .quiet:hover { color: #f7edd4; }
+  .talk-keep-meter { display: block; flex-basis: 100%; height: 2px; margin: 0.15rem 0; background: rgba(230, 201, 138, 0.12); }
+  .talk-keep-meter > span { display: block; height: 100%; background: rgba(230, 201, 138, 0.5); }
   #talks-list audio { width: 100%; margin-top: 0.6rem; }
   .account-field { display: flex; flex-direction: column; gap: 0.28rem; font-size: 0.82rem; color: rgba(232, 204, 146, 0.84); text-align: left; }
   #done-practice { text-align: center; color: rgba(232, 204, 146, 0.8); min-height: 1.3rem; }
@@ -3001,27 +3016,62 @@ if (window.YantraListening && window.YantraListening.onCommit) {
     paintTalkHeard();
   });
 }
-/* Dharma Talks: the room and its home link show for the Zazen word only, filled by talks.js from talks.json. */
+/* Dharma Talks: the room and its home link show for the Zazen word only, filled by talks.js from talks.json.
+   Offline, a talk that is not kept on this device is left off the list. */
 function paintTalks() {
   const section = document.getElementById("talks-list");
   if (!section) return;
   // Dharma Talks is for the Zazen word only. Albums stay.
   const talks = document.getElementById("open-talks");
-  const shown = !!(window.YantraTalks && window.YANTRA_LEVEL === "zazen" && window.yantraTalks);
+  const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+  const level = window.YANTRA_LEVEL;
+  const data = window.yantraTalks;
+  const kept = window.yantraKeptTalks;
+  const sections = window.YantraTalks
+    ? window.YantraTalks.talkSections(data, level, { offline: offline, kept: kept })
+    : [];
+  const shown = !!(window.YantraTalks && level === "zazen" && sections.length);
   if (talks) talks.hidden = !shown;
-  if (!shown) {
-    const player = section.querySelector("audio");
+  const player = section.querySelector("audio");
+  const src = player ? (player.getAttribute("src") || "") : "";
+  const stillPlaying = !src || (window.YantraTalks && window.YantraTalks.canPlay && window.YantraTalks.canPlay(src, { offline: offline, kept: kept }));
+  if (!stillPlaying) {
     if (player) {
+      player.pause();
+      player.removeAttribute("src");
+      player.hidden = true;
+    }
+    const now = section.querySelector("[data-talk-now]");
+    if (now) now.textContent = "";
+    if (document.body.classList.contains("watching") && window.yantraCloseWatch) window.yantraCloseWatch();
+  }
+  if (!shown) {
+    if (player && stillPlaying) {
       player.pause();
       player.removeAttribute("src");
       player.hidden = true;
     }
     section.hidden = true;
     section.dataset.painted = "";
+    const list = section.querySelector("[data-talk-list]");
+    if (list) list.replaceChildren();
+    if (document.body.classList.contains("watching") && window.yantraCloseWatch) window.yantraCloseWatch();
     return;
   }
-  if (section.dataset.painted === "1" && !section.hidden) return;
-  section.dataset.painted = window.YantraTalks.render(section, window.yantraTalks, window.YANTRA_LEVEL) ? "1" : "";
+  const key = window.YantraTalks.viewKey(data, level, {
+    offline: offline,
+    kept: kept,
+    states: window.yantraTalkStates,
+  });
+  if (section.dataset.painted === key && !section.hidden) return;
+  section.dataset.painted = window.YantraTalks.render(section, data, level, document, {
+    offline: offline,
+    kept: kept,
+    states: window.yantraTalkStates || {},
+    onAction: function (src, action) {
+      if (window.yantraTalkKeep) window.yantraTalkKeep(src, action);
+    },
+  }) ? key : "";
 }
 window.paintTalks = paintTalks;
 function showRoom(name) {
@@ -3261,13 +3311,16 @@ if (window.YANTRA_WEB) {
     const talk = quote && window.YantraTalks
       ? window.YantraTalks.findTalk(window.yantraTalks, "zazen", quote.talk)
       : null;
+    const talkReady = !!(talk && talkCreditPlayable(talk.src));
     if (quote && quote.text) {
       quoteNode.textContent = "\u201c" + quote.text + "\u201d";
-      if (talk && from) {
+      if (talkReady && from) {
         from.hidden = false;
         from.textContent = "From: " + talk.title;
         from.dataset.src = talk.src;
         from.dataset.title = talk.title;
+      } else if (cite && talk && !talkReady) {
+        cite.textContent = "\u2014 " + talk.title;
       } else if (cite) {
         cite.append(document.createTextNode("\u2014 " + (quote.by || "") + ", "));
         const link = document.createElement("a");
@@ -3291,6 +3344,7 @@ if (window.YANTRA_WEB) {
       const src = doneFrom.dataset.src || "";
       const title = doneFrom.dataset.title || "";
       if (!src.startsWith("/talks/") || src.includes("..") || !window.YantraTalks) return;
+      if (!talkCreditPlayable(src)) return;
       showRoom("talks");
       window.YantraTalks.play(document.getElementById("talks-list"), src, title);
     });
@@ -3347,6 +3401,26 @@ if (window.YANTRA_WEB) {
     const segments = await window.YantraTalkView.loadWords(detail.src);
     if (window.yantraWatch === view) view.segments = segments;
   }
+  function talkCreditPlayable(src) {
+    if (!src) return false;
+    if (!window.YantraTalks || !window.YantraTalks.canPlay) return true;
+    return window.YantraTalks.canPlay(src, {
+      offline: typeof navigator !== "undefined" && navigator.onLine === false,
+      kept: window.yantraKeptTalks,
+    });
+  }
+  addEventListener("offline", () => {
+    const from = document.getElementById("done-from");
+    if (!from || from.hidden) return;
+    if (talkCreditPlayable(from.dataset.src || "")) return;
+    const title = from.dataset.title || "";
+    from.hidden = true;
+    from.textContent = "";
+    delete from.dataset.src;
+    delete from.dataset.title;
+    const cite = document.getElementById("done-cite");
+    if (cite && title && !cite.textContent) cite.textContent = "\u2014 " + title;
+  });
   function closeWatch() {
     // Leaving the talk is like ending a sit: it pauses, and picks up here next time.
     const view = window.yantraWatch;
@@ -3357,6 +3431,7 @@ if (window.YANTRA_WEB) {
     if (watchLock) watchLock.release().catch(() => {});
     watchLock = null;
   }
+  window.yantraCloseWatch = closeWatch;
   addEventListener("yantra:talk", (event) => openWatch(event.detail));
   talkWatch.addEventListener("click", (event) => {
     if (!event.target.closest("button")) showTalkBar();

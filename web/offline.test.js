@@ -66,11 +66,29 @@ const failed = O.packView({ error: true, have: 1, total: 6, bytes: 1000 }, false
 assert.strictEqual(failed.action, "Try again");
 assert.strictEqual(failed.secondary, "Remove");
 
-assert.strictEqual(SW.SHELL, "yantra-v8");
+assert.strictEqual(O.isTalkSrc("/talks/meditation.mp3"), true);
+assert.strictEqual(O.isTalkSrc("/talks/../secret.mp3"), false);
+assert.strictEqual(O.isTalkSrc("/web/audio/samurai/01.mp3"), false);
+assert.strictEqual(O.talkUrl("/talks/meditation.mp3", origin), origin + "/talks/meditation.mp3");
+assert.strictEqual(O.talkUrl("/talks/../secret.mp3", origin), "");
+assert.strictEqual(O.talkView({}, false).action, "Keep offline");
+assert.strictEqual(O.talkView({}, false).detail, "");
+const keeping = O.talkView({ busy: true, bytes: 2 * 1024 * 1024, total: 8 * 1024 * 1024 }, false);
+assert.strictEqual(keeping.action, "Stop");
+assert.strictEqual(keeping.meter, 25);
+assert.ok(keeping.detail.startsWith("Keeping"));
+const storedTalk = O.talkView({ complete: true, bytes: 12 * 1024 * 1024 }, true);
+assert.strictEqual(storedTalk.action, "Remove");
+assert.ok(storedTalk.detail.startsWith("On this device"));
+assert.strictEqual(O.talkView({}, true).action, "");
+assert.strictEqual(O.talkView({ error: true }, false).action, "Try again");
+
+assert.strictEqual(SW.SHELL, "yantra-v9");
 assert.strictEqual(SW.AUDIO, O.AUDIO);
 assert.notStrictEqual(SW.SHELL, SW.AUDIO);
-assert.strictEqual(SW.retainCache("yantra-v8"), true);
+assert.strictEqual(SW.retainCache("yantra-v9"), true);
 assert.strictEqual(SW.retainCache("yantra-audio-v1"), true);
+assert.strictEqual(SW.retainCache("yantra-v8"), false);
 assert.strictEqual(SW.retainCache("yantra-v7"), false);
 for (const file of ["/web/", "/web/index.html", "/index.html", "/discs.json", "/access", "/web/audio.json", "/web/config.json", "/web/sets.json", "/web/awakening.js", "/web/field.js", "/web/choose.js", "/web/sit.js", "/web/settings.js", "/web/practice.js", "/web/listening.js", "/web/offline.js", "/web/immersive.js", "/web/icons/icon-192.png"]) {
   assert.ok(SW.SHELL_FILES.includes(file), file);
@@ -87,7 +105,12 @@ assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/web/playback.js"
 assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/web/sw.js")), "skip");
 assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/web/talks.json")), "skip");
 assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/web/quotes.json")), "skip");
-assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/talks/balance.mp3")), "skip");
+assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/talks/balance.mp3")), "audio");
+assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3")), "audio");
+assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/talks/balance.json")), "skip");
+assert.strictEqual(SW.isTalkAudio("/talks/foo/../../secret.mp3"), false);
+assert.strictEqual(SW.isTalkAudio("/talks/meditation.mp3"), true);
+assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/talks/balance.mp3"), "POST"), "skip");
 assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/ambient/rain-light.mp3")), "skip");
 assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/logout")), "skip");
 assert.strictEqual(SW.routeKind(new URL("https://yantramedi.app/api/practice")), "skip");
@@ -110,12 +133,17 @@ assert.ok(swText.includes('"/talks.json"'));
 assert.ok(swText.includes('url.pathname.startsWith("/ambient")'));
 assert.ok(swText.includes('pathname === "/logout"'));
 assert.ok(swText.includes("yantra-audio-v1"));
+assert.ok(swText.includes("blob.slice"));
 assert.ok(!swText.includes("cache.put(request, copy)"));
 
 const web = fs.readFileSync(path.join(__dirname, "web.js"), "utf8");
 const loader = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 assert.ok(web.includes("cachedAlbums"));
+assert.ok(web.includes("yantraTalkKeep"));
+assert.ok(web.includes("saveCatalog"));
+assert.ok(web.includes("loadCatalog"));
+assert.ok(web.includes('level === "sangha" && window.YantraOffline && window.YantraOffline.clearTalks'));
 assert.ok(web.includes("offline: offlineNow()"));
 assert.ok(fs.readFileSync(path.join(__dirname, "offline.js"), "utf8").includes("Keep offline"));
 assert.ok(web.includes('scope: "/"'));
@@ -124,6 +152,10 @@ assert.ok(loader.includes('src="offline.js"'));
 assert.ok(loader.indexOf('src="offline.js"') < loader.indexOf('src="web.js"'));
 assert.ok(page.includes("paintOfflineAlbum"));
 assert.ok(fs.readFileSync(path.join(__dirname, "account.js"), "utf8").includes("clearKept"));
+assert.ok(fs.readFileSync(path.join(__dirname, "account.js"), "utf8").includes("clearTalks"));
+assert.ok(page.includes("talk-keep"));
+assert.ok(page.includes("talks.hidden = !shown"));
+assert.ok(O.CATALOG_KEY.startsWith("yantra."));
 
 test("stores a complete album and skips it the next time", async () => {
   const cache = memoryCache();
@@ -171,4 +203,165 @@ test("a ranged response is not kept", async () => {
     (err) => err.name === "Incomplete",
   );
   assert.strictEqual((await cache.keys()).length, 0);
+});
+
+function memoryStore() {
+  const map = new Map();
+  return {
+    getItem(key) { return map.has(key) ? map.get(key) : null; },
+    setItem(key, value) { map.set(key, String(value)); },
+    removeItem(key) { map.delete(key); },
+  };
+}
+
+test("stores one talk, plays it from cache, and can remove it", async () => {
+  const cache = memoryCache();
+  const src = "/talks/meditation.mp3";
+  let fetches = 0;
+  const fetchImpl = async (url, init) => {
+    fetches += 1;
+    assert.strictEqual(url, origin + src);
+    assert.strictEqual(init.method, "GET");
+    assert.strictEqual(init.cache, "no-store");
+    assert.ok(!init.headers || !init.headers.Range);
+    return new Response(new Uint8Array([1, 2, 3, 4, 5, 6]), {
+      status: 200,
+      headers: { "content-type": "audio/mpeg", "content-length": "6" },
+    });
+  };
+  const progress = [];
+  const stored = await O.storeTalk(src, {
+    origin: origin,
+    cache: cache,
+    fetch: fetchImpl,
+    onProgress: (row) => progress.push(row.bytes),
+  });
+  assert.strictEqual(stored.complete, true);
+  assert.strictEqual(stored.bytes, 6);
+  assert.strictEqual(fetches, 1);
+  assert.ok(progress.indexOf(6) >= 0);
+  const found = await O.inventoryTalks([src, "/talks/other.mp3", src], { origin: origin, cache: cache });
+  assert.deepStrictEqual(found.kept, [src]);
+  assert.strictEqual(found.talks[src].bytes, 6);
+  assert.strictEqual(found.talks["/talks/other.mp3"].complete, false);
+  fetches = 0;
+  await O.storeTalk(src, { origin: origin, cache: cache, fetch: fetchImpl });
+  assert.strictEqual(fetches, 0, "a complete talk is not downloaded again");
+  await O.removeTalk(src, { origin: origin, cache: cache });
+  const gone = await O.inventoryTalks([src], { origin: origin, cache: cache });
+  assert.deepStrictEqual(gone.kept, []);
+});
+
+test("a ranged talk response is not kept", async () => {
+  const cache = memoryCache();
+  await assert.rejects(
+    () => O.storeTalk("/talks/meditation.mp3", {
+      origin: origin,
+      cache: cache,
+      fetch: async () => new Response(new Uint8Array([1, 2]), {
+        status: 206,
+        headers: { "content-type": "audio/mpeg", "content-range": "bytes 0-1/8" },
+      }),
+    }),
+    (err) => err.name === "Incomplete",
+  );
+  assert.strictEqual((await cache.keys()).length, 0);
+});
+
+test("stopping a talk does not keep a partial copy", async () => {
+  const cache = memoryCache();
+  const controller = new AbortController();
+  const fetchImpl = async () => {
+    const stream = new ReadableStream({
+      pull(control) {
+        controller.abort();
+        control.enqueue(new Uint8Array([1, 2, 3, 4]));
+        control.close();
+      },
+    });
+    return new Response(stream, {
+      status: 200,
+      headers: { "content-type": "audio/mpeg", "content-length": "8" },
+    });
+  };
+  await assert.rejects(
+    () => O.storeTalk("/talks/meditation.mp3", {
+      origin: origin,
+      cache: cache,
+      fetch: fetchImpl,
+      signal: controller.signal,
+    }),
+    (err) => err.name === "AbortError",
+  );
+  assert.strictEqual((await cache.keys()).length, 0);
+});
+
+test("a short body is not kept as a complete talk", async () => {
+  const cache = memoryCache();
+  await assert.rejects(
+    () => O.storeTalk("/talks/meditation.mp3", {
+      origin: origin,
+      cache: cache,
+      fetch: async () => new Response(new Uint8Array([1, 2]), {
+        status: 200,
+        headers: { "content-type": "audio/mpeg", "content-length": "8" },
+      }),
+    }),
+    (err) => err.name === "Incomplete",
+  );
+  assert.strictEqual((await cache.keys()).length, 0);
+});
+
+test("a talk path outside /talks is not fetched", async () => {
+  let fetches = 0;
+  await assert.rejects(
+    () => O.storeTalk("/talks/../secret.mp3", {
+      cache: memoryCache(),
+      fetch: async () => { fetches += 1; return new Response(null, { status: 200 }); },
+    }),
+    (err) => err.name === "Incomplete",
+  );
+  assert.strictEqual(fetches, 0);
+});
+
+test("clearing talks leaves a kept album in the same cache", async () => {
+  const cache = memoryCache();
+  const store = memoryStore();
+  await O.storeAlbum("samurai", two, {
+    origin: origin,
+    cache: cache,
+    fetch: async () => new Response(new Uint8Array([9, 8, 7, 6]), {
+      status: 200,
+      headers: { "content-type": "audio/mpeg" },
+    }),
+  });
+  await O.storeTalk("/talks/meditation.mp3", {
+    origin: origin,
+    cache: cache,
+    fetch: async () => new Response(new Uint8Array([1, 2, 3, 4]), {
+      status: 200,
+      headers: { "content-type": "audio/mpeg", "content-length": "4" },
+    }),
+  });
+  assert.strictEqual(O.saveCatalog({
+    heading: "Dharma Talks by Rama",
+    note: "By Rama.",
+    sets: [{
+      id: "dharma-talks",
+      title: "Dharma Talks",
+      talks: [
+        { title: "Meditation", key: "talks/meditation.mp3", seconds: 1797 },
+        { title: "Nope", key: "talks/../secret.mp3", seconds: 10 },
+      ],
+    }],
+  }, store), true);
+  const loaded = O.loadCatalog(store);
+  assert.strictEqual(loaded.sets[0].talks.length, 1);
+  assert.strictEqual(loaded.sets[0].talks[0].key, "talks/meditation.mp3");
+  await O.clearTalks({ cache: cache, store: store });
+  assert.strictEqual(O.loadCatalog(store), null);
+  const albums = await O.inventory(two, { origin: origin, cache: cache });
+  assert.deepStrictEqual(albums.cachedAlbumIds, ["samurai"]);
+  const talks = await O.inventoryTalks(["/talks/meditation.mp3"], { origin: origin, cache: cache });
+  assert.deepStrictEqual(talks.kept, []);
 });

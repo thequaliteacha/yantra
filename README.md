@@ -88,7 +88,10 @@ yantra, and the practice record work with the connection off, for albums that
 were kept in full. Spotify cannot play offline, so those albums leave the
 shelf, as does any self-hosted album that is not fully kept. The sangha word
 still opens only Vayu. The Zazen word still opens the rest, including
-Lumikara. Talks and quotes are not kept for the plane.
+Lumikara. Quotes are not kept for the plane. On a Dharma talk, *Keep offline*
+stores that one recording in the same way. *Remove* deletes it. With the
+network on, a talk that is not stored still streams. With the network off,
+talks that were not kept leave the list. The Sangha word does not see talks.
 
 Each listener's forms are their own. On the web they are kept in that browser
 under the listener's Spotify account, and every saved form also becomes a
@@ -189,7 +192,9 @@ this device also clears Spotify and the cookie.
 
 *Dharma Talks*, on the home screen for the Zazen word only, plays the Rama
 talks listed in `web/talks.json` (downloaded from the Rama Meditation Society
-site and served from R2 under `/talks/`).
+site and served from R2 under `/talks/`). *Keep offline* on a talk stores that
+recording on the device, and it plays from there when the network is gone.
+*Remove* deletes the copy. A talk that is not stored still streams while online.
 
 ### Setting up the connections (once, by the site owner)
 

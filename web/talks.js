@@ -3,6 +3,9 @@
  * The list is web/talks.json and the audio is /talks/<key> in the private R2
  * bucket. The Worker refuses both to the Sangha word, and this page also keeps
  * the section hidden unless the access level is zazen.
+ * A talk can be kept on this device. Offline, a talk that was not kept is
+ * left off the list. Streaming stays when the talk is not kept and the
+ * network is here.
  */
 (function (root) {
   const KEY = /^talks\/[a-z0-9][a-z0-9./_-]{0,160}\.mp3$/;
@@ -120,18 +123,63 @@
     }
   }
 
-  /* Sets in their own order, each with its playable talks. Nothing unless zazen. */
-  function talkSections(data, level) {
+  function talkKept(src, kept) {
+    if (!kept || !src) return false;
+    if (typeof kept.has === "function") return kept.has(src);
+    if (Array.isArray(kept)) return kept.indexOf(src) >= 0;
+    return !!(kept[src] && kept[src].complete !== false);
+  }
+
+  /* A kept talk plays with the network off. Anything else still streams while online. */
+  function canPlay(src, options) {
+    const text = String(src || "");
+    if (!KEY.test(text.replace(/^\//, "")) || text.includes("..") || !text.startsWith("/talks/")) return false;
+    const opts = options || {};
+    if (!opts.offline) return true;
+    return talkKept(text, opts.kept);
+  }
+
+  /* Sets in their own order, each with its playable talks. Nothing unless zazen.
+     Offline, a talk that is not on this device is omitted, not dimmed. */
+  function talkSections(data, level, options) {
     if (level !== "zazen" || !data || !Array.isArray(data.sets)) return [];
+    const opts = options || {};
     const out = [];
     for (const set of data.sets) {
       if (!set || !Array.isArray(set.talks)) continue;
-      const talks = set.talks
+      let talks = set.talks
         .map((talk) => ({ title: String(talk.title || ""), src: talkSrc(talk.key), length: formatLength(talk.seconds) }))
         .filter((talk) => talk.title && talk.src);
+      if (opts.offline) talks = talks.filter((talk) => talkKept(talk.src, opts.kept));
       if (talks.length) out.push({ id: String(set.id || ""), title: String(set.title || ""), talks });
     }
     return out;
+  }
+
+  function talkInfo(src, options) {
+    const opts = options || {};
+    const state = (opts.states && opts.states[src]) || {};
+    const kept = talkKept(src, opts.kept) || !!state.complete;
+    return {
+      complete: !!state.busy ? false : kept,
+      bytes: Number(state.bytes) || 0,
+      total: Number(state.total) || 0,
+      busy: !!state.busy,
+      error: !!state.error && !kept,
+    };
+  }
+
+  function viewKey(data, level, options) {
+    const opts = options || {};
+    const bits = [String(level || ""), opts.offline ? "0" : "1"];
+    talkSections(data, level, opts).forEach((set) => {
+      bits.push(set.id);
+      set.talks.forEach((talk) => {
+        const info = talkInfo(talk.src, opts);
+        bits.push(talk.src, info.busy ? "b" : "", info.complete ? "c" : "", info.error ? "e" : "", String(info.bytes), String(info.total));
+      });
+    });
+    return bits.join("\u001f");
   }
 
   /* The talk whose title is the quote's source, from the list this level can see. */
@@ -157,11 +205,61 @@
     return true;
   }
 
+  function keepView(info, offline) {
+    const Offline = root && root.YantraOffline;
+    if (Offline && typeof Offline.talkView === "function") return Offline.talkView(info, offline);
+    if (info.busy) return { action: "Stop", secondary: "", detail: "Keeping", meter: null };
+    if (info.complete) return { action: "Remove", secondary: "", detail: "On this device", meter: null };
+    if (offline) return { action: "", secondary: "", detail: "", meter: null };
+    if (info.error) return { action: "Try again", secondary: "", detail: "Could not finish. Try again on the network.", meter: null };
+    return { action: "Keep offline", secondary: "", detail: "", meter: null };
+  }
+
+  function appendKeep(parent, d, talk, view, onAction) {
+    if (!view || (!view.action && !view.detail && view.meter == null)) return;
+    const row = d.createElement("div");
+    row.className = "talk-keep";
+    if (view.detail) {
+      const detail = d.createElement("span");
+      detail.className = "talk-keep-detail";
+      detail.textContent = view.detail;
+      row.append(detail);
+    }
+    if (view.meter != null) {
+      const meter = d.createElement("span");
+      meter.className = "talk-keep-meter";
+      meter.setAttribute("role", "progressbar");
+      meter.setAttribute("aria-valuenow", String(view.meter));
+      meter.setAttribute("aria-valuemin", "0");
+      meter.setAttribute("aria-valuemax", "100");
+      const bar = d.createElement("span");
+      if (bar.style) bar.style.width = view.meter + "%";
+      meter.append(bar);
+      row.append(meter);
+    }
+    const press = (label) => {
+      const button = d.createElement("button");
+      button.type = "button";
+      button.className = "quiet";
+      button.textContent = label;
+      button.addEventListener("click", (event) => {
+        if (event && event.stopPropagation) event.stopPropagation();
+        onAction(talk.src, label);
+      });
+      row.append(button);
+    };
+    if (view.action) press(view.action);
+    if (view.secondary) press(view.secondary);
+    parent.append(row);
+  }
+
   /* Fills the #talks-list section. Returns true when it is shown. */
-  function render(section, data, level, doc) {
+  function render(section, data, level, doc, options) {
     if (!section) return false;
     const d = doc || section.ownerDocument;
-    const sections = talkSections(data, level);
+    const opts = options || {};
+    const sections = talkSections(data, level, opts);
+    const showKeep = level === "zazen" && typeof opts.onAction === "function";
     const list = section.querySelector("[data-talk-list]");
     const player = section.querySelector("audio");
     if (list) list.replaceChildren();
@@ -207,7 +305,15 @@
           if (!player) return;
           start(player, talk.src, talk.title, set.title, now);
         });
-        group.append(button);
+        if (!showKeep) {
+          group.append(button);
+          continue;
+        }
+        const wrap = d.createElement("div");
+        wrap.className = "talk-row";
+        wrap.append(button);
+        appendKeep(wrap, d, talk, keepView(talkInfo(talk.src, opts), !!opts.offline), opts.onAction);
+        group.append(wrap);
       }
       if (list) list.append(group);
     }
@@ -215,7 +321,7 @@
     return true;
   }
 
-  const api = { talkSrc, formatLength, stateLabel, talkSections, findTalk, play, render };
+  const api = { talkSrc, formatLength, stateLabel, talkSections, canPlay, viewKey, findTalk, play, render };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.YantraTalks = api;
 })(typeof window !== "undefined" ? window : globalThis);
