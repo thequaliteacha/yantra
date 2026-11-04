@@ -22,9 +22,32 @@ const VERBATIM = [
   ["But the real miracle, obviously, is the transformation of consciousness from limitation and pain to enlightenment and ecstasy.", "Miracles", "https://www.ramameditationsociety.org/free-resource/miracles/"],
   ["In intermediate meditation, you’re touching light more deeply than in introductory meditation.", "Intermediate Meditation", "https://www.ramameditationsociety.org/free-resource/intermediate-meditation/"],
   ["As an enlightened teacher of Buddhism, I’d like to welcome you to the pathway to enlightenment.", "The Enlightenment Cycle", "https://www.ramameditationsociety.org/free-resource/enlightenment-cycle/"],
+  ["Wisdom is the ability to do two things at once — to be in the world and of it, to enjoy it, to participate in it fully and successfully, and at the same time, to not be here at all — to be in realms of light, to be in samadhi, beyond all this. That’s true wisdom.", "Wisdom", "https://www.ramameditationsociety.org/free-resource/wisdom/"],
+  ["Meditation is the science of stopping thought. When there is no thought, there is only pure mind – which is ecstasy. Meditation is perfect, qualityless, clear light perceiving itself as such.", "Awareness of Meditation", "https://www.ramameditationsociety.org/free-resource/awareness-meditation/"],
+  ["Meditation is timeless awareness. You don’t have to do anything to make it happen. You don’t have to rub two sticks together vigorously to create fire. The fire is already burning inside.", "Non-Doing of Meditation", "https://www.ramameditationsociety.org/free-resource/non-doing-meditation/"],
+  ["Your thoughts are like birds. Birds come into the sky and we see them. Then they fly by and they’re gone, but the sky, which is the element through which they travel, remains the same. The sky was there before the birds came; it was there while they passed through, and while they left. We want to find ourselves. We are the sky.", "Introductory and Intermediate Meditation", "https://www.ramameditationsociety.org/free-resource/introductory-and-intermediate-meditation/"],
+  ["When you concentrate, you’re focusing on something. When you meditate, you’re letting go and dissolving, you’re seeking to stop all thought.", "Zazen: Concentration and Meditation", "https://www.ramameditationsociety.org/free-resource/zazen-concentration-and-meditation/"],
+  ["As you focus completely on something, all other thoughts will be forced out of the mind because your attention will be dominated by the object of concentration. This develops your mental power exquisitely.", "Zazen: Concentration and Meditation", "https://www.ramameditationsociety.org/free-resource/zazen-concentration-and-meditation/"],
+  ["In advanced meditation, you become light. You transcend self, ego, time, space, dimensionality. You merge with the clear light of reality and you go beyond this world.", "Intermediate Meditation", "https://www.ramameditationsociety.org/free-resource/intermediate-meditation/"],
+  ["Meditation is concentration in the beginning. It’s a focus. Then, in the intermediate stage, it’s an opening, a deepening of one’s awareness but with a focus towards the planes of light.", "Intermediate Meditation", "https://www.ramameditationsociety.org/free-resource/intermediate-meditation/"],
+  ["Beyond duality, there is no darkness, no evil. There is only light: white light and black light (like the light between the stars).", "Light", "https://www.ramameditationsociety.org/free-resource/light/"],
+  ["If you focus on light exclusively, then you will experience ecstasy!", "Light", "https://www.ramameditationsociety.org/free-resource/light/"],
+  ["Enlightenment is the complete awareness of life without mental modifications. Enlightenment is the state of awareness we reach when our consciousness is one with infinity, with the infinite consciousness of life itself. Enlightenment is not a state of mind, although all states of mind are contained within it. It is the best of all things, the brightest of all lights.", "Enlightenment", "https://www.ramameditationsociety.org/enlightenment-from-the-enlightenment-cycle-talks-by-rama/"],
+  ["Enlightenment is happiness – happiness in the most profound and yet most simple sense. Enlightenment is, as I said before, a journey – a journey into cosmic consciousness. And meditation is the key to enlightenment.", "Enlightenment", "https://www.ramameditationsociety.org/enlightenment-from-the-enlightenment-cycle-talks-by-rama/"],
+  ["So enlightenment is a journey, a journey into light, a journey into self-knowledge, a journey into beauty, reflection, awareness.", "Enlightenment", "https://www.ramameditationsociety.org/enlightenment-from-the-enlightenment-cycle-talks-by-rama/"],
+  ["At the beginning and the middle and the end of all things, there’s only perfection. And that’s the perfection of enlightenment that is nirvana.", "Enlightenment", "https://www.ramameditationsociety.org/enlightenment-from-the-enlightenment-cycle-talks-by-rama/"],
+  ["Buddhism is the study of light and the study of life.", "Buddhism", "https://www.ramameditationsociety.org/free-resource/buddhism/"],
+  ["Zen is the study of making the mind still. As your mind becomes still, a power enters into you. This power transforms your mind.", "Rapid Mental Development", "https://www.ramameditationsociety.org/free-resource/rapid-mental-development/"],
 ];
 
+/* A theme tag has to be the word itself. "Enlightenment" contains the letters of "light" and is not a light tag. */
+function saysTheme(text, theme) {
+  return new RegExp("\\b" + theme + "s?\\b", "i").test(text);
+}
+
+assert.strictEqual(file.quotes.length, 24);
 assert.strictEqual(file.quotes.length, VERBATIM.length);
+assert.strictEqual(new Set(file.quotes.map((quote) => quote.text)).size, file.quotes.length);
 file.quotes.forEach((quote, index) => {
   assert.strictEqual(quote.text, VERBATIM[index][0]);
   assert.strictEqual(quote.talk, VERBATIM[index][1]);
@@ -32,12 +55,13 @@ file.quotes.forEach((quote, index) => {
   assert.strictEqual(quote.by, "Rama");
   quote.themes.forEach((theme) => {
     assert.ok(file.themes.includes(theme), theme);
-    assert.ok(quote.text.toLowerCase().includes(theme), quote.talk + " " + theme);
+    assert.ok(saysTheme(quote.text, theme), quote.talk + " " + theme);
   });
 });
 
 const pool = Q.pool(file);
-assert.strictEqual(pool.length, 8);
+assert.strictEqual(pool.length, 24);
+assert.strictEqual(new Set(pool.map((quote) => quote.id)).size, pool.length);
 assert.ok(pool.every((quote) => VERBATIM.some((row) => row[0] === quote.text)));
 assert.ok(pool.every((quote) => quote.href.startsWith("https://www.ramameditationsociety.org/")));
 
@@ -64,11 +88,17 @@ assert.deepStrictEqual(
   ["light", "ocean", "tantric"].sort()
 );
 
+const catalog = new Set();
+talks.sets.forEach((set) => set.talks.forEach((talk) => catalog.add(talk.title.toLowerCase())));
 VERBATIM.forEach((row) => {
   const found = T.findTalk(talks, "zazen", row[1]);
-  assert.ok(found, row[1]);
-  assert.strictEqual(found.title, row[1]);
-  assert.ok(found.src.startsWith("/talks/"), found.src);
+  if (catalog.has(row[1].toLowerCase())) {
+    assert.ok(found, row[1]);
+    assert.strictEqual(found.title, row[1]);
+    assert.ok(found.src.startsWith("/talks/"), found.src);
+  } else {
+    assert.strictEqual(found, null, row[1]);
+  }
   assert.strictEqual(T.findTalk(talks, "sangha", row[1]), null);
   assert.strictEqual(T.findTalk(talks, "", row[1]), null);
 });
@@ -101,22 +131,46 @@ function tally(options, draws, seed) {
   return counts;
 }
 
-const light = tally({ tracks: [{ discId: "mandala-of-light", n: 1 }], file }, 600, 3);
-const lightHits = pool.filter((quote) => quote.themes.includes("light")).reduce((sum, quote) => sum + light[quote.id], 0);
-assert.ok(lightHits / 600 > 0.42 && lightHits / 600 < 0.62, String(lightHits));
-assert.ok(lightHits < 600);
-Object.values(light).forEach((count) => assert.ok(count / 600 < 0.7));
+const TOUCHING = "In intermediate meditation, you’re touching light more deeply than in introductory meditation.";
+const lightQuotes = pool.filter((quote) => quote.themes.includes("light"));
+const lightTalks = new Set(lightQuotes.map((quote) => quote.talk));
+const touching = pool.find((quote) => quote.text === TOUCHING);
+assert.ok(touching.themes.includes("light"));
+assert.ok(lightQuotes.length >= 8, String(lightQuotes.length));
+assert.ok(lightTalks.size >= 6, [...lightTalks].join(", "));
+assert.ok(lightQuotes.filter((quote) => quote.text !== TOUCHING).length >= 7);
+const intermediateLight = pool.filter((quote) => quote.talk === "Intermediate Meditation" && quote.themes.includes("light"));
+assert.ok(intermediateLight.length >= 3, String(intermediateLight.length));
 
-const even = tally({ tracks: [{ discId: "mystery-school", n: 1 }], file }, 800, 9);
+const lightDraws = 3000;
+const light = tally({ tracks: [{ discId: "mandala-of-light", n: 1 }], file }, lightDraws, 3);
+const lightHits = lightQuotes.reduce((sum, quote) => sum + (light[quote.id] || 0), 0);
+assert.ok(lightHits / lightDraws > 0.64 && lightHits / lightDraws < 0.8, String(lightHits / lightDraws));
+assert.ok(lightHits < lightDraws);
+const touchingHits = light[touching.id] || 0;
+assert.ok(touchingHits / lightDraws < 0.12, String(touchingHits / lightDraws));
+assert.ok(touchingHits / lightHits < 0.2, String(touchingHits / lightHits));
+Object.entries(light).forEach(([id, count]) => assert.ok(count / lightDraws < 0.12, id + " " + count / lightDraws));
+const lightAvg = lightHits / lightQuotes.length;
+const otherAvg = (lightDraws - lightHits) / (pool.length - lightQuotes.length);
+assert.ok(lightAvg / otherAvg > 2.4 && lightAvg / otherAvg < 3.6, String(lightAvg / otherAvg));
+
+const againLight = tally({ tracks: [{ discId: "mandala-of-light", n: 1 }], file, lastId: touching.id }, lightDraws, 11);
+assert.ok((againLight[touching.id] || 0) / lightDraws < 0.05, String((againLight[touching.id] || 0) / lightDraws));
+const otherLightPeak = Math.max(...lightQuotes.filter((quote) => quote.id !== touching.id).map((quote) => againLight[quote.id] || 0));
+assert.ok((againLight[touching.id] || 0) < otherLightPeak);
+
+const evenDraws = 2400;
+const even = tally({ tracks: [{ discId: "mystery-school", n: 1 }], file }, evenDraws, 9);
 pool.forEach((quote) => {
-  const share = (even[quote.id] || 0) / 800;
-  assert.ok(share > 0.05 && share < 0.3, quote.id + " " + share);
+  const share = (even[quote.id] || 0) / evenDraws;
+  assert.ok(share > 0.02 && share < 0.08, quote.id + " " + share);
 });
 
 const sticky = pool[0].id;
-const again = tally({ tracks: [{ discId: "mystery-school", n: 1 }], file, lastId: sticky }, 800, 9);
+const again = tally({ tracks: [{ discId: "mystery-school", n: 1 }], file, lastId: sticky }, evenDraws, 9);
 assert.ok((again[sticky] || 0) < (even[sticky] || 0));
-assert.ok((again[sticky] || 0) / 800 < 0.09);
+assert.ok((again[sticky] || 0) / evenDraws < 0.04);
 
 const desert = Q.select(pool, { tracks: [{ discId: "anza-borrego", n: 1 }], file }, () => 0);
 assert.ok(!desert.themes.includes("desert"), "a desert album does not invent a desert quote");
