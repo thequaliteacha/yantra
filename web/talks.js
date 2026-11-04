@@ -80,30 +80,60 @@
     lockScreen(player, title, setTitle);
     if (keeping && !keeping.has(player) && typeof player.addEventListener === "function") {
       keeping.add(player);
-      let last = 0;
+      let place = 0;
+      const listening = () => root && root.YantraListening;
+      /* The clock reads this element on its own timer, so a talk keeps
+         accumulating after the visualizer closes and the talks page is hidden. */
+      if (listening() && typeof listening().watchTalk === "function") {
+        listening().watchTalk(() => {
+          const here = player.getAttribute("src") || "";
+          if (!here) return null;
+          const at = Number(player.currentTime) || 0;
+          const playing = !player.paused && !player.ended;
+          if (playing && Math.abs(at - place) >= 10) {
+            place = at;
+            keepProgress(here, at, player.duration && at >= player.duration - 30);
+          }
+          return { key: here, position: at, playing: playing };
+        });
+      }
       const noteTalk = () => {
-        const Listening = root && root.YantraListening;
+        const Listening = listening();
         const here = player.getAttribute("src") || "";
         if (!Listening || !here || typeof Listening.observeTalk !== "function") return;
         Listening.observeTalk({
           key: here,
           position: player.currentTime || 0,
-          playing: !player.paused,
+          playing: !player.paused && !player.ended,
           at: Date.now(),
         });
       };
       const finishTalk = () => {
         noteTalk();
-        const Listening = root && root.YantraListening;
+        const Listening = listening();
         if (Listening && typeof Listening.endTalk === "function") Listening.endTalk();
+      };
+      const pulse = () => {
+        const Listening = listening();
+        if (Listening && typeof Listening.pulseTalk === "function") Listening.pulseTalk();
       };
       player.addEventListener("timeupdate", () => {
         noteTalk();
         const at = player.currentTime;
-        if (Math.abs(at - last) < 10) return;
-        last = at;
+        if (Math.abs(at - place) < 10) return;
+        place = at;
         const here = player.getAttribute("src") || "";
         if (here) keepProgress(here, at, player.duration && at >= player.duration - 30);
+      });
+      player.addEventListener("play", pulse);
+      player.addEventListener("seeked", () => {
+        const here = player.getAttribute("src") || "";
+        const at = Number(player.currentTime) || 0;
+        if (here && at > 0) {
+          place = at;
+          keepProgress(here, at, false);
+        }
+        pulse();
       });
       player.addEventListener("pause", () => {
         const here = player.getAttribute("src") || "";

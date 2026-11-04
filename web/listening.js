@@ -4,6 +4,10 @@
  * stay in yantra.practice.v1 and are never added into this total. The record
  * stays on this device. A linked device uploads it only as ciphertext, beside
  * the formal days, and sync.js merges it once per device.
+ *
+ * A talk is credited from the audio element itself. The visualizer is only a
+ * view: leaving it, or hiding the talks page, does not stop the clock. Pause
+ * does. Resume continues from the playhead.
  */
 (function (root) {
   const KEY = "yantra.listening.v1";
@@ -285,6 +289,33 @@
     return Math.round((Number(ms) || 0) / 60000) >= 1;
   }
 
+  /* Uncommitted playhead time, so the mindfulness total matches what is
+     actually playing. Storage still holds only what has been committed. */
+  function addSnap(store, snap) {
+    if (!snap || !snap.parts) return store;
+    const kind = snap.kind === "talk" ? "talk" : "album";
+    const name = bucket(kind);
+    const lastAt = Math.max(0, Number(snap.lastAt) || 0);
+    Object.keys(snap.parts).forEach((key) => {
+      if (!validKey(kind, key)) return;
+      const raw = snap.parts[key];
+      const ms = Math.max(0, Number(raw && raw.ms != null ? raw.ms : raw) || 0);
+      if (ms <= 0) return;
+      const row = readRow(store[name][key]);
+      row.ms += ms;
+      if (lastAt > row.lastAt) row.lastAt = lastAt;
+      store[name][key] = row;
+    });
+    return store;
+  }
+
+  function liveStore(store) {
+    const next = normalize(store);
+    if (albumClock.active()) addSnap(next, albumClock.snapshot());
+    if (talkClock.active()) addSnap(next, talkClock.snapshot());
+    return recompute(next);
+  }
+
   /* What this word may see. Gated albums and talks stay in the store. */
   function rowsFor(store, options) {
     const opts = options || {};
@@ -294,7 +325,7 @@
       if (disc && disc.id && disc.title) titles[String(disc.id)] = String(disc.title);
     });
     const talkTitles = opts.talkTitles || {};
-    const clean = normalize(store);
+    const clean = liveStore(store);
     const now = opts.now instanceof Date ? opts.now : new Date();
     const items = [];
     let visibleMs = clean.earlier.ms;
@@ -342,7 +373,7 @@
   }
 
   function rowOf(kind, key) {
-    const store = loadView();
+    const store = liveStore(loadView());
     const name = bucket(kind === "talk" ? "talk" : "album");
     return store[name][String(key || "")] || null;
   }
@@ -421,11 +452,19 @@
         if (key && ms > 0) copy[key] = (copy[key] || 0) + ms;
         return { kind: kind, parts: copy, lastAt: lastAt };
       },
-      end() {
+      /* Hand the open time to storage and keep following the playhead. */
+      take() {
         flush();
         const heardParts = {};
         Object.keys(parts).forEach((id) => { heardParts[id] = parts[id]; });
         const heard = { kind: kind, parts: heardParts, lastAt: lastAt };
+        parts = {};
+        ms = 0;
+        lastAt = 0;
+        return heard;
+      },
+      end() {
+        const heard = this.take();
         on = false;
         parts = {};
         key = "";
@@ -452,20 +491,75 @@
     return commit(albumClock.end());
   }
 
-  function observeTalk(sample) {
-    if (!talkClock.active()) talkClock.begin("talk");
-    talkClock.observe(sample);
+  const TALK_SETTLE_MS = 5000;
+  let sampleTalkFrom = null;
+
+  function uncommittedTalk() {
+    if (!talkClock.active()) return 0;
+    const snap = talkClock.snapshot();
+    let pending = 0;
+    Object.keys(snap.parts).forEach((id) => { pending += Number(snap.parts[id]) || 0; });
+    return pending;
   }
-  function checkpointTalk() {
-    if (talkClock.active()) checkpoint(talkClock.snapshot());
+
+  /* Store the open talk once it is worth writing. Pause and hide store any remainder. */
+  function settleTalk(force) {
+    if (!talkClock.active()) return { store: load(), added: 0 };
+    const pending = uncommittedTalk();
+    if (pending <= 0) return { store: load(), added: 0 };
+    if (!force && pending < TALK_SETTLE_MS) return { store: load(), added: 0 };
+    return commit(talkClock.take());
   }
+
   function endTalk() {
     if (!talkClock.active()) return { store: load(), added: 0 };
     return commit(talkClock.end());
   }
 
+  /* A paused sample must not open a new listen. The playhead has to be moving. */
+  function noteTalk(sample) {
+    if (!sample || !sample.key || !validKey("talk", sample.key)) {
+      if (talkClock.active()) return endTalk();
+      return { store: load(), added: 0 };
+    }
+    if (!talkClock.active()) {
+      if (!sample.playing) return { store: load(), added: 0 };
+      talkClock.begin("talk");
+    }
+    talkClock.observe(sample);
+    if (!sample.playing) return endTalk();
+    return settleTalk(false);
+  }
+
+  function observeTalk(sample) {
+    if (!sample) return { store: load(), added: 0 };
+    if (sample.at == null) sample.at = Date.now();
+    return noteTalk(sample);
+  }
+
+  function checkpointTalk() {
+    if (talkClock.active()) checkpoint(talkClock.snapshot());
+  }
+
+  /* talks.js hands this the talks <audio> element. The visualizer is not involved. */
+  function watchTalk(read) {
+    sampleTalkFrom = typeof read === "function" ? read : null;
+  }
+
+  function pulseTalk(now) {
+    if (typeof sampleTalkFrom !== "function") return null;
+    let sample = null;
+    try { sample = sampleTalkFrom(); } catch (e) { return null; }
+    if (!sample || !sample.key) {
+      if (talkClock.active()) return endTalk();
+      return null;
+    }
+    if (sample.at == null) sample.at = typeof now === "number" ? now : Date.now();
+    return noteTalk(sample);
+  }
+
   function exportData() {
-    const store = loadView();
+    const store = liveStore(loadView());
     return {
       totals: { ms: store.totals.ms },
       albums: store.albums,
@@ -476,6 +570,8 @@
 
   if (root && typeof root.addEventListener === "function") {
     const keep = () => {
+      pulseTalk();
+      settleTalk(true);
       checkpointAlbum();
       checkpointTalk();
     };
@@ -483,8 +579,10 @@
     if (root.document && typeof root.document.addEventListener === "function") {
       root.document.addEventListener("visibilitychange", () => {
         if (root.document.visibilityState === "hidden") keep();
+        else pulseTalk();
       });
     }
+    root.setInterval(() => { pulseTalk(); }, 1000);
     root.setInterval(keep, 15000);
   }
 
@@ -519,6 +617,9 @@
     checkpointAlbum: checkpointAlbum,
     endAlbum: endAlbum,
     observeTalk: observeTalk,
+    watchTalk: watchTalk,
+    pulseTalk: pulseTalk,
+    settleTalk: settleTalk,
     checkpointTalk: checkpointTalk,
     endTalk: endTalk,
     exportData: exportData,
