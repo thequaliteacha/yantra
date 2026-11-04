@@ -223,6 +223,10 @@
         window.yantraQuotes = [];
         window.yantraQuoteFile = null;
         window.yantraTalks = null;
+        window.yantraKeptTalks = new Set();
+        if (window.YantraOffline && window.YantraOffline.clearTalks) {
+          window.YantraOffline.clearTalks().catch(() => {});
+        }
         if (window.paintTalks) window.paintTalks();
       }
     }

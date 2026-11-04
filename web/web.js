@@ -21,6 +21,10 @@
   let cachedIds = new Set();
   let packState = {};
   const offlineJobs = {};
+  let talkState = {};
+  const talkJobs = {};
+  let talkPaintAt = 0;
+  let talkPaintTimer = 0;
   const config = { spotifyClientId: "", appleDeveloperToken: "", audioBase: "audio/" };
 
   const ready = Promise.all([
@@ -67,8 +71,20 @@
       }
       // Rama talks, for the Zazen word only (the Worker refuses talks.json to the Sangha word).
       const talks = await realFetch("talks.json", { cache: "no-store" }).catch(() => null);
-      if (talks && talks.ok) window.yantraTalks = await talks.json().catch(() => null);
+      if (talks && talks.ok) {
+        window.yantraTalks = await talks.json().catch(() => null);
+        if (window.yantraTalks && window.YantraOffline && window.YantraOffline.saveCatalog) {
+          window.YantraOffline.saveCatalog(window.yantraTalks);
+        }
+      } else if (offlineNow() && window.YantraOffline && window.YantraOffline.loadCatalog) {
+        window.yantraTalks = window.YantraOffline.loadCatalog();
+      }
+    } else if (level === "sangha" && window.YantraOffline && window.YantraOffline.clearTalks) {
+      await window.YantraOffline.clearTalks().catch(() => {});
+      window.yantraTalks = null;
+      window.yantraKeptTalks = new Set();
     }
+    await refreshTalks();
     if (typeof window.paintTalks === "function") window.paintTalks();
     await refreshPacks();
     try { paintOffline(); } catch (e) {}
@@ -1999,6 +2015,124 @@
     return typeof navigator !== "undefined" && navigator.onLine === false;
   }
 
+  function talkSources() {
+    const Talks = window.YantraTalks;
+    const srcs = [];
+    if (!Talks || !window.yantraTalks || window.YANTRA_LEVEL !== "zazen") return srcs;
+    Talks.talkSections(window.yantraTalks, "zazen").forEach((set) => {
+      set.talks.forEach((talk) => {
+        if (talk && talk.src && srcs.indexOf(talk.src) < 0) srcs.push(talk.src);
+      });
+    });
+    return srcs;
+  }
+
+  function paintTalksSoon(force) {
+    const now = Date.now();
+    const due = !talkPaintAt || now - talkPaintAt >= 400;
+    if (force || due) {
+      if (talkPaintTimer) {
+        clearTimeout(talkPaintTimer);
+        talkPaintTimer = 0;
+      }
+      talkPaintAt = now;
+      if (typeof window.paintTalks === "function") window.paintTalks();
+      return;
+    }
+    if (talkPaintTimer) return;
+    talkPaintTimer = setTimeout(() => {
+      talkPaintTimer = 0;
+      talkPaintAt = Date.now();
+      if (typeof window.paintTalks === "function") window.paintTalks();
+    }, 400 - (now - talkPaintAt));
+  }
+
+  async function refreshTalks() {
+    const Offline = window.YantraOffline;
+    window.yantraTalkStates = talkState;
+    if (!Offline || window.YANTRA_LEVEL !== "zazen" || typeof Offline.inventoryTalks !== "function") {
+      window.yantraKeptTalks = new Set();
+      return;
+    }
+    try {
+      const found = await Offline.inventoryTalks(talkSources(), { origin: location.origin });
+      window.yantraKeptTalks = new Set(found.kept || []);
+      const talks = found.talks || {};
+      Object.keys(talks).forEach((src) => {
+        const prev = talkState[src] || {};
+        talkState[src] = {
+          bytes: talks[src].bytes || (prev.busy ? prev.bytes : 0) || 0,
+          total: prev.busy ? (prev.total || talks[src].bytes || 0) : (talks[src].bytes || 0),
+          complete: !!talks[src].complete,
+          busy: !!prev.busy && !talks[src].complete,
+          error: !!prev.error && !talks[src].complete,
+        };
+      });
+      window.yantraTalkStates = talkState;
+    } catch (e) {
+      window.yantraKeptTalks = window.yantraKeptTalks || new Set();
+    }
+  }
+
+  async function keepTalk(src) {
+    const Offline = window.YantraOffline;
+    if (!Offline || window.YANTRA_LEVEL !== "zazen" || !src || offlineNow() || talkJobs[src]) return;
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    talkJobs[src] = controller;
+    talkState[src] = Object.assign({}, talkState[src], { busy: true, error: false, complete: false });
+    window.yantraTalkStates = talkState;
+    paintTalksSoon(true);
+    try {
+      await Offline.storeTalk(src, {
+        origin: location.origin,
+        signal: controller ? controller.signal : undefined,
+        onProgress: (progress) => {
+          talkState[src] = {
+            bytes: progress.bytes,
+            total: progress.total,
+            complete: false,
+            busy: true,
+            error: false,
+          };
+          window.yantraTalkStates = talkState;
+          paintTalksSoon(false);
+        },
+      });
+      await refreshTalks();
+      if (talkState[src]) talkState[src].busy = false;
+    } catch (err) {
+      await refreshTalks();
+      if (talkState[src]) {
+        talkState[src].busy = false;
+        if (!err || err.name !== "AbortError") talkState[src].error = true;
+      }
+    }
+    delete talkJobs[src];
+    window.yantraTalkStates = talkState;
+    paintTalksSoon(true);
+  }
+
+  async function removeTalk(src) {
+    const Offline = window.YantraOffline;
+    if (!Offline || !src || window.YANTRA_LEVEL !== "zazen") return;
+    if (talkJobs[src]) talkJobs[src].abort();
+    delete talkJobs[src];
+    await Offline.removeTalk(src, { origin: location.origin }).catch(() => {});
+    if (talkState[src]) {
+      talkState[src] = { bytes: 0, total: 0, complete: false, busy: false, error: false };
+    }
+    await refreshTalks();
+    window.yantraTalkStates = talkState;
+    paintTalksSoon(true);
+  }
+
+  window.yantraTalkKeep = function (src, action) {
+    if (window.YANTRA_LEVEL !== "zazen") return;
+    if (action === "Stop" && talkJobs[src]) talkJobs[src].abort();
+    else if (action === "Remove") removeTalk(src);
+    else keepTalk(src);
+  };
+
   async function refreshPacks() {
     const Offline = window.YantraOffline;
     if (!Offline || !recordings || typeof location === "undefined") return;
@@ -2218,11 +2352,16 @@
   window.paintOfflineAlbum = paintOfflineAlbum;
   window.paintOfflineAlbums = paintOfflineAlbums;
   window.addEventListener("offline", () => {
+    Object.keys(talkJobs).forEach((src) => {
+      if (talkJobs[src]) talkJobs[src].abort();
+    });
     paintOffline();
+    refreshTalks().then(() => paintTalksSoon(true));
     dispatchEvent(new Event("yantra:shelf"));
   });
   window.addEventListener("online", () => {
     paintOffline();
+    refreshTalks().then(() => paintTalksSoon(true));
     dispatchEvent(new Event("yantra:shelf"));
   });
   if (window.paintAccount) {

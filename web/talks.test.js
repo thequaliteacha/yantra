@@ -91,7 +91,27 @@ assert.ok(loader.includes('src="talks.js"'));
 assert.ok(loader.includes('src="listening.js"'));
 assert.strictEqual(fs.readFileSync(path.join(__dirname, "talks.js"), "utf8").includes("YantraPractice"), false);
 assert.ok(sw.includes('"/talks.json"'), "the service worker never caches the talk list");
+assert.ok(sw.includes("isTalkAudio"), "a kept talk is served from the audio cache");
+assert.strictEqual(sw.includes('"/web/talks.json"'), false);
 assert.ok(page.includes("z-index: 6"), "the back arrow stays above the room");
+assert.ok(page.includes("talk-keep"), "a kept talk has a quiet control");
+assert.ok(page.includes("talkCreditPlayable"), "an uncached talk is not offered offline from a quote");
+assert.ok(fs.readFileSync(path.join(__dirname, "web.js"), "utf8").includes("yantraTalkKeep"));
+assert.ok(fs.readFileSync(path.join(__dirname, "account.js"), "utf8").includes("clearTalks"));
+
+const meditation = "/talks/meditation.mp3";
+const keptOne = new Set([meditation]);
+const online = T.talkSections(data, "zazen", { offline: false, kept: keptOne });
+assert.strictEqual(online[1].talks.length, 6, "online, every talk still streams");
+const plane = T.talkSections(data, "zazen", { offline: true, kept: keptOne });
+assert.deepStrictEqual(plane.map((set) => set.id), ["dharma-talks", "the-enlightenment-cycle"]);
+assert.deepStrictEqual(plane[0].talks.map((talk) => talk.src), [meditation]);
+assert.ok(!JSON.stringify(plane).includes("Cosmic Awareness"), "an uncached talk is absent offline");
+assert.deepStrictEqual(T.talkSections(data, "sangha", { offline: false, kept: keptOne }), []);
+assert.strictEqual(T.canPlay(meditation, { offline: true, kept: keptOne }), true);
+assert.strictEqual(T.canPlay("/talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3", { offline: true, kept: keptOne }), false);
+assert.strictEqual(T.canPlay(meditation, { offline: false, kept: new Set() }), true);
+assert.strictEqual(T.canPlay("/talks/../secret.mp3", { offline: false }), false);
 
 console.log("talks.test.js ok");
 
@@ -169,3 +189,61 @@ console.log("talks progress ok");
   delete globalThis.YantraPractice;
 }
 console.log("talks listening ok");
+
+{
+  globalThis.YantraOffline = require("./offline.js");
+  const actions = [];
+  const kept = section();
+  const src = "/talks/rama-live-la/rama-live-la-02-cosmic-awareness.mp3";
+  assert.strictEqual(T.render(kept.root, data, "zazen", null, {
+    offline: false,
+    kept: new Set(),
+    states: {},
+    onAction: (talkSrc, action) => actions.push([talkSrc, action]),
+  }), true);
+  const live = kept.list.children[1];
+  const row = live.children[2];
+  assert.strictEqual(row.className, "talk-row");
+  assert.strictEqual(row.children[0].className, "talk");
+  const keep = row.children[1];
+  assert.strictEqual(keep.className, "talk-keep");
+  const button = keep.children.find((node) => node.tag === "button");
+  assert.strictEqual(button.textContent, "Keep offline");
+  button.listeners.click();
+  assert.deepStrictEqual(actions, [[src, "Keep offline"]]);
+  assert.strictEqual(kept.audio.played, 0, "keeping a talk does not start it");
+  row.children[0].listeners.click();
+  assert.strictEqual(kept.audio.played, 1);
+  assert.strictEqual(kept.audio.attrs.src, src);
+
+  const again = section();
+  assert.strictEqual(T.render(again.root, data, "zazen", null, {
+    offline: true,
+    kept: new Set([src]),
+    states: { [src]: { complete: true, bytes: 12 * 1024 * 1024, busy: false, error: false } },
+    onAction: (talkSrc, action) => actions.push([talkSrc, action]),
+  }), true);
+  const titles = [];
+  again.list.children.forEach((group) => {
+    group.children.forEach((node) => {
+      const talk = node.className === "talk-row" ? node.children[0] : node;
+      if (talk && talk.className === "talk") titles.push(talk.children[0].textContent);
+    });
+  });
+  assert.deepStrictEqual(titles, ["Cosmic Awareness"]);
+  const keptRow = again.list.children[0].children[1].children[1];
+  assert.strictEqual(keptRow.className, "talk-keep");
+  assert.ok(keptRow.children[0].textContent.startsWith("On this device"));
+  const remove = keptRow.children.find((node) => node.tag === "button");
+  assert.strictEqual(remove.textContent, "Remove");
+  assert.ok(!JSON.stringify(again.list).includes("Meditation"), "offline drops talks that are not on the device");
+
+  const sanghaKeep = section();
+  assert.strictEqual(T.render(sanghaKeep.root, data, "sangha", null, {
+    onAction: () => actions.push("sangha"),
+  }), false);
+  assert.strictEqual(sanghaKeep.root.hidden, true);
+  assert.strictEqual(actions.includes("sangha"), false);
+  delete globalThis.YantraOffline;
+}
+console.log("talks offline ok");
