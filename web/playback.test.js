@@ -204,7 +204,14 @@ assert.ok(!playback.includes("Not available on this device yet"));
 assert.ok(web.includes("markFailed(live.items[index], false)"));
 assert.ok(!web.includes("markFailed(live.items[index], fromSpotify)"));
 assert.ok(!web.includes("const fromSpotify"));
-assert.ok(web.includes("spotify.play({ uris })"));
+assert.ok(web.includes("spotify.play("));
+assert.ok(web.includes("{ uris, expect: uris[0], allow: uris }"));
+assert.ok(web.includes("Playback.primeQueue"));
+assert.ok(web.includes("Playback.openingVerdict"));
+assert.ok(web.includes("recorded.detach()"));
+assert.ok(web.includes("spotify.quietDevice()"));
+assert.ok(web.includes('removeAttribute("src")'));
+assert.ok(!page.includes('selectedId = "samurai"'), "a sit cannot inherit a hardcoded Samurai selection");
 assert.ok(web.includes("spotify.sessionFailed || spotify.sdkFailed"));
 assert.ok(web.includes("Playback.calmLine"));
 assert.strictEqual(P.STALL_MS, 5000);
@@ -238,6 +245,37 @@ assert.strictEqual(P.nextPlayable(queue, 0, (item) => item.playable), 2);
 assert.strictEqual(P.nextPlayable(queue, 2, (item) => item.playable), -1);
 assert.strictEqual(P.calmLine(true), "This song didn't play. The next one is starting.");
 assert.strictEqual(P.calmLine(false), "This song didn't play.");
+
+const planned = ["spotify:track:first", "spotify:track:second"];
+assert.strictEqual(P.openingVerdict("spotify:track:first", planned), "open");
+assert.strictEqual(P.openingVerdict("spotify:track:second", planned), "later");
+assert.strictEqual(P.openingVerdict("spotify:track:samurai", planned), "foreign");
+assert.strictEqual(P.openingVerdict("", planned), "wait");
+assert.strictEqual(P.openingVerdict("spotify:track:first", []), "wait");
+assert.strictEqual(P.sameSource("spotify:track:abc", "https://open.spotify.com/track/abc"), true);
+assert.strictEqual(P.sameSource(
+  "audio/big-island/01.mp3",
+  "https://yantramedi.app/web/audio/big-island/01.mp3",
+), true);
+assert.strictEqual(P.sameSource(
+  "audio/big-island/01.mp3",
+  "https://yantramedi.app/web/audio/samurai/01.mp3",
+), false);
+assert.strictEqual(P.openingVerdict(
+  "https://yantramedi.app/web/audio/samurai/01.mp3",
+  ["audio/mystical-creatures/01.mp3", "audio/mystical-creatures/02.mp3"],
+), "foreign", "a leftover Samurai file is not the sit that was asked for");
+assert.strictEqual(P.openingVerdict(
+  "https://yantramedi.app/web/audio/mystical-creatures/01.mp3",
+  ["audio/mystical-creatures/01.mp3", "audio/mystical-creatures/04.mp3"],
+), "open");
+assert.deepStrictEqual(P.primeQueue({
+  uris: planned,
+  expect: planned[0],
+  allow: planned,
+}), { uris: planned, offset: { position: 0 } });
+assert.deepStrictEqual(P.primeQueue({ context_uri: "spotify:album:samurai" }).offset, { position: 0 });
+assert.deepStrictEqual(P.primeQueue({ uris: planned, offset: { position: 3 } }).offset, { position: 3 });
 
 assert.strictEqual(page.includes("ramameditationsociety.org"), false);
 assert.strictEqual(page.includes("You decide to be happy"), false);
