@@ -146,5 +146,120 @@ assert.ok(page.includes('id="mindful-total"'));
 assert.ok(page.includes('id="disc-listened"'));
 assert.ok(page.includes("paintMindfulness()"));
 assert.strictEqual(page.includes('id="motion-heart"'), false);
+const talksSrc = fs.readFileSync(path.join(__dirname, "talks.js"), "utf8");
+assert.ok(talksSrc.includes("watchTalk("), "talk tracking follows the audio element");
+assert.ok(talksSrc.includes("addEventListener(\"play\""));
+assert.ok(talksSrc.includes("addEventListener(\"seeked\""));
+assert.ok(!talksSrc.includes("YantraPractice"), "a talk does not write the formal record");
+
+/* Dharma talks keep accruing after the visualizer is gone. The clock reads the
+   audio element, so pause, resume, and seek behave the same on any screen. */
+{
+  const src = "/talks/dharma/leaving.mp3";
+  const player = {
+    src: src,
+    currentTime: 0,
+    paused: true,
+    ended: false,
+    getAttribute(name) { return name === "src" ? this.src : null; },
+  };
+  let now = 0;
+  L.watchTalk(() => {
+    if (!player.src) return null;
+    return {
+      key: player.getAttribute("src"),
+      position: player.currentTime,
+      playing: !player.paused && !player.ended,
+    };
+  });
+  const base = (L.load().talks[src] || {}).ms || 0;
+  const totalsBefore = L.load().totals.ms;
+  const practiceMs = P.load().totals.ms;
+  const practiceSits = P.load().totals.sits;
+
+  player.paused = false;
+  L.pulseTalk(now);
+  now = 20000;
+  player.currentTime = 20;
+  L.pulseTalk(now);
+  assert.strictEqual(Math.round(L.load().talks[src].ms - base), 20000, "play inside the visualizer is stored");
+
+  // Leave the visualizer and keep listening. Nothing here pauses or ends the talk.
+  now = 50000;
+  player.currentTime = 50;
+  L.pulseTalk(now);
+  assert.strictEqual(Math.round(L.load().talks[src].ms - base), 50000, "time keeps accumulating after the visualizer closes");
+
+  now = 53000;
+  player.currentTime = 53;
+  L.pulseTalk(now);
+  assert.strictEqual(Math.round(L.load().talks[src].ms - base), 50000, "a short tail stays open until pause");
+  assert.strictEqual(Math.round(L.syncPayload(L.load()).talks[src].ms - base), 50000, "an open tail is not uploaded until it is stored");
+  const live = L.rowsFor(L.load(), {
+    level: "zazen",
+    discs: [],
+    talkTitles: { [src]: "Leaving" },
+    now: new Date(now),
+  });
+  const row = live.items.find((item) => item.id === src);
+  assert.ok(row, "the open tail is part of the mindfulness list");
+  assert.strictEqual(Math.round(row.ms - base), 53000, "the list includes time not yet committed");
+  assert.ok(row.detail.indexOf("today") >= 0 || row.lastAt > 0);
+
+  player.paused = true;
+  L.pulseTalk(now);
+  assert.strictEqual(Math.round(L.load().talks[src].ms - base), 53000, "pause stores the tail and stops the clock");
+  const held = L.load().talks[src].ms;
+  const heldAt = L.load().talks[src].lastAt;
+  now = 90000;
+  L.pulseTalk(now);
+  assert.strictEqual(L.load().talks[src].ms, held, "paused time outside the visualizer is not credited");
+  assert.strictEqual(L.load().talks[src].lastAt, heldAt);
+
+  // Resume, then a forward seek counts only the wall clock.
+  player.paused = false;
+  player.currentTime = 53;
+  L.pulseTalk(now);
+  now = 100000;
+  player.currentTime = 180;
+  L.pulseTalk(now);
+  assert.strictEqual(Math.round(L.load().talks[src].ms - held), 10000, "resume continues, and a forward seek does not count as listening");
+
+  const afterSeek = L.load().talks[src].ms;
+  now = 101000;
+  player.currentTime = 10;
+  L.pulseTalk(now);
+  assert.strictEqual(L.load().talks[src].ms, afterSeek, "a backward seek adds nothing");
+  now = 121000;
+  player.currentTime = 30;
+  L.pulseTalk(now);
+  assert.strictEqual(Math.round(L.load().talks[src].ms - afterSeek), 20000, "playback after the seek counts");
+
+  player.paused = true;
+  L.pulseTalk(now);
+  const stored = L.load();
+  let sum = stored.earlier.ms;
+  Object.keys(stored.albums).forEach((id) => { sum += stored.albums[id].ms; });
+  Object.keys(stored.talks).forEach((id) => { sum += stored.talks[id].ms; });
+  assert.strictEqual(stored.totals.ms, sum, "mindfulness total stays the sum of albums, talks, and earlier");
+  assert.strictEqual(stored.totals.ms - totalsBefore, stored.talks[src].ms - base);
+  assert.strictEqual(L.syncPayload(stored).talks[src].ms, stored.talks[src].ms);
+  assert.strictEqual(P.load().totals.ms, practiceMs, "talk listening does not change formal time");
+  assert.strictEqual(P.load().totals.sits, practiceSits);
+
+  // A crash keeps the open tail once, including after the visualizer is gone.
+  const crashed = L.createClock(() => 0);
+  crashed.begin("talk");
+  crashed.observe({ key: src, position: 0, playing: true, at: 0 });
+  crashed.observe({ key: src, position: 12, playing: true, at: 12000 });
+  const beforeCrash = L.load().talks[src].ms;
+  L.checkpoint(crashed.snapshot());
+  L.recover();
+  assert.strictEqual(L.load().talks[src].ms, beforeCrash + 12000);
+  L.recover();
+  assert.strictEqual(L.load().talks[src].ms, beforeCrash + 12000, "a recovered talk is not added twice");
+
+  L.watchTalk(null);
+}
 
 console.log("listening.test.js ok");

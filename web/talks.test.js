@@ -247,3 +247,70 @@ console.log("talks listening ok");
   delete globalThis.YantraOffline;
 }
 console.log("talks offline ok");
+
+// Leaving the visualizer: timeupdate may never fire once the talks page is
+// hidden. Pause, continue, and resume still follow the audio element.
+{
+  const mem = new Map();
+  global.localStorage = {
+    getItem(key) { return mem.has(key) ? mem.get(key) : null; },
+    setItem(key, value) { mem.set(String(key), String(value)); },
+    removeItem(key) { mem.delete(key); },
+  };
+  const L = require("./listening.js");
+  globalThis.YantraListening = L;
+  const progress = {};
+  globalThis.YantraSettings = {
+    get: (key) => (key === "talks.progress" ? JSON.parse(JSON.stringify(progress.value || {})) : undefined),
+    set: (key, value) => { if (key === "talks.progress") progress.value = value; },
+  };
+  const practice = { commits: 0 };
+  globalThis.YantraPractice = { commit() { practice.commits += 1; } };
+  const handlers = {};
+  const player = {
+    attrs: {}, currentTime: 0, duration: 1800, hidden: true, paused: false, ended: false,
+    getAttribute(name) { return this.attrs[name] || null; },
+    setAttribute(name, value) { this.attrs[name] = value; },
+    removeAttribute(name) { delete this.attrs[name]; },
+    addEventListener(name, fn) { (handlers[name] = handlers[name] || []).push(fn); },
+    removeEventListener(name, fn) { handlers[name] = (handlers[name] || []).filter((f) => f !== fn); },
+    play() { return Promise.resolve(); },
+    pause() { this.paused = true; },
+  };
+  const fire = (name) => (handlers[name] || []).slice().forEach((fn) => fn());
+  const section = { querySelector: (sel) => (sel === "audio" ? player : null) };
+  const src = "/talks/meditation.mp3";
+  assert.ok(T.play(section, src, "Meditation"));
+  assert.strictEqual(typeof handlers.play, "object");
+  assert.strictEqual(typeof handlers.seeked, "object");
+  // No timeupdate: the visualizer is closed and the element is not on screen.
+  player.currentTime = 0;
+  player.paused = false;
+  L.pulseTalk(0);
+  player.currentTime = 40;
+  L.pulseTalk(40000);
+  assert.ok(L.load().talks[src].ms >= 39000, "listening accrues without a visualizer or timeupdate");
+  assert.strictEqual(progress.value[src].at, 40, "resume position advances while the visualizer is closed");
+  player.paused = true;
+  fire("pause");
+  const pausedMs = L.load().talks[src].ms;
+  assert.ok(pausedMs >= 39000);
+  L.pulseTalk(80000);
+  assert.strictEqual(L.load().talks[src].ms, pausedMs, "pause outside the visualizer stops credit");
+  player.paused = false;
+  player.currentTime = 40;
+  L.pulseTalk(80000);
+  player.currentTime = 55;
+  L.pulseTalk(95000);
+  player.paused = true;
+  fire("pause");
+  assert.ok(L.load().talks[src].ms >= pausedMs + 14000, "resume continues from the playhead");
+  assert.ok(L.load().talks[src].ms < pausedMs + 20000, "the paused gap is not credited");
+  assert.strictEqual(progress.value[src].at, 55);
+  assert.strictEqual(practice.commits, 0, "off-screen talk controls do not commit a formal sit");
+  L.watchTalk(null);
+  delete globalThis.YantraListening;
+  delete globalThis.YantraSettings;
+  delete globalThis.YantraPractice;
+}
+console.log("talks leave visualizer ok");
