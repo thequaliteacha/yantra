@@ -315,7 +315,7 @@
 
   function ruleLine() {
     return linked()
-      ? "A minute of a morning or evening sit counts. Linked devices share the days."
+      ? "A minute of a morning or evening sit counts. Evening continues until 2:22 AM. Linked devices share the days."
       : Practice.RULE;
   }
 

@@ -3,7 +3,8 @@
  * A formal sit is a Morning Meditation or an Evening Meditation. It counts
  * after one minute of playback. Paused time is not included. Album listening
  * and Dharma talks stay in yantra.listening.v1 and never enter these totals
- * or streaks. The day is the device's local calendar. Missing a morning ends
+ * or streaks. The day is the device's local calendar. An evening sit before
+ * 2:22 AM still belongs to the day before. Missing a morning ends
  * the morning run only.
  *
  * The days themselves stay in this browser. A device with no practice key
@@ -20,7 +21,9 @@
   const KEY = "yantra.practice.v1";
   const PENDING_KEY = "yantra.listening.pendingEarlier";
   const MIN_MS = 60 * 1000;
-  const RULE = "A minute of a morning or evening sit counts. Kept on this device only.";
+  /* Evening keeps going past midnight. 00:00 up to 02:22 is still the previous day's sunset sit. */
+  const EVENING_CARRY_MINUTES = 2 * 60 + 22;
+  const RULE = "A minute of a morning or evening sit counts. Evening continues until 2:22 AM. Kept on this device only.";
   let pendingEarlier = 0;
 
   function empty() {
@@ -46,6 +49,35 @@
     if (parts.length !== 3 || parts.some((part) => !part && part !== 0)) return "";
     const next = new Date(parts[0], parts[1] - 1, parts[2] + n);
     return localDate(next);
+  }
+
+  /* The practice date for a formal sit. Morning stays on the local calendar
+     day. Evening before 2:22 AM belongs to the day before, so a sit finished
+     after midnight still counts as that sunset. */
+  function practiceDate(when, theme) {
+    const d = when instanceof Date ? when : new Date();
+    const day = localDate(d);
+    if (theme !== "evening") return day;
+    const minutes = d.getHours() * 60 + d.getMinutes();
+    if (minutes < EVENING_CARRY_MINUTES) return addDays(day, -1);
+    return day;
+  }
+
+  function sitTheme(heard) {
+    return heard && (heard.theme === "morning" || heard.theme === "evening") ? heard.theme : "";
+  }
+
+  /* A live or open sit carries `at` (commit, or the last checkpoint). Date it
+     from that moment so a midnight evening is not stuck on the wrong calendar
+     day, and so opening the app the next morning does not move it. An explicit
+     date with no moment is already a practice day: tests, sync, and stored
+     history stay as they are. */
+  function sitDate(heard) {
+    const theme = sitTheme(heard);
+    const at = heard && Number(heard.at);
+    if (at > 0) return practiceDate(new Date(at), theme);
+    if (heard && /^\d{4}-\d{2}-\d{2}$/.test(heard.date || "")) return heard.date;
+    return practiceDate(new Date(), theme);
   }
 
   function dayBetween(earlier, later) {
@@ -153,7 +185,8 @@
 
   /* One row per device. The same device id is counted once, so pulling a log
      again, or listing a device twice, does not add the sits a second time.
-     Different devices add. The day is the union; the counts are the sum. */
+     Different devices add. The day is the union; the counts are the sum.
+     Keys are already practice dates. Merging does not move an evening sit. */
   function mergeDays(logs) {
     const out = {};
     const seen = new Set();
@@ -247,11 +280,12 @@
     return { current, best, last };
   }
 
-  function streaks(store, today) {
+  function streaks(store, today, eveningToday) {
     const days = (store && store.days) || {};
+    const evening = eveningToday || today;
     return {
       morning: streakFor(days, "morning", today),
-      evening: streakFor(days, "evening", today),
+      evening: streakFor(days, "evening", evening),
       daily: streakFor(days, "daily", today),
       perfect: streakFor(days, "perfect", today),
     };
@@ -261,9 +295,9 @@
     const next = clone(store || empty());
     next.open = null;
     const ms = Math.max(0, Number(heard && heard.ms) || 0);
-    const theme = heard && (heard.theme === "morning" || heard.theme === "evening") ? heard.theme : "";
+    const theme = sitTheme(heard);
     if (!theme || ms < MIN_MS) return { store: next, counted: false };
-    const date = (heard && /^\d{4}-\d{2}-\d{2}$/.test(heard.date || "")) ? heard.date : localDate(new Date());
+    const date = sitDate(heard);
     const day = projectDay(next.days[date]) || { ms: 0, sits: 0, morning: 0, evening: 0 };
     day.ms += ms;
     day[theme] += 1;
@@ -273,26 +307,48 @@
     return { store: next, counted: true };
   }
 
-  /* The last seven days, oldest first, each with its sunrise and sunset halves. */
-  function weekOf(store, today) {
+  /* The last seven days, oldest first, each with its sunrise and sunset halves.
+     The ring sits on the evening practice day, which is yesterday until 2:22. */
+  function weekOf(store, today, eveningToday) {
+    const mark = eveningToday || today;
     const out = [];
     for (let back = 6; back >= 0; back -= 1) {
       const date = addDays(today, -back);
       const day = normalizeDay(store.days[date]);
-      out.push({ date: date, morning: day.morning > 0, evening: day.evening > 0, today: back === 0 });
+      out.push({ date: date, morning: day.morning > 0, evening: day.evening > 0, today: date === mark });
     }
     return out;
   }
 
   function summarize(store, now) {
     const clean = normalize(store);
-    const todayKey = localDate(now instanceof Date ? now : new Date());
-    const today = normalizeDay(clean.days[todayKey]);
+    const when = now instanceof Date ? now : new Date();
+    const todayKey = localDate(when);
+    const eveningKey = practiceDate(when, "evening");
+    const calendar = normalizeDay(clean.days[todayKey]);
+    const eveningDay = normalizeDay(clean.days[eveningKey]);
+    const same = todayKey === eveningKey;
+    /* Morning stays on the calendar day. Evening before 2:22 still reads as
+       this sunset, including its minutes. A perfect day is both sits on one
+       date, so those halves are not paired across the boundary. */
+    const today = same ? {
+      ms: calendar.ms,
+      sits: calendar.sits,
+      morning: calendar.morning,
+      evening: calendar.evening,
+      eveningHere: true,
+    } : {
+      ms: calendar.ms + eveningDay.ms,
+      sits: calendar.sits + eveningDay.evening,
+      morning: calendar.morning,
+      evening: eveningDay.evening,
+      eveningHere: false,
+    };
     return {
       totals: { ms: clean.totals.ms, sits: clean.totals.sits },
-      today: { ms: today.ms, sits: today.sits, morning: today.morning, evening: today.evening },
-      streaks: streaks(clean, todayKey),
-      week: weekOf(clean, todayKey),
+      today: today,
+      streaks: streaks(clean, todayKey, eveningKey),
+      week: weekOf(clean, todayKey, eveningKey),
       milestones: clean.milestones.slice(),
       reminders: clean.reminders,
     };
@@ -322,7 +378,9 @@
     const current = run.current || 0;
     const today = summary.today || {};
     const morning = today.morning > 0;
-    const evening = today.evening > 0;
+    /* During the evening carry, today.evening is yesterday's sunset and must
+       not pair with this calendar morning into a perfect day. */
+    const evening = today.evening > 0 && today.eveningHere !== false;
     if (morning && evening) {
       if (current >= 3 && current >= (run.best || 0)) return current + " perfect days in a row, your longest yet.";
       if (current >= 2) return current + " perfect days in a row.";
@@ -413,14 +471,16 @@
   function createListeningClock(now) {
     const clock = now || function () { return Date.now(); };
     let theme = "";
-    let date = "";
     let ms = 0;
     let last = null;
     let on = false;
+    function heardNow() {
+      const at = clock();
+      return { ms: ms, theme: theme, at: at, date: practiceDate(new Date(at), theme) };
+    }
     return {
       begin(nextTheme) {
         theme = nextTheme === "morning" || nextTheme === "evening" ? nextTheme : "";
-        date = localDate(new Date(clock()));
         ms = 0;
         last = null;
         on = true;
@@ -439,14 +499,13 @@
         }
         last = { key: sample.key, position: sample.position, playing: !!sample.playing, at: at };
       },
-      snapshot() { return { ms: ms, theme: theme, date: date }; },
+      snapshot() { return heardNow(); },
       end() {
-        const heard = { ms: ms, theme: theme, date: date };
+        const heard = heardNow();
         on = false;
         ms = 0;
         last = null;
         theme = "";
-        date = "";
         return heard;
       },
     };
@@ -527,17 +586,20 @@
     const theme = heard.theme === "morning" || heard.theme === "evening" ? heard.theme : "";
     if (!theme) return;
     const store = load();
+    const at = Number(heard.at) > 0 ? Number(heard.at) : Date.now();
     store.open = {
       ms: Math.max(0, Number(heard.ms) || 0),
       theme: theme,
-      date: /^\d{4}-\d{2}-\d{2}$/.test(heard.date || "") ? heard.date : localDate(new Date()),
-      at: Date.now(),
+      date: practiceDate(new Date(at), theme),
+      at: at,
     };
     save(store);
   }
 
   /* A sit the page did not get to close (the phone locked and the app was
-     released) is kept on the next open, credited to the day it started. */
+     released) is kept on the next open. The day is the practice date at the
+     last checkpoint, so an evening before 2:22 AM stays on the day before
+     even when the phone is opened later that morning. */
   function recover() {
     const store = load();
     if (!store.open) return store;
@@ -571,7 +633,12 @@
       version: 1,
       exported: new Date().toISOString(),
       totals: picture.totals,
-      today: picture.today,
+      today: {
+        ms: picture.today.ms,
+        sits: picture.today.sits,
+        morning: picture.today.morning,
+        evening: picture.today.evening,
+      },
       days: store.days,
       streaks: picture.streaks,
       milestones: store.milestones,
@@ -579,7 +646,7 @@
       rules: {
         minimumMs: MIN_MS,
         listening: "Playback time only. Paused time is not counted.",
-        streaks: "A perfect day has a morning sit and an evening sit; the perfect run counts those days. Morning and evening are separate runs. A missed morning ends only the morning run. The daily run counts a day with a morning or an evening sit. Album and talk listening are a separate total and do not extend a run. Dates are the device's local calendar.",
+        streaks: "A perfect day has a morning sit and an evening sit; the perfect run counts those days. Morning and evening are separate runs. A missed morning ends only the morning run. The daily run counts a day with a morning or an evening sit. Album and talk listening are a separate total and do not extend a run. Dates are the device's local calendar. An evening sit before 2:22 AM still belongs to the day before.",
         milestones: "Reserved. Empty until a later version marks them.",
         reminders: "Reserved. This version does not notify.",
       },
@@ -597,6 +664,7 @@
     earlierFrom: earlierFrom,
     takeMigratedEarlier: takeMigratedEarlier,
     localDate: localDate,
+    practiceDate: practiceDate,
     addDays: addDays,
     record: record,
     mergeDays: mergeDays,

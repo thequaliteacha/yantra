@@ -116,6 +116,99 @@ assert.strictEqual(P.localDate(local), "2026-10-19");
 assert.strictEqual(P.addDays("2026-03-08", 1), "2026-03-09");
 assert.strictEqual(P.addDays("2026-12-31", 1), "2027-01-01");
 
+// Evening before 2:22 AM belongs to the previous local date. Morning does not.
+assert.strictEqual(P.practiceDate(new Date(2026, 9, 21, 0, 15), "evening"), "2026-10-20", "12:15 AM evening is the previous day");
+assert.strictEqual(P.practiceDate(new Date(2026, 9, 21, 2, 21), "evening"), "2026-10-20", "2:21 AM evening is still the previous day");
+assert.strictEqual(P.practiceDate(new Date(2026, 9, 21, 2, 22), "evening"), "2026-10-21", "2:22 AM evening is that calendar day");
+assert.strictEqual(P.practiceDate(new Date(2026, 9, 20, 23, 59), "evening"), "2026-10-20", "11:59 PM evening is that day");
+assert.strictEqual(P.practiceDate(new Date(2026, 9, 21, 0, 15), "morning"), "2026-10-21", "12:15 AM morning is that calendar day");
+assert.strictEqual(P.practiceDate(new Date(2026, 9, 21, 0, 0), "evening"), "2026-10-20");
+assert.strictEqual(P.practiceDate(new Date(2026, 10, 1, 1, 5), "evening"), "2026-10-31", "the carry crosses a month");
+assert.strictEqual(P.practiceDate(new Date(2026, 9, 21, 0, 15), ""), "2026-10-21", "a sit with no theme stays on the calendar day");
+
+function hear(theme, start, end) {
+  let now = start.getTime();
+  const clock = P.createListeningClock(() => now);
+  clock.begin(theme);
+  clock.observe({ key: "a", position: 0, playing: true, at: now });
+  now = end.getTime();
+  clock.observe({ key: "a", position: 90, playing: true, at: now });
+  return clock.end();
+}
+
+const lateEvening = hear("evening", new Date(2026, 9, 21, 0, 10), new Date(2026, 9, 21, 0, 15));
+assert.strictEqual(lateEvening.date, "2026-10-20", "a sit that starts after midnight is not frozen on the new day");
+assert.strictEqual(P.record(P.empty(), lateEvening).store.days["2026-10-20"].evening, 1);
+assert.strictEqual(P.record(P.empty(), lateEvening).store.days["2026-10-21"], undefined);
+
+const acrossMidnight = hear("evening", new Date(2026, 9, 20, 23, 50), new Date(2026, 9, 21, 0, 15));
+assert.strictEqual(acrossMidnight.date, "2026-10-20", "finishing after midnight still counts as that evening");
+assert.strictEqual(hear("evening", new Date(2026, 9, 20, 23, 40), new Date(2026, 9, 20, 23, 59)).date, "2026-10-20");
+assert.strictEqual(hear("evening", new Date(2026, 9, 21, 2, 0), new Date(2026, 9, 21, 2, 21)).date, "2026-10-20");
+assert.strictEqual(hear("evening", new Date(2026, 9, 21, 2, 10), new Date(2026, 9, 21, 2, 22)).date, "2026-10-21");
+const lateMorning = hear("morning", new Date(2026, 9, 21, 0, 5), new Date(2026, 9, 21, 0, 15));
+assert.strictEqual(lateMorning.date, "2026-10-21");
+assert.strictEqual(P.record(P.empty(), lateMorning).store.days["2026-10-21"].morning, 1);
+assert.strictEqual(P.record(P.empty(), lateMorning).store.days["2026-10-20"], undefined, "morning is not moved to the day before");
+
+const explicit = P.record(P.empty(), { date: "2026-10-21", theme: "evening", ms: P.MIN_MS });
+assert.strictEqual(explicit.store.days["2026-10-21"].evening, 1, "an explicit practice date is kept");
+assert.strictEqual(explicit.store.days["2026-10-20"], undefined, "stored days are not rewritten");
+
+let evenings = sit(P.empty(), "2026-10-19", "evening");
+evenings = P.record(evenings, { theme: "evening", ms: P.MIN_MS, at: new Date(2026, 9, 21, 0, 15).getTime(), date: "2026-10-21" }).store;
+assert.strictEqual(evenings.days["2026-10-20"].evening, 1, "commit uses the checkpoint moment, not a frozen midnight date");
+assert.strictEqual(evenings.days["2026-10-21"], undefined);
+const during = P.summarize(evenings, new Date(2026, 9, 21, 0, 15));
+assert.strictEqual(during.streaks.evening.current, 2, "the evening run continues across the window");
+assert.strictEqual(during.streaks.evening.last, "2026-10-20");
+assert.strictEqual(during.streaks.morning.current, 0);
+assert.strictEqual(during.streaks.perfect.current, 0, "evening alone is not a perfect day");
+assert.strictEqual(during.today.evening, 1);
+assert.strictEqual(during.today.morning, 0, "today's morning is the new calendar day");
+assert.strictEqual(during.today.ms, P.MIN_MS);
+assert.strictEqual(during.week.filter((day) => day.today).length, 1);
+assert.strictEqual(during.week.find((day) => day.today).date, "2026-10-20", "the week marks the evening practice day");
+assert.strictEqual(during.week[during.week.length - 1].date, "2026-10-21");
+assert.strictEqual(during.week[during.week.length - 1].today, false);
+assert.strictEqual(P.completeLine(during, "evening"), "Today, 1 minute. Sit at sunrise and sunset for a perfect day.");
+
+const waiting = P.summarize(sit(P.empty(), "2026-10-19", "evening"), new Date(2026, 9, 21, 0, 15));
+assert.strictEqual(waiting.streaks.evening.current, 1, "until 2:22 the previous evening is still yesterday");
+assert.strictEqual(P.summarize(sit(P.empty(), "2026-10-19", "evening"), new Date(2026, 9, 21, 2, 21)).streaks.evening.current, 1);
+const closed = P.summarize(sit(P.empty(), "2026-10-19", "evening"), new Date(2026, 9, 21, 2, 22));
+assert.strictEqual(closed.streaks.evening.current, 0, "at 2:22 a missed evening ends the run");
+assert.strictEqual(closed.week.find((day) => day.today).date, "2026-10-21");
+assert.strictEqual(waiting.streaks.daily.current, 0, "the daily run still follows the calendar day");
+assert.strictEqual(P.summarize(evenings, new Date(2026, 9, 21, 2, 22)).streaks.evening.current, 2, "after 2:22 the sit already kept stays yesterday");
+
+let perfect = sit(P.empty(), "2026-10-20", "morning");
+perfect = P.record(perfect, { theme: "evening", ms: P.MIN_MS, at: new Date(2026, 9, 21, 0, 15).getTime() }).store;
+assert.strictEqual(perfect.days["2026-10-20"].morning, 1);
+assert.strictEqual(perfect.days["2026-10-20"].evening, 1);
+const perfectNow = P.summarize(perfect, new Date(2026, 9, 21, 0, 15));
+assert.strictEqual(perfectNow.streaks.perfect.current, 1, "morning and evening on the practice date are a perfect day");
+assert.strictEqual(perfectNow.streaks.perfect.last, "2026-10-20");
+assert.strictEqual(P.lead(perfectNow), "Sit at sunrise and sunset for 2 perfect days in a row.");
+perfect = P.record(perfect, { theme: "morning", ms: P.MIN_MS, at: new Date(2026, 9, 21, 0, 15).getTime() }).store;
+assert.strictEqual(perfect.days["2026-10-21"].morning, 1);
+assert.strictEqual(perfect.days["2026-10-20"].morning, 1, "the earlier morning stays on its own date");
+const afterDawn = P.summarize(perfect, new Date(2026, 9, 21, 0, 15));
+assert.strictEqual(afterDawn.streaks.morning.current, 2, "the new morning continues yesterday's morning");
+assert.strictEqual(afterDawn.streaks.perfect.current, 1, "a morning after midnight does not finish yesterday");
+assert.strictEqual(afterDawn.today.morning, 1);
+assert.strictEqual(afterDawn.today.evening, 1);
+assert.strictEqual(P.lead(afterDawn), "Sit at sunset for 2 perfect days in a row.");
+assert.strictEqual(afterDawn.today.ms, P.MIN_MS * 3, "the new morning and that evening's day both show");
+
+const sharedEvening = P.mergeDays([
+  { deviceId: "a".repeat(32), days: { "2026-10-20": { ms: P.MIN_MS, sits: 1, morning: 0, evening: 1 } } },
+  { deviceId: "b".repeat(32), days: { "2026-10-21": { ms: P.MIN_MS, sits: 1, morning: 1, evening: 0 } } },
+]);
+assert.strictEqual(sharedEvening["2026-10-20"].evening, 1, "sync keeps the committing device's practice date");
+assert.strictEqual(sharedEvening["2026-10-21"].morning, 1);
+assert.strictEqual(sharedEvening["2026-10-21"].evening, 0);
+
 const clock = P.createListeningClock(() => 0);
 let at = 0;
 clock.begin("morning");
@@ -224,6 +317,42 @@ const albumRun = {
 const dropped = P.migrate(albumRun).store;
 assert.strictEqual(P.streaks(dropped, "2026-10-05").daily.current, 1, "an album-only day does not extend the daily run");
 
+global.localStorage = memoryStore();
+const carried = new Date(2026, 9, 21, 0, 15);
+const openClock = P.createListeningClock(() => carried.getTime());
+openClock.begin("evening");
+openClock.observe({ key: "a", position: 0, playing: true, at: carried.getTime() });
+openClock.observe({ key: "a", position: 90, playing: true, at: carried.getTime() + 90000 });
+P.checkpoint(openClock.snapshot());
+assert.strictEqual(P.load().open.date, "2026-10-20", "an open evening before 2:22 is dated the day before");
+assert.strictEqual(P.load().open.at, carried.getTime());
+assert.strictEqual(P.recover().days["2026-10-20"].evening, 1, "reopening later still commits that evening");
+assert.strictEqual(P.load().days["2026-10-21"], undefined);
+assert.strictEqual(P.load().open, null);
+
+global.localStorage = memoryStore();
+P.save(Object.assign(P.empty(), {
+  open: { ms: 90000, theme: "evening", date: "2026-10-21", at: new Date(2026, 9, 21, 0, 15).getTime() },
+}));
+assert.strictEqual(P.load().open.date, "2026-10-21", "a stored open date is not rewritten on load");
+const repaired = P.recover();
+assert.strictEqual(repaired.days["2026-10-20"].evening, 1, "commit repairs a frozen midnight date");
+assert.strictEqual(repaired.days["2026-10-21"], undefined);
+
+global.localStorage = memoryStore();
+P.save(Object.assign(P.empty(), {
+  open: { ms: 90000, theme: "evening", date: "2026-10-21", at: new Date(2026, 9, 20, 23, 50).getTime() },
+}));
+assert.strictEqual(P.recover().days["2026-10-20"].evening, 1, "an evening checkpointed before midnight stays that day");
+
+global.localStorage = memoryStore();
+P.save(Object.assign(P.empty(), {
+  open: { ms: 90000, theme: "morning", date: "2026-10-20", at: new Date(2026, 9, 21, 0, 15).getTime() },
+}));
+const dawnOpen = P.recover();
+assert.strictEqual(dawnOpen.days["2026-10-21"].morning, 1, "a morning checkpointed after midnight is the new day");
+assert.strictEqual(dawnOpen.days["2026-10-20"], undefined);
+
 const web = fs.readFileSync(path.join(__dirname, "web.js"), "utf8");
 const worker = fs.readFileSync(path.join(__dirname, "../deploy/cloudflare/worker.js"), "utf8");
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
@@ -246,6 +375,10 @@ assert.strictEqual(worker.includes("microphone=(self)"), false);
 assert.strictEqual(/Naval/.test(web + page), false);
 assert.ok(sw.includes("yantra-v9"));
 assert.ok(sw.includes('"/web/listening.js"'));
+assert.ok(readme.includes("Evening continues until 2:22 AM."));
+assert.ok(P.RULE.includes("Evening continues until 2:22 AM."));
+assert.ok(fs.readFileSync(path.join(__dirname, "sync.js"), "utf8").includes("Evening continues until 2:22 AM."));
+assert.ok(fs.readFileSync(path.join(__dirname, "practice.js"), "utf8").includes("An evening sit before 2:22 AM still belongs to the day before."));
 assert.ok(readme.includes("36"));
 assert.ok(readme.includes("Twenty albums are hosted"));
 assert.strictEqual(readme.includes("34 albums"), false);
