@@ -280,4 +280,94 @@ const failedPlane = P.filterDiscs(catalog, Object.assign({}, plane, { failedKeys
 assert.ok(failedPlane && failedPlane.tracks.length > 0);
 assert.ok(!failedPlane.tracks.some((track) => track.n === 1));
 
+/* Song 1 of a sit, heard, then started over. The playhead goes back to the
+   beginning and keeps moving. That rewind is not a stall, so the sit does not
+   skip ahead once the stall window passes. */
+const bryce = P.createProgressWatch(5000);
+bryce.sample("audio/bryce/01.mp3", 0.4, true, 0);
+bryce.sample("audio/bryce/01.mp3", 8, true, 8000);
+assert.deepStrictEqual(bryce.sample("audio/bryce/01.mp3", 0.2, true, 9000), { stalled: false, moved: false });
+assert.deepStrictEqual(bryce.sample("audio/bryce/01.mp3", 1.4, true, 10200), { stalled: false, moved: true });
+assert.deepStrictEqual(bryce.sample("audio/bryce/01.mp3", 6.2, true, 15000), { stalled: false, moved: true });
+
+const stuck = P.createProgressWatch(5000);
+stuck.sample("audio/bryce/01.mp3", 8, true, 0);
+assert.deepStrictEqual(stuck.sample("audio/bryce/01.mp3", 8, true, 5000), { stalled: true, moved: false });
+
+const jitter = P.createProgressWatch(5000);
+jitter.sample("audio/bryce/01.mp3", 8, true, 0);
+assert.deepStrictEqual(jitter.sample("audio/bryce/01.mp3", 7.9, true, 5000), { stalled: true, moved: false }, "a small step back can still be a stall");
+
+/* iPad fires `ended` when currentTime is set to 0. The queue stays on this song. */
+function audioThatEndsOnZero() {
+  const listeners = {};
+  const audio = {
+    duration: 240,
+    paused: false,
+    ended: false,
+    src: "bryce-1.mp3",
+    plays: 0,
+    _t: 12,
+    addEventListener(name, fn) {
+      (listeners[name] || (listeners[name] = [])).push(fn);
+    },
+    play() {
+      this.plays += 1;
+      this.paused = false;
+      this.ended = false;
+      this._t = 0;
+      return Promise.resolve();
+    },
+  };
+  Object.defineProperty(audio, "currentTime", {
+    get() { return this._t; },
+    set(value) {
+      this._t = value;
+      if (value === 0) {
+        this.paused = true;
+        this.ended = true;
+        (listeners.ended || []).slice().forEach((fn) => fn());
+      }
+    },
+  });
+  return audio;
+}
+
+const sit = {
+  index: 0,
+  keys: ["bryce-1.mp3", "bryce-2.mp3", "bryce-3.mp3", "bryce-4.mp3", "bryce-5.mp3", "bryce-6.mp3"],
+  restarting: false,
+  audio: audioThatEndsOnZero(),
+};
+sit.audio.addEventListener("ended", () => {
+  P.advanceOnEnd(sit, (next) => {
+    sit.index = next;
+    sit.audio.src = sit.keys[next];
+  });
+});
+assert.strictEqual(P.restartTrack(sit), true);
+assert.strictEqual(sit.index, 0, "start over stays on song 1");
+assert.strictEqual(sit.audio.src, "bryce-1.mp3");
+assert.strictEqual(sit.audio.currentTime, 0);
+assert.ok(sit.audio.plays >= 1, "the same song keeps playing");
+assert.strictEqual(sit.restarting, true);
+
+let advanced = -1;
+assert.strictEqual(P.advanceOnEnd({
+  index: 0,
+  keys: sit.keys,
+  restarting: false,
+}, (next) => { advanced = next; }), true, "a real ending still opens the next song");
+assert.strictEqual(advanced, 1);
+assert.strictEqual(P.advanceOnEnd({ index: 5, keys: sit.keys, restarting: false }, () => { throw new Error("last song"); }), false);
+
+const restartBody = playback.slice(playback.indexOf("function restartTrack"), playback.indexOf("function finishRestart"));
+assert.ok(restartBody.indexOf("restarting = true") < restartBody.indexOf("currentTime = 0"), "the guard is up before the seek");
+const restartFn = web.slice(web.indexOf("async restart()"), web.indexOf("window.yantraTransport"));
+assert.ok(restartFn.includes("return recorded.restart()"));
+assert.ok(restartFn.includes("progressWatch.reset()"));
+assert.ok(!restartFn.includes("currentTime = 0"), "restart does not seek in a way the ended handler can mistake");
+assert.ok(web.includes("Playback.restartTrack"));
+assert.ok(web.includes("Playback.advanceOnEnd"));
+
 console.log("playback.test.js ok");
