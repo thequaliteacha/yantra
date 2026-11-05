@@ -11,6 +11,9 @@
   const VAYU = "vayu";
   const STALL_MS = 5000;
   const PROGRESS_EPS = 0.25;
+  /* A restart seeks this same song back by more than a moment. Smaller
+     jitter is still a stall if the playhead never goes forward. */
+  const REWIND_S = 1;
 
   function spotifySdkSupported(env) {
     const ua = String((env && env.userAgent) || "");
@@ -104,6 +107,13 @@ const tracks = (disc.tracks || []).filter((track) => trackOffered(
           at = t;
           return { stalled: false, moved: false };
         }
+        /* Starting this song over leaves the playhead behind its old mark.
+           That is not a stall: a stall would skip the sit ahead to the next song. */
+        if (position - pos >= REWIND_S) {
+          position = pos;
+          at = t;
+          return { stalled: false, moved: false };
+        }
         if (pos > position + PROGRESS_EPS) {
           position = pos;
           at = t;
@@ -150,6 +160,69 @@ const tracks = (disc.tracks || []).filter((track) => trackOffered(
     return -1;
   }
 
+  /* Send the element that is already playing this song back to 0:00.
+     The restart guard is raised first. iPad fires ended from that seek, and
+     the queue must not hear it as the song finishing. */
+  function restartTrack(player) {
+    if (!player || !player.audio) return false;
+    const index = Number(player.index);
+    if (!Number.isFinite(index) || index < 0) return false;
+    player.restarting = true;
+    player.resumeTries = 0;
+    const audio = player.audio;
+    try { audio.currentTime = 0; } catch (e) {}
+    if (audio.paused || audio.ended) playQuietly(audio);
+    return true;
+  }
+
+  function finishRestart(player) {
+    if (player) player.restarting = false;
+  }
+
+  function playQuietly(audio) {
+    if (!audio || typeof audio.play !== "function") return;
+    try {
+      const pending = audio.play();
+      if (pending && typeof pending.catch === "function") pending.catch(() => {});
+    } catch (e) {}
+  }
+
+  /* If the spurious end left the element stopped, or still sitting late in
+     the song, bring that same element back to the start. */
+  function resumeTrack(player) {
+    const audio = player && player.audio;
+    if (!audio || !player.restarting || player.resuming) return;
+    const late = (Number(audio.currentTime) || 0) > 0.35;
+    const stopped = !!(audio.paused || audio.ended);
+    if (!late && !stopped) return;
+    if ((player.resumeTries || 0) >= 2) return;
+    player.resumeTries = (player.resumeTries || 0) + 1;
+    player.resuming = true;
+    try {
+      if (late) {
+        try { audio.currentTime = 0; } catch (e) {}
+      }
+      if (audio.paused || audio.ended) playQuietly(audio);
+    } finally {
+      player.resuming = false;
+    }
+  }
+
+  /* A natural end loads the next recording. A restart does not. */
+  function advanceOnEnd(player, startAt) {
+    if (!player || player.restarting) {
+      if (player && player.restarting) resumeTrack(player);
+      return false;
+    }
+    const index = Number(player.index);
+    const total = player.keys ? player.keys.length : 0;
+    if (!Number.isFinite(index) || index < 0) return false;
+    const next = index + 1;
+    if (next >= total) return false;
+    if (typeof startAt === "function") startAt(next);
+    return true;
+  }
+
   const api = {
     LUMAKARA: LUMAKARA,
     STALL_MS: STALL_MS,
@@ -165,6 +238,10 @@ const tracks = (disc.tracks || []).filter((track) => trackOffered(
     presentState: presentState,
     calmLine: calmLine,
     nextPlayable: nextPlayable,
+    restartTrack: restartTrack,
+    finishRestart: finishRestart,
+    resumeTrack: resumeTrack,
+    advanceOnEnd: advanceOnEnd,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.YantraPlayback = api;

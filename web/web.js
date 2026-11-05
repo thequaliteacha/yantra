@@ -921,6 +921,7 @@
     token: 0,
     onfail: null,
     heardAt: 0,
+    restarting: false,
     available() { return Object.keys(recordings).length > 0; },
     connected() { return this.available(); },
     element() {
@@ -928,10 +929,11 @@
         this.audio = new Audio();
         this.audio.preload = "auto";
         this.audio.addEventListener("ended", () => {
-          const next = this.index + 1;
-          if (next >= this.keys.length) return;
-          this.start(next).then((ok) => {
-            if (!ok && this.onfail) this.onfail(next, "rejected");
+          // iPad also fires this when a playing song is sent back to the start.
+          Playback.advanceOnEnd(this, (next) => {
+            this.start(next).then((ok) => {
+              if (!ok && this.onfail) this.onfail(next, "rejected");
+            });
           });
         });
         this.audio.addEventListener("error", () => {
@@ -941,7 +943,29 @@
       }
       return this.audio;
     },
+    clearRestart() {
+      clearTimeout(this.restartTimer);
+      clearTimeout(this.resumeTimer);
+      Playback.finishRestart(this);
+    },
+    /* Same file, same place in the sit. The playhead returns to 0:00. */
+    restart() {
+      if (this.index < 0 || !this.keys[this.index]) return false;
+      this.element();
+      clearTimeout(this.restartTimer);
+      clearTimeout(this.resumeTimer);
+      const token = this.token;
+      if (!Playback.restartTrack(this)) return false;
+      this.resumeTimer = setTimeout(() => {
+        if (this.token === token && this.restarting) Playback.resumeTrack(this);
+      }, 0);
+      this.restartTimer = setTimeout(() => {
+        if (this.token === token) Playback.finishRestart(this);
+      }, 1000);
+      return true;
+    },
     start(index) {
+      this.clearRestart();
       const audio = this.element();
       this.index = index;
       const token = ++this.token;
@@ -1275,7 +1299,8 @@
   }
 
   /* Back, restart and next during a sit, so a song never has to be waited out.
-     Back returns to the previous song; on the first song it starts it over. */
+     Back returns to the previous song; on the first song it starts it over.
+     Restart stays on this song and begins again at 0:00. It does not advance the sit. */
   const transport = {
     async step(delta) {
       if (live.service === "recordings") {
@@ -1296,16 +1321,18 @@
     next() { return this.step(1); },
     back() { return this.step(-1); },
     async restart() {
-      if (live.service === "recordings" && recorded.audio) {
-        recorded.audio.currentTime = 0;
-        if (recorded.audio.paused) recorded.audio.play().catch(() => {});
-        return true;
+      if (live.service === "recordings") {
+        if (recorded.index < 0) return false;
+        progressWatch.reset();
+        return recorded.restart();
       }
       if (live.service === "spotify") {
+        progressWatch.reset();
         const device = spotify.deviceId ? "&device_id=" + spotify.deviceId : "";
         return !!(await spotify.api("PUT", "/me/player/seek?position_ms=0" + device));
       }
       if (live.service === "apple" && apple.music) {
+        progressWatch.reset();
         try { await apple.music.seekToTime(0); return true; } catch (e) { return false; }
       }
       if (queue.index >= 0) return playSong(queue.index);
