@@ -115,8 +115,8 @@ the page nudges toward the next one. Morning and evening also keep their own
 runs. Album listening and Dharma talks do not extend those runs, the week
 circles, or the daily run. Their time is a second total, mindfulness practice,
 under *Mindfulness Material*, with the time and last listen for each album and
-each talk. The day is the device's own date. On its own, a device keeps both
-records to itself.
+each talk. The day is the device's own date. Evening continues until 2:22 AM.
+On its own, a device keeps both records to itself.
 *Link my devices* makes a private practice key. The QR code stays hidden until
 you ask to see it, drawn in muted gold on deep indigo, and the link is there too.
 Its key sits in the fragment (`https://yantramedi.app/web/#link=…`),
