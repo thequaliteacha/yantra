@@ -413,16 +413,18 @@ export async function cookieLevel(request, env) {
   return same(sig || "", await hmac(env, level + "." + exp)) ? level : "";
 }
 
-function norm(word) {
+/* Trim surrounding whitespace and fold case before the word is compared.
+   The stored word is folded the same way. A mismatch still opens nothing. */
+export function normalizeAccessWord(word) {
   return String(word || "").trim().toLowerCase();
 }
 
 async function enter(request, env, url) {
   const form = await request.formData().catch(() => null);
-  const word = norm(form && form.get("word"));
+  const word = normalizeAccessWord(form && form.get("word"));
   let level = "";
-  if (word && env.ZAZEN_WORD && same(word, norm(env.ZAZEN_WORD))) level = "zazen";
-  else if (word && env.SANGHA_WORD && same(word, norm(env.SANGHA_WORD))) level = "sangha";
+  if (word && env.ZAZEN_WORD && same(word, normalizeAccessWord(env.ZAZEN_WORD))) level = "zazen";
+  else if (word && env.SANGHA_WORD && same(word, normalizeAccessWord(env.SANGHA_WORD))) level = "sangha";
   if (!level || !env.COOKIE_KEY) {
     await new Promise((r) => setTimeout(r, 800));
     return gatePage("That word doesn't open it. Ask Chitananda for the sangha word.");

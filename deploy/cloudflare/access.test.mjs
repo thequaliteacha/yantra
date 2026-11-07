@@ -1,7 +1,7 @@
 /* node deploy/cloudflare/access.test.mjs */
 import assert from "assert";
 import { readFileSync } from "fs";
-import { mintCookie, ramaDenied, route, visibleShelf } from "./worker.js";
+import { cookieLevel, mintCookie, normalizeAccessWord, ramaDenied, route, visibleShelf } from "./worker.js";
 
 const discsText = readFileSync(new URL("../../discs.json", import.meta.url), "utf8");
 const quotesText = readFileSync(new URL("../../web/quotes.json", import.meta.url), "utf8");
@@ -210,5 +210,89 @@ assert.strictEqual(script.headers.get("service-worker-allowed"), "/");
 assert.strictEqual(script.headers.get("cache-control"), "no-cache");
 const anonScript = await route(new Request("https://yantramedi.app/web/sw.js"), env);
 assert.strictEqual(anonScript.status, 401, "the service worker stays behind the word gate");
+
+assert.strictEqual(normalizeAccessWord("  AbC\t"), "abc");
+assert.strictEqual(normalizeAccessWord("\nMiXeD "), "mixed");
+assert.strictEqual(normalizeAccessWord(""), "");
+assert.strictEqual(normalizeAccessWord(null), "");
+
+function foldCase(word, mode) {
+  const text = String(word);
+  if (mode === "upper") return text.toUpperCase();
+  if (mode === "lower") return text.toLowerCase();
+  if (mode === "mixed") {
+    return text.split("").map((ch, i) => (i % 2 ? ch.toUpperCase() : ch.toLowerCase())).join("");
+  }
+  return " \t" + text + "\n ";
+}
+
+function entryRequest(word) {
+  const body = new URLSearchParams();
+  body.set("word", word);
+  return new Request("https://yantramedi.app/enter", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded", accept: "text/html" },
+    body,
+  });
+}
+
+async function enterLevel(target, word) {
+  const response = await route(entryRequest(word), target);
+  const cookies = typeof response.headers.getSetCookie === "function" ? response.headers.getSetCookie() : [];
+  const set = cookies[0] || response.headers.get("set-cookie") || "";
+  const match = /^yantra=([^;]+)/.exec(set);
+  const level = match
+    ? await cookieLevel(new Request("https://yantramedi.app/web/", { headers: { cookie: "yantra=" + match[1] } }), target)
+    : "";
+  return {
+    status: response.status,
+    location: response.headers.get("location") || "",
+    level,
+    raw: match ? match[1] : "",
+    cookie: Boolean(match),
+    text: await response.text(),
+  };
+}
+
+async function assertAccepted(target, word, expected) {
+  const result = await enterLevel(target, word);
+  assert.strictEqual(result.status, 303);
+  assert.strictEqual(result.location, "https://yantramedi.app/web/");
+  assert.strictEqual(result.level, expected);
+  const opened = await (await route(new Request("https://yantramedi.app/access", {
+    headers: { cookie: "yantra=" + result.raw },
+  }), target)).json();
+  assert.strictEqual(opened.level, expected);
+}
+
+for (const mode of ["lower", "upper", "mixed", "pad"]) {
+  await assertAccepted(env, foldCase(env.SANGHA_WORD, mode), "sangha");
+  await assertAccepted(env, foldCase(env.ZAZEN_WORD, mode), "zazen");
+}
+
+const storedMixed = {
+  ...env,
+  SANGHA_WORD: "  " + foldCase(env.SANGHA_WORD, "mixed") + "\t",
+  ZAZEN_WORD: "\n" + foldCase(env.ZAZEN_WORD, "upper") + "  ",
+};
+await assertAccepted(storedMixed, env.SANGHA_WORD.toLowerCase(), "sangha");
+await assertAccepted(storedMixed, foldCase(env.ZAZEN_WORD, "lower"), "zazen");
+
+async function assertRejected(target, word) {
+  const result = await enterLevel(target, word);
+  assert.strictEqual(result.status, 401);
+  assert.strictEqual(result.level, "");
+  assert.strictEqual(result.cookie, false);
+  assert.strictEqual(result.location, "");
+  assert.strictEqual(result.text.includes("doesn't open it"), true);
+  const visible = String(word || "").trim();
+  if (visible) assert.strictEqual(result.text.includes(visible), false);
+}
+
+await assertRejected(env, "wrong-entry");
+await assertRejected(env, " " + env.SANGHA_WORD + " x");
+await assertRejected(env, "");
+await assertRejected(env, "   ");
+await assertRejected({ ...env, SANGHA_WORD: "", ZAZEN_WORD: "" }, foldCase(env.SANGHA_WORD, "upper"));
 
 console.log("access.test.mjs ok");
