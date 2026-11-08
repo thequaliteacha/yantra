@@ -64,7 +64,7 @@ triangle turns the other way. Reduced motion slows both turns and holds that
 breath still. Awakening motion, in Settings, starts on and can still
 the inner wheel and the breath. The yantra is drawn at full brightness; the
 device's own screen brightness is the control.
-*Meditation Complete* closes the sit. For the Zazen word, the line there is still a verbatim Rama quote. `web/quotes.json` tags albums, tracks, and those lines by theme, and the screen prefers a line that fits what just played, then falls back to any of the lines. When that talk is in the talks on the practice page, the credit is *From:* that talk. The Sangha word does not see the quotes. *Albums and
+*Meditation Complete* closes the sit. For the Zazen word, the line there is still a verbatim Rama quote. `web/quotes.json` tags albums, tracks, and those lines by theme, and the screen prefers a line that fits what just played, then falls back to any of the lines. When that talk is in the talks on the practice page, the credit is *From:* that talk. After the quote, one invitation, *Continue with a Dharma talk*, appears only when a talk can actually play. It does not start on its own. Offline, it appears only for a talk already kept on the device. The time after that counts as mindfulness listening, not as another formal sit. The Sangha word does not see the quotes or the invitation. *Albums and
 forms* opens the full shelf. *Getting Started* explains the practice and how to
 install the app on a phone.
 
@@ -142,9 +142,7 @@ either a clock time or coordinates rounded to a tenth of a degree. Delete my
 reminder data removes that record. On iPhone and iPad the note arrives only
 from the Home Screen app.
 
-The home screen holds only the two sits and the week: seven circles whose left
-half fills with the sunrise sit and right half with the sunset sit, and one line
-toward the next perfect day. Everything else is under the mark at the top
+The home screen holds the two sits, a quiet formal run, and the week. The run shows the continuous days (a morning or an evening sit) and a weekly count that is that run capped at 7, so the eighth day stays 7. The circles shift shape at 7, 30, 90, 180, and 365 days. The glow deepens with the run and with time already practiced. There is no score. Each account draws its own marks, kept on the device. Any circle opens the real morning and evening history. Listening is not on that calendar. Under that, seven circles still fill left for the sunrise sit and right for the sunset sit, and one line points toward the next perfect day. Everything else is under the mark at the top
 right. *Start Here* sits at the top of that page. Then Altar, Profile, Practice,
 Linked devices, Reminders, and Mindfulness Material (Dharma Talks for the Zazen
 word only, and Albums + Playlists), then Settings. The folds start shut. Log out

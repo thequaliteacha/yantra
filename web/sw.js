@@ -5,7 +5,7 @@
    Spotify, quotes, talk word timings, and ambient audio stay on the network.
    The talk list is not part of the shell. */
 const YantraSW = (function () {
-  const SHELL = "yantra-v9";
+  const SHELL = "yantra-v10";
   const AUDIO = "yantra-audio-v1";
   const SHELL_FILES = [
     "/web/",
@@ -29,6 +29,7 @@ const YantraSW = (function () {
     "/web/choose.js",
     "/web/quotes.js",
     "/web/talks.js",
+    "/web/quiet.js",
     "/web/talkview.js",
     "/web/altar.js",
     "/web/settings.js",

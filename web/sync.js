@@ -234,6 +234,21 @@
     return peers;
   }
 
+  /* A local mark for the quiet circles. The practice key stays here. The
+     result is not the lookup id, and it is not written into the upload. */
+  function markSeed() {
+    const key = loadState().practiceKey || "";
+    if (!key) return "";
+    let Quiet = root && root.YantraQuiet;
+    if (!Quiet && typeof require === "function") {
+      try { Quiet = require("./quiet.js"); } catch (e) { Quiet = null; }
+    }
+    if (!Quiet || typeof Quiet.accountMark !== "function") return "";
+    const mark = Quiet.accountMark(key);
+    if (typeof mark !== "string" || !mark || mark === key || mark.indexOf(key) >= 0) return "";
+    return mark;
+  }
+
   function loadState() {
     const kept = storage();
     if (!kept) return emptyState();
@@ -1504,6 +1519,7 @@
     linked: linked,
     devices: devices,
     loadState: loadState,
+    markSeed: markSeed,
     currentStore: currentStore,
     ruleLine: ruleLine,
     sync: sync,

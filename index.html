@@ -10,6 +10,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
 <meta name="theme-color" content="#05040a">
 <title>Yantra</title>
 <style>
+  /* A flex or grid display must not bring back an element the page has hidden. */
+  [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: #05040a; overflow: hidden; color: #f3e6c8; }
   canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; }
   /* A sit's element fullscreen uses the same night field. iOS still paints
@@ -568,8 +570,71 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .week { display: flex; justify-content: center; margin: 0.4rem 0 0; min-height: 1.9rem; }
   .week svg { width: min(15rem, 80%); height: auto; overflow: visible; }
   .week.one svg { width: 5.5rem; }
+  .streak-hero { margin-top: 0.85rem; text-align: center; }
+  .streak-meta { display: flex; justify-content: center; gap: 1.8rem; margin: 0 0 0.35rem; }
+  .room p.streak-stat { margin: 0; text-align: center; }
+  .streak-label { display: block; font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(243, 230, 200, 0.46); }
+  .streak-value { display: block; margin-top: 0.12rem; font-family: Palatino, "Iowan Old Style", Georgia, serif; font-size: 1.05rem; color: rgba(247, 237, 212, 0.9); }
+  #streak-days { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
+  #streak-days .day-btn {
+    appearance: none; border: 0; background: transparent; padding: 2px; border-radius: 50%;
+    cursor: pointer; color: inherit; min-width: 2.4rem; min-height: 2.4rem;
+  }
+  #streak-days .day-btn:focus-visible { outline: 2px solid #d4b87a; outline-offset: 2px; }
+  #streak-days svg { width: 2.15rem; height: 2.15rem; display: block; filter: drop-shadow(0 0 4px rgba(230, 201, 138, 0.2)); }
+  #done-segue {
+    display: block; margin: 0.35rem auto 0; width: auto; max-width: 100%;
+    padding: 0.72rem 1.25rem; border-radius: 999px;
+    border: 1px solid rgba(230, 201, 138, 0.45); background: rgba(230, 201, 138, 0.1);
+    color: #f7edd4; font: inherit; font-size: 1rem; letter-spacing: 0.01em; cursor: pointer;
+    box-shadow: 0 0 18px rgba(230, 201, 138, 0.2);
+  }
+  #done-segue:focus-visible, #practice-cal button:focus-visible { outline: 2px solid #d4b87a; outline-offset: 3px; }
+  #practice-cal {
+    position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+             max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
+  #practice-cal .cal-backdrop { position: absolute; inset: 0; background: rgba(5, 4, 10, 0.72); }
+  #practice-cal .cal-panel {
+    position: relative; width: min(24rem, 100%); max-height: min(86vh, 40rem); overflow: auto;
+    background: #14120f; border: 1px solid rgba(230, 201, 138, 0.22); border-radius: 1.15rem;
+    padding: 1.25rem 1.1rem 1rem; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  }
+  #practice-cal h2 { font-family: Palatino, "Iowan Old Style", Georgia, serif; font-weight: 500; font-size: 1.25rem; margin: 0 0 0.2rem; color: #f7edd4; }
+  #practice-cal .cal-note { margin: 0 0 0.8rem; color: rgba(243, 230, 200, 0.62); font-size: 0.82rem; }
+  #practice-cal .cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.55rem; }
+  #practice-cal .cal-nav button {
+    appearance: none; border: 1px solid rgba(230, 201, 138, 0.28); background: transparent; color: #f3e6c8;
+    width: 2.5rem; height: 2.5rem; border-radius: 999px; cursor: pointer; font: inherit; font-size: 1.2rem;
+  }
+  #practice-cal .cal-nav button:disabled { opacity: 0.35; cursor: default; }
+  #practice-cal-month { font-family: Palatino, "Iowan Old Style", Georgia, serif; color: #f3e6c8; }
+  #practice-cal .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; text-align: center; }
+  #practice-cal .dow { font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(243, 230, 200, 0.45); padding: 0.2rem 0; }
+  #practice-cal .cal-cell {
+    aspect-ratio: 1; min-height: 2.15rem; border-radius: 0.55rem; border: 1px solid transparent;
+    color: rgba(243, 230, 200, 0.55); font-size: 0.78rem; display: grid; place-items: center; position: relative;
+  }
+  #practice-cal .cal-cell.formal { color: #f7edd4; border-color: rgba(230, 201, 138, 0.22); background: rgba(230, 201, 138, 0.08); }
+  #practice-cal .cal-dots { position: absolute; bottom: 0.22rem; display: flex; gap: 0.18rem; }
+  #practice-cal .cal-dot { width: 0.28rem; height: 0.28rem; border-radius: 50%; background: rgba(233, 162, 90, 0.9); }
+  #practice-cal .cal-dot.evening { background: rgba(120, 170, 165, 0.95); }
+  #practice-cal .cal-legend { display: flex; flex-wrap: wrap; gap: 0.7rem 1rem; margin: 0.85rem 0 0; font-size: 0.75rem; color: rgba(243, 230, 200, 0.62); }
+  #practice-cal .cal-legend i { display: inline-block; width: 0.45rem; height: 0.45rem; border-radius: 50%; margin-right: 0.3rem; vertical-align: middle; }
+  #practice-cal .cal-legend .m { background: rgba(233, 162, 90, 0.9); }
+  #practice-cal .cal-legend .e { background: rgba(120, 170, 165, 0.95); }
+  #practice-cal-close {
+    position: absolute; top: 0.65rem; right: 0.65rem; appearance: none; border: 1px solid rgba(230, 201, 138, 0.28);
+    background: transparent; color: rgba(243, 230, 200, 0.8); width: 2.15rem; height: 2.15rem; border-radius: 999px;
+    cursor: pointer; font-size: 1.1rem; line-height: 1;
+  }
   #home-day, #practice-lead { text-align: center; color: rgba(243, 230, 200, 0.9); font-size: 0.98rem; min-height: 1.4rem; }
-  #home .choice + .week { margin-top: 1rem; }
+  #home .choice + .streak-hero, #home-week { margin-top: 1rem; }
+  @media (prefers-reduced-motion: reduce) {
+    #streak-days svg { filter: none; }
+    #done-segue { box-shadow: none; }
+  }
   #pick-sheet { display: flex; flex-direction: column; gap: 0.6rem; margin: -0.4rem 0 0.6rem; padding: 0.8rem 0 1rem; border-bottom: 1px solid rgba(230, 201, 138, 0.16); }
   .sheet-head, .room p.sheet-head { margin: 0; font-size: 0.82rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(232, 204, 146, 0.84); text-align: left; }
   #pick-sheet #pick-album-row { margin: 0; }
@@ -734,6 +799,13 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <div id="home-mark" aria-hidden="true"></div>
     <button class="choice dawn" type="button" data-theme="morning">Morning Meditation</button>
     <button class="choice dusk" type="button" data-theme="evening">Evening Meditation</button>
+    <div id="home-streak" class="streak-hero" hidden>
+      <div class="streak-meta">
+        <p class="streak-stat"><span class="streak-label">Continuous</span> <span id="streak-continuous" class="streak-value"></span></p>
+        <p class="streak-stat"><span class="streak-label">Weekly</span> <span id="streak-weekly" class="streak-value"></span></p>
+      </div>
+      <div id="streak-days" role="group" aria-label="Formal practice days. Activate any day to open the practice calendar."></div>
+    </div>
     <div class="week" id="home-week"></div>
     <p id="home-day"></p>
     <p id="home-note"></p>
@@ -817,6 +889,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
       <cite id="done-cite"></cite>
       <button type="button" id="done-from" hidden></button>
     </blockquote>
+    <button type="button" id="done-segue" hidden>Continue with a Dharma talk</button>
     <button class="choice" type="button" data-room="home" style="margin-top:1.4rem">Back to Home</button>
   </div>
 </div>
@@ -1153,9 +1226,26 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <button type="button" id="talk-toggle">Pause</button>
     <button type="button" id="talk-fwd" aria-label="Forward 30 seconds">30 &#8635;</button>
     <button type="button" id="talk-words-toggle" aria-pressed="true">Words</button>
+    <button type="button" id="talk-stop" hidden>Stop</button>
+    <button type="button" id="talk-still" hidden>Back to stillness</button>
     <button type="button" id="talk-close">Close</button>
   </div>
   <p id="talk-title"></p>
+</div>
+<div id="practice-cal" hidden role="dialog" aria-modal="true" aria-labelledby="practice-cal-title">
+  <div class="cal-backdrop" data-close="1"></div>
+  <div class="cal-panel" role="document">
+    <button type="button" id="practice-cal-close" aria-label="Close calendar">&#215;</button>
+    <h2 id="practice-cal-title">Practice</h2>
+    <p class="cal-note">Formal sits. Listening is separate.</p>
+    <div class="cal-nav">
+      <button type="button" id="practice-cal-prev" aria-label="Previous month">&#8249;</button>
+      <span id="practice-cal-month" aria-live="polite"></span>
+      <button type="button" id="practice-cal-next" aria-label="Next month">&#8250;</button>
+    </div>
+    <div id="practice-cal-grid" class="cal-grid"></div>
+    <p class="cal-legend"><span><i class="m"></i>Morning</span><span><i class="e"></i>Evening</span><span>Listening is not shown</span></p>
+  </div>
 </div>
 <div id="altar" class="altar-photos" aria-hidden="true"></div>
 <div id="caption">
@@ -2983,6 +3073,17 @@ function paintPractice() {
     add("Perfect days", summary.streaks.perfect, "perfect");
     add("Sunrise", summary.streaks.morning, "dawn");
     add("Sunset", summary.streaks.evening, "dusk");
+    add("Continuous", summary.streaks.daily, "");
+    if (summary.streaks.weekly && window.YantraQuiet) {
+      const weeklyRow = document.createElement("div");
+      weeklyRow.className = "practice-row";
+      const weeklyName = document.createElement("span");
+      weeklyName.textContent = "Weekly";
+      const weeklyCurrent = document.createElement("span");
+      weeklyCurrent.textContent = window.YantraQuiet.weeklyLabel(summary.streaks.weekly.current);
+      weeklyRow.append(weeklyName, weeklyCurrent, document.createElement("span"));
+      rows.append(weeklyRow);
+    }
     const today = document.createElement("div");
     today.className = "practice-row";
     const name = document.createElement("span");
@@ -3001,6 +3102,7 @@ function paintPractice() {
   document.getElementById("practice-actions").hidden = false;
   paintWeek(document.getElementById("home-week"), summary.week);
   paintWeek(document.getElementById("account-week"), summary.week);
+  if (window.paintStreakHero) window.paintStreakHero(summary);
   paintMindfulness();
   const homeDay = document.getElementById("home-day");
   if (homeDay) homeDay.textContent = practice.lead(summary);
@@ -3288,54 +3390,7 @@ if (window.YANTRA_WEB) {
     if (!sessionLive) return;
     sessionLive = false;
     endSitting();
-    document.getElementById("done-line").textContent =
-      "Well done. Your " + sessionTheme + " meditation is complete.";
-    const practiceLine = document.getElementById("done-practice");
-    if (practiceLine && window.YantraPractice) {
-      practiceLine.textContent = window.YantraPractice.completeLine(window.YantraPractice.summary(), sessionTheme);
-    }
-    const words = document.getElementById("done-words");
-    const from = document.getElementById("done-from");
-    const cite = document.getElementById("done-cite");
-    const quoteNode = document.getElementById("done-quote");
-    if (from) {
-      from.hidden = true;
-      from.textContent = "";
-      delete from.dataset.src;
-      delete from.dataset.title;
-    }
-    if (cite) cite.replaceChildren();
-    if (quoteNode) quoteNode.textContent = "";
-    const file = window.YANTRA_LEVEL === "zazen" ? window.yantraQuoteFile : null;
-    const quote = file && window.YantraQuotes ? window.YantraQuotes.choose(file, window.yantraLastSit || []) : null;
-    const talk = quote && window.YantraTalks
-      ? window.YantraTalks.findTalk(window.yantraTalks, "zazen", quote.talk)
-      : null;
-    const talkReady = !!(talk && talkCreditPlayable(talk.src));
-    if (quote && quote.text) {
-      quoteNode.textContent = "\u201c" + quote.text + "\u201d";
-      if (talkReady && from) {
-        from.hidden = false;
-        from.textContent = "From: " + talk.title;
-        from.dataset.src = talk.src;
-        from.dataset.title = talk.title;
-      } else if (cite && talk && !talkReady) {
-        cite.textContent = "\u2014 " + talk.title;
-      } else if (cite) {
-        cite.append(document.createTextNode("\u2014 " + (quote.by || "") + ", "));
-        const link = document.createElement("a");
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.textContent = quote.talk || "";
-        if (quote.href) link.href = quote.href;
-        cite.append(link);
-      }
-      words.hidden = false;
-    } else {
-      words.hidden = true;
-    }
-    roomTrail = [];
-    showRoom("done");
+    showCompletion();
   });
   const doneFrom = document.getElementById("done-from");
   if (doneFrom) {
@@ -3393,6 +3448,10 @@ if (window.YANTRA_WEB) {
     delete talkWords.dataset.index;
     talkWords.classList.remove("on");
     document.getElementById("talk-title").textContent = detail.title || "";
+    const stopNow = document.getElementById("talk-stop");
+    const backNow = document.getElementById("talk-still");
+    if (stopNow) stopNow.hidden = !segueReturn;
+    if (backNow) backNow.hidden = !segueReturn;
     talkWatch.hidden = false;
     document.body.classList.add("watching");
     paintTalkBar();
@@ -3409,27 +3468,330 @@ if (window.YANTRA_WEB) {
       kept: window.yantraKeptTalks,
     });
   }
+  /* The completion screen, the one Dharma invitation, and the practice calendar.
+     None of this records a sit. A talk keeps its own listening time. */
+  let segueQuote = null;
+  let segueReturn = false;
+  let calReturn = null;
+  let calWhen = null;
+  function mountSvg(parent, markup) {
+    /* The HTML parser builds a real SVG. A parsed fragment imported into the
+       page was keeping the space and dropping the stroke. */
+    parent.innerHTML = markup;
+  }
+  function quietSeed() {
+    const linked = window.YantraSync && window.YantraSync.markSeed ? window.YantraSync.markSeed() : "";
+    return window.YantraQuiet.seedFor(localStorage, linked);
+  }
+  function paintStreakHero(summary) {
+    const hero = document.getElementById("home-streak");
+    const row = document.getElementById("streak-days");
+    if (!hero || !row || !window.YantraQuiet) return;
+    const daily = summary && summary.streaks && summary.streaks.daily;
+    const current = daily && daily.current > 0 ? daily.current : 0;
+    if (!current) {
+      hero.hidden = true;
+      row.replaceChildren();
+      return;
+    }
+    hero.hidden = false;
+    const continuous = document.getElementById("streak-continuous");
+    const weekly = document.getElementById("streak-weekly");
+    if (continuous) continuous.textContent = window.YantraQuiet.continuousLabel(current);
+    const weeklyCount = summary.streaks && summary.streaks.weekly ? summary.streaks.weekly.current : 0;
+    if (weekly) weekly.textContent = window.YantraQuiet.weeklyLabel(weeklyCount);
+    row.replaceChildren();
+    const seed = quietSeed();
+    const formalMs = summary.totals ? summary.totals.ms : 0;
+    window.YantraQuiet.heroDays(current).forEach((day) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "day-btn";
+      btn.setAttribute("aria-label", "Day " + day + " of continuous practice. Open the practice calendar.");
+      mountSvg(btn, window.YantraQuiet.renderForm(window.YantraQuiet.formForDays(day), day, seed, {
+        auraDays: current,
+        formalMs: formalMs,
+        size: 36,
+      }));
+      btn.addEventListener("click", openPracticeCalendar);
+      btn.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        if (event.key === " ") event.preventDefault();
+        if (event.repeat) return;
+        openPracticeCalendar();
+      });
+      row.append(btn);
+    });
+  }
+  function practiceDays() {
+    if (!window.YantraPractice || !window.YantraPractice.loadView) return {};
+    const store = window.YantraPractice.loadView();
+    return (store && store.days) || {};
+  }
+  function paintPracticeCalendar() {
+    if (!calWhen || !window.YantraQuiet) return;
+    const built = window.YantraQuiet.monthCells(calWhen.y, calWhen.m, practiceDays());
+    const label = document.getElementById("practice-cal-month");
+    const next = document.getElementById("practice-cal-next");
+    const grid = document.getElementById("practice-cal-grid");
+    if (label) label.textContent = built.label;
+    const now = new Date();
+    if (next) next.disabled = built.year > now.getFullYear() || (built.year === now.getFullYear() && built.month >= now.getMonth() + 1);
+    if (!grid) return;
+    grid.replaceChildren();
+    grid.setAttribute("aria-label", built.label);
+    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((name) => {
+      const el = document.createElement("div");
+      el.className = "dow";
+      el.textContent = name;
+      grid.append(el);
+    });
+    built.cells.forEach((cell) => {
+      const el = document.createElement("div");
+      el.className = "cal-cell";
+      if (cell.empty) {
+        el.setAttribute("aria-hidden", "true");
+        grid.append(el);
+        return;
+      }
+      if (cell.formal) el.classList.add("formal");
+      const spoken = built.label.replace(" " + built.year, " " + cell.day + ", " + built.year);
+      let detail = spoken + ", no formal sit";
+      if (cell.morning && cell.evening) detail = spoken + ", morning formal, evening formal";
+      else if (cell.morning) detail = spoken + ", morning formal";
+      else if (cell.evening) detail = spoken + ", evening formal";
+      el.setAttribute("aria-label", detail);
+      el.textContent = String(cell.day);
+      if (cell.morning || cell.evening) {
+        const dots = document.createElement("span");
+        dots.className = "cal-dots";
+        dots.setAttribute("aria-hidden", "true");
+        if (cell.morning) {
+          const dot = document.createElement("span");
+          dot.className = "cal-dot";
+          dots.append(dot);
+        }
+        if (cell.evening) {
+          const dot = document.createElement("span");
+          dot.className = "cal-dot evening";
+          dots.append(dot);
+        }
+        el.append(dots);
+      }
+      grid.append(el);
+    });
+  }
+  function openPracticeCalendar() {
+    calReturn = document.activeElement;
+    const now = new Date();
+    calWhen = { y: now.getFullYear(), m: now.getMonth() + 1 };
+    paintPracticeCalendar();
+    const modal = document.getElementById("practice-cal");
+    if (!modal) return;
+    modal.hidden = false;
+    const close = document.getElementById("practice-cal-close");
+    if (close) close.focus();
+  }
+  function closePracticeCalendar() {
+    const modal = document.getElementById("practice-cal");
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    if (calReturn && typeof calReturn.focus === "function") calReturn.focus();
+  }
+  function shiftCalendar(by) {
+    if (!calWhen) return;
+    const next = new Date(calWhen.y, calWhen.m - 1 + by, 1);
+    const now = new Date();
+    if (by > 0 && (next.getFullYear() > now.getFullYear() || (next.getFullYear() === now.getFullYear() && next.getMonth() > now.getMonth()))) return;
+    calWhen = { y: next.getFullYear(), m: next.getMonth() + 1 };
+    paintPracticeCalendar();
+  }
+  function showSegueControls(on) {
+    const stop = document.getElementById("talk-stop");
+    const back = document.getElementById("talk-still");
+    if (stop) stop.hidden = !on;
+    if (back) back.hidden = !on;
+  }
+  function paintSegue() {
+    const btn = document.getElementById("done-segue");
+    if (!btn) return;
+    const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+    const kept = window.yantraKeptTalks;
+    const level = window.YANTRA_LEVEL;
+    const sections = window.YantraTalks
+      ? window.YantraTalks.talkSections(window.yantraTalks, level, { offline: offline, kept: kept })
+      : [];
+    const offer = window.YantraQuiet
+      ? window.YantraQuiet.segueOffer({
+          level: level,
+          quoteShown: !!(segueQuote && segueQuote.shown),
+          preferred: segueQuote && segueQuote.preferred,
+          sections: sections,
+          offline: offline,
+          kept: kept,
+          canPlay: function (src, opts) { return !!(window.YantraTalks && window.YantraTalks.canPlay(src, opts)); },
+        })
+      : null;
+    if (!offer) {
+      btn.hidden = true;
+      delete btn.dataset.src;
+      delete btn.dataset.title;
+      delete btn.dataset.set;
+      return;
+    }
+    btn.hidden = false;
+    btn.textContent = "Continue with a Dharma talk";
+    btn.dataset.src = offer.src;
+    btn.dataset.title = offer.title;
+    btn.dataset.set = offer.setTitle || "";
+  }
+  function beginSegue() {
+    const btn = document.getElementById("done-segue");
+    if (!btn || btn.hidden || window.YANTRA_LEVEL !== "zazen" || !window.YantraTalks) return;
+    const src = btn.dataset.src || "";
+    const title = btn.dataset.title || "";
+    if (!src.startsWith("/talks/") || src.includes("..") || !talkCreditPlayable(src)) {
+      paintSegue();
+      return;
+    }
+    segueReturn = true;
+    const started = window.YantraTalks.play(document.getElementById("talks-list"), src, title);
+    if (!started) {
+      segueReturn = false;
+      showSegueControls(false);
+      return;
+    }
+    if (!document.body.classList.contains("watching")) showRoom("talks");
+    showSegueControls(true);
+  }
+  function returnToStillness() {
+    const fromSegue = segueReturn;
+    closeWatch();
+    if (!fromSegue) return;
+    roomTrail = [];
+    showRoom("done");
+    const btn = document.getElementById("done-segue");
+    if (btn && !btn.hidden) btn.focus();
+  }
+  function showCompletion() {
+    document.getElementById("done-line").textContent =
+      "Well done. Your " + sessionTheme + " meditation is complete.";
+    const practiceLine = document.getElementById("done-practice");
+    if (practiceLine && window.YantraPractice) {
+      practiceLine.textContent = window.YantraPractice.completeLine(window.YantraPractice.summary(), sessionTheme);
+    }
+    const words = document.getElementById("done-words");
+    const from = document.getElementById("done-from");
+    const cite = document.getElementById("done-cite");
+    const quoteNode = document.getElementById("done-quote");
+    if (from) {
+      from.hidden = true;
+      from.textContent = "";
+      delete from.dataset.src;
+      delete from.dataset.title;
+    }
+    if (cite) cite.replaceChildren();
+    if (quoteNode) quoteNode.textContent = "";
+    const file = window.YANTRA_LEVEL === "zazen" ? window.yantraQuoteFile : null;
+    const quote = file && window.YantraQuotes ? window.YantraQuotes.choose(file, window.yantraLastSit || []) : null;
+    const talk = quote && window.YantraTalks
+      ? window.YantraTalks.findTalk(window.yantraTalks, "zazen", quote.talk)
+      : null;
+    const talkReady = !!(talk && talkCreditPlayable(talk.src));
+    if (quote && quote.text) {
+      quoteNode.textContent = "\u201c" + quote.text + "\u201d";
+      if (talkReady && from) {
+        from.hidden = false;
+        from.textContent = "From: " + talk.title;
+        from.dataset.src = talk.src;
+        from.dataset.title = talk.title;
+      } else if (cite && talk && !talkReady) {
+        cite.textContent = "\u2014 " + talk.title;
+      } else if (cite) {
+        cite.append(document.createTextNode("\u2014 " + (quote.by || "") + ", "));
+        const link = document.createElement("a");
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = quote.talk || "";
+        if (quote.href) link.href = quote.href;
+        cite.append(link);
+      }
+      words.hidden = false;
+    } else if (words) {
+      words.hidden = true;
+    }
+    segueQuote = {
+      shown: !!(quote && quote.text),
+      preferred: talkReady && talk ? { title: talk.title, src: talk.src, setTitle: talk.setTitle || "" } : null,
+    };
+    paintSegue();
+    roomTrail = [];
+    showRoom("done");
+  }
+  window.paintStreakHero = paintStreakHero;
+  window.showCompletion = showCompletion;
+  document.getElementById("done-segue").addEventListener("click", beginSegue);
+  document.getElementById("talk-stop").addEventListener("click", returnToStillness);
+  document.getElementById("talk-still").addEventListener("click", returnToStillness);
+  document.getElementById("practice-cal-close").addEventListener("click", closePracticeCalendar);
+  document.getElementById("practice-cal-prev").addEventListener("click", () => shiftCalendar(-1));
+  document.getElementById("practice-cal-next").addEventListener("click", () => shiftCalendar(1));
+  document.getElementById("practice-cal").addEventListener("click", (event) => {
+    if (event.target && event.target.getAttribute("data-close")) closePracticeCalendar();
+  });
+  document.addEventListener("keydown", (event) => {
+    const modal = document.getElementById("practice-cal");
+    if (!modal || modal.hidden) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closePracticeCalendar();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const targets = Array.from(modal.querySelectorAll("button")).filter((el) => !el.disabled && !el.closest("[hidden]"));
+    if (!targets.length) return;
+    const first = targets[0];
+    const last = targets[targets.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !modal.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !modal.contains(active))) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
   addEventListener("offline", () => {
     const from = document.getElementById("done-from");
-    if (!from || from.hidden) return;
-    if (talkCreditPlayable(from.dataset.src || "")) return;
-    const title = from.dataset.title || "";
-    from.hidden = true;
-    from.textContent = "";
-    delete from.dataset.src;
-    delete from.dataset.title;
-    const cite = document.getElementById("done-cite");
-    if (cite && title && !cite.textContent) cite.textContent = "\u2014 " + title;
+    if (from && !from.hidden && !talkCreditPlayable(from.dataset.src || "")) {
+      const title = from.dataset.title || "";
+      from.hidden = true;
+      from.textContent = "";
+      delete from.dataset.src;
+      delete from.dataset.title;
+      const cite = document.getElementById("done-cite");
+      if (cite && title && !cite.textContent) cite.textContent = "\u2014 " + title;
+    }
+    paintSegue();
   });
+  addEventListener("online", () => paintSegue());
   function closeWatch() {
-    // Leaving the talk is like ending a sit: it pauses, and picks up here next time.
+    // Leaving the talk pauses it, and it picks up here next time. A talk is not another sit.
+    const fromSegue = segueReturn;
     const view = window.yantraWatch;
     if (view && !view.audio.paused) view.audio.pause();
     document.body.classList.remove("watching");
     talkWatch.hidden = true;
     window.yantraWatch = null;
+    segueReturn = false;
+    showSegueControls(false);
     if (watchLock) watchLock.release().catch(() => {});
     watchLock = null;
+    if (fromSegue) {
+      const btn = document.getElementById("done-segue");
+      const done = document.getElementById("done");
+      if (btn && !btn.hidden && done && !done.hidden) btn.focus();
+    }
   }
   window.yantraCloseWatch = closeWatch;
   addEventListener("yantra:talk", (event) => openWatch(event.detail));
