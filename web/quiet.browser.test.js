@@ -4,16 +4,18 @@
  * the practice calendar, and the Dharma invitation. Screenshots go to
  * $YANTRA_ARTIFACTS when that directory is set, otherwise a folder under
  * the system temp directory. Either place is created as the current user.
+ * The browser is $YANTRA_CHROME, or the first Chrome/Chromium found on PATH
+ * and then at the usual locations, including /usr/bin/chromium.
  */
 const assert = require("assert");
 const fs = require("fs");
 const http = require("http");
+const net = require("net");
 const os = require("os");
 const path = require("path");
 const { spawn } = require("child_process");
 
 const ROOT = path.resolve(__dirname, "..");
-const PORT = 8766;
 
 /* A directory the current user can create. An explicit path wins; the
    default never tries /opt, which an ordinary account cannot mkdir. */
@@ -23,8 +25,69 @@ function artifactDir(env, tmp) {
   return path.join(tmp || os.tmpdir(), "yantra-quiet-artifacts");
 }
 
+/* Names tried on PATH, then absolute paths. Chromium on Arch lives at
+   /usr/bin/chromium. Brave is last so it is used only when nothing else
+   is installed. YANTRA_CHROME overrides the search. */
+const CHROME_NAMES = ["chromium", "google-chrome", "google-chrome-stable", "chromium-browser", "chrome"];
+const CHROME_PATHS = [
+  "/usr/bin/chromium",
+  "/usr/bin/google-chrome-stable",
+  "/usr/bin/google-chrome",
+  "/usr/bin/chromium-browser",
+  "/usr/local/bin/google-chrome",
+  "/usr/local/bin/chromium",
+  "/opt/google/chrome/chrome",
+  "/snap/bin/chromium",
+  "/usr/bin/brave",
+  "/usr/bin/brave-browser",
+];
+
+function isExecutable(file) {
+  try {
+    fs.accessSync(file, fs.constants.X_OK);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function resolveCommand(command, pathEnv, exists) {
+  const text = String(command || "");
+  if (!text) return "";
+  if (text.includes("/") || text.includes("\\")) {
+    const full = path.resolve(text);
+    return exists(full) ? full : "";
+  }
+  const dirs = String(pathEnv || "").split(path.delimiter);
+  for (let i = 0; i < dirs.length; i += 1) {
+    if (!dirs[i]) continue;
+    const full = path.join(dirs[i], text);
+    if (exists(full)) return full;
+  }
+  return "";
+}
+
+function chromeExecutable(env, opts) {
+  const options = opts || {};
+  const exists = options.exists || isExecutable;
+  const pathEnv = options.pathEnv != null ? options.pathEnv : (env && env.PATH) || "";
+  const configured = env && typeof env.YANTRA_CHROME === "string" ? env.YANTRA_CHROME.trim() : "";
+  if (configured) {
+    const found = resolveCommand(configured, pathEnv, exists);
+    if (!found) throw new Error("YANTRA_CHROME is not an executable file: " + configured);
+    return found;
+  }
+  for (let i = 0; i < CHROME_NAMES.length; i += 1) {
+    const found = resolveCommand(CHROME_NAMES[i], pathEnv, exists);
+    if (found) return found;
+  }
+  for (let i = 0; i < CHROME_PATHS.length; i += 1) {
+    if (exists(CHROME_PATHS[i])) return CHROME_PATHS[i];
+  }
+  throw new Error("No Chrome or Chromium found. Set YANTRA_CHROME to the browser, for example /usr/bin/chromium.");
+}
+
 const ART = artifactDir(process.env);
-const DEBUG = 9333;
 
 function mime(file) {
   if (file.endsWith(".html")) return "text/html; charset=utf-8";
@@ -59,7 +122,18 @@ function startServer() {
         res.end(data);
       });
     });
-    server.listen(PORT, "127.0.0.1", () => resolve(server));
+    server.listen(0, "127.0.0.1", () => resolve(server));
+  });
+}
+
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const port = server.address().port;
+      server.close(() => resolve(port));
+    });
   });
 }
 
@@ -67,10 +141,25 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitForPort() {
+function getJson(url) {
+  return new Promise((resolve, reject) => {
+    const req = http.get(url, (res) => {
+      const chunks = [];
+      res.on("data", (chunk) => chunks.push(chunk));
+      res.on("end", () => {
+        try { resolve(JSON.parse(Buffer.concat(chunks).toString("utf8"))); }
+        catch (err) { reject(err); }
+      });
+    });
+    req.on("error", reject);
+  });
+}
+
+async function waitForPort(port) {
+  const url = "http://127.0.0.1:" + port + "/json/list";
   for (let i = 0; i < 80; i += 1) {
     try {
-      const list = await fetch("http://127.0.0.1:" + DEBUG + "/json/list").then((r) => r.json());
+      const list = await getJson(url);
       const page = list.find((item) => item.type === "page" && item.webSocketDebuggerUrl);
       if (page) return page;
     } catch (e) {}
@@ -255,15 +344,19 @@ async function heroClip(send) {
 
 async function main() {
   fs.mkdirSync(ART, { recursive: true });
+  const browser = chromeExecutable(process.env);
+  const debugPort = await freePort();
   console.log("artifacts", ART);
+  console.log("browser", browser);
   const server = await startServer();
+  const pagePort = server.address().port;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "yantra-quiet-"));
-  const chrome = spawn("/usr/local/bin/google-chrome", [
+  const chrome = spawn(browser, [
     "--headless=new",
     "--no-sandbox",
     "--disable-gpu",
     "--disable-dev-shm-usage",
-    "--remote-debugging-port=" + DEBUG,
+    "--remote-debugging-port=" + debugPort,
     "--remote-allow-origins=*",
     "--user-data-dir=" + dir,
     "--window-size=1280,900",
@@ -272,7 +365,7 @@ async function main() {
   let chromeLog = "";
   chrome.stderr.on("data", (chunk) => { chromeLog += chunk.toString(); });
   try {
-    const page = await waitForPort();
+    const page = await waitForPort(debugPort);
     const client = connect(page.webSocketDebuggerUrl);
     await client.ready;
     const send = client.send;
@@ -285,7 +378,7 @@ async function main() {
         "access.level": { value: "zazen", updatedAt: 1 }
       })); } catch (e) {}`,
     });
-    await send("Page.navigate", { url: "http://127.0.0.1:" + PORT + "/web/" });
+    await send("Page.navigate", { url: "http://127.0.0.1:" + pagePort + "/web/" });
     await waitFor(send, "!!(window.YantraQuiet && window.YantraPractice && window.showCompletion && document.getElementById('done-segue'))", "app");
     await waitFor(send, "window.yantraQuoteFile && window.yantraQuoteFile.quotes && window.yantraQuoteFile.quotes.length > 0", "quotes");
     await installProbe(send);
@@ -679,4 +772,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { artifactDir };
+module.exports = { artifactDir, chromeExecutable, CHROME_NAMES, CHROME_PATHS };
