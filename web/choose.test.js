@@ -180,6 +180,16 @@ const rotated = plan({ theme: "evening", count: 3, albumId: "", lastId: "big-isl
 assert.notStrictEqual(rotated.albumId, "big-island");
 assert.strictEqual(discById(rotated.albumId).circle, "vayu");
 
+for (const theme of ["morning", "evening"]) {
+  const six = plan({ theme, count: 6, albumId: "", lastId: "samurai" });
+  assert.strictEqual(six.ok, true, theme + " 6-song sit can start without an album");
+  assert.notStrictEqual(six.albumId, "samurai");
+  assert.strictEqual(six.via, "default");
+  assert.ok(six.items.every((item) => item.discId === six.albumId), "every song, including the first, is the album this path chose");
+  assert.strictEqual(six.items[0].discId, six.albumId);
+  assert.notStrictEqual(six.items[0].discId, "samurai");
+}
+
 const crossAsk = plan({ theme: "evening", count: 3, mix: true, albumId: "samurai" });
 assert.strictEqual(crossAsk.albumId, "samurai", "a sit never crosses albums, even if asked to mix");
 assert.strictEqual(new Set(crossAsk.items.map((item) => item.discId)).size, 1);
@@ -238,7 +248,8 @@ assert.ok(readyAt > 0);
 assert.ok(!readyFn.includes("playSession"), "a reminder deep link opens the sit, it does not start an album");
 assert.ok(page.includes('params.get("ready")'));
 assert.ok(fs.readFileSync(path.join(__dirname, "schedule.js"), "utf8").includes('"/web/?ready="'));
-assert.ok(page.includes("playSession(sessionTheme, Number(button.dataset.count))"));
+assert.ok(page.includes("playSession(sessionTheme, Number(button.dataset.count), { album: picked ? picked.value : \"\" })"));
+assert.ok(!page.includes('selectedId = "samurai"'), "the shelf does not arm Samurai before an album is chosen");
 
 const spinAt = page.indexOf("window.wheelSpin");
 const spin = page.slice(spinAt, spinAt + 180);
