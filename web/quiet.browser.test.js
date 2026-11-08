@@ -160,6 +160,80 @@ async function key(send, name, code, vk, modifiers) {
   });
 }
 
+const TYPE_PROBE = `(function () {
+  function parse(c) {
+    const m = String(c || "").match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*([\\d.]+))?\\)/);
+    if (!m) return { r: 0, g: 0, b: 0, a: 1 };
+    return { r: +m[1], g: +m[2], b: +m[3], a: m[4] == null ? 1 : +m[4] };
+  }
+  function lin(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+  function lum(p) { return 0.2126 * lin(p.r) + 0.7152 * lin(p.g) + 0.0722 * lin(p.b); }
+  function ratio(fg, bg) {
+    const hi = Math.max(lum(fg), lum(bg));
+    const lo = Math.min(lum(fg), lum(bg));
+    return (hi + 0.05) / (lo + 0.05);
+  }
+  function chain(el) {
+    let o = 1;
+    let n = el;
+    while (n && n.nodeType === 1) {
+      const a = Number(getComputedStyle(n).opacity);
+      if (Number.isFinite(a)) o *= a;
+      n = n.parentElement;
+    }
+    return o;
+  }
+  function measure(el) {
+    if (!el || el.hidden) return null;
+    const cs = getComputedStyle(el);
+    const color = parse(cs.color);
+    const opacity = chain(el);
+    const fgA = color.a * opacity;
+    const bg = { r: 5, g: 4, b: 10 };
+    const fg = {
+      r: color.r * fgA + bg.r * (1 - fgA),
+      g: color.g * fgA + bg.g * (1 - fgA),
+      b: color.b * fgA + bg.b * (1 - fgA),
+    };
+    return {
+      opacity: Math.round(opacity * 1000) / 1000,
+      color: cs.color,
+      contrast: Math.round(ratio(fg, bg) * 100) / 100,
+      outlineWidth: cs.outlineWidth,
+      outlineStyle: cs.outlineStyle,
+    };
+  }
+  const ids = {
+    quote: document.getElementById("done-quote"),
+    segue: document.getElementById("done-segue"),
+    line: document.getElementById("done-line"),
+    home: document.querySelector("#home h1"),
+    label: document.querySelector(".streak-label"),
+    value: document.getElementById("streak-continuous"),
+    play: document.getElementById("talk-stop"),
+  };
+  const out = {};
+  Object.keys(ids).forEach((key) => {
+    const row = measure(ids[key]);
+    if (row) out[key] = row;
+  });
+  return out;
+})`;
+
+async function installProbe(send) {
+  await evaluate(send, "window.__yantraType = " + TYPE_PROBE);
+}
+
+async function readType(send) {
+  return evaluate(send, "window.__yantraType()");
+}
+
+function assertReadable(sample, name, minContrast) {
+  assert.ok(sample && sample[name], name + " was not measured");
+  assert.ok(sample[name].opacity >= 0.95, name + " settled opacity " + sample[name].opacity);
+  assert.ok(sample[name].contrast >= minContrast, name + " contrast " + sample[name].contrast + " (" + sample[name].color + ")");
+}
+
 async function heroClip(send) {
   return evaluate(send, `(() => {
     const el = document.getElementById("home-streak");
@@ -203,6 +277,7 @@ async function heroClip(send) {
     await send("Page.navigate", { url: "http://127.0.0.1:" + PORT + "/web/" });
     await waitFor(send, "!!(window.YantraQuiet && window.YantraPractice && window.showCompletion && document.getElementById('done-segue'))", "app");
     await waitFor(send, "window.yantraQuoteFile && window.yantraQuoteFile.quotes && window.yantraQuoteFile.quotes.length > 0", "quotes");
+    await installProbe(send);
 
     const initial = await evaluate(send, `(() => {
       const segue = document.getElementById("done-segue");
@@ -265,6 +340,16 @@ async function heroClip(send) {
     assert.ok(seeded.svg && seeded.svg.includes("<svg"), "each day draws a mark");
     assert.ok(seeded.box >= 24, "the mark is large enough to see, got " + seeded.box);
     assert.ok(seeded.label.includes("Open the practice calendar"));
+    const homeEarly = await readType(send);
+    const homeRunning = await evaluate(send, `document.querySelector("#home .inner").getAnimations().filter((anim) => anim.playState === "running").length`);
+    await evaluate(send, `document.querySelector("#home .inner").getAnimations().forEach((anim) => anim.finish())`);
+    await sleep(80);
+    const homeType = await readType(send);
+    console.log("home fade", JSON.stringify({ running: homeRunning, early: homeEarly.home, settled: homeType.home, label: homeType.label }));
+    if (homeRunning) assert.ok(homeEarly.home.opacity < 0.85, "home is still inside the entrance fade when shot too soon, opacity " + homeEarly.home.opacity);
+    assertReadable(homeType, "home", 7);
+    assertReadable(homeType, "label", 4.5);
+    assertReadable(homeType, "value", 7);
     await shot(send, "quiet-home-desktop.png");
     const deskClip = await heroClip(send);
     await shot(send, "quiet-hero-desktop.png", deskClip);
@@ -379,7 +464,37 @@ async function heroClip(send) {
     assert.strictEqual(done.text, "Continue with a Dharma talk");
     assert.ok(done.src.startsWith("/talks/"));
     assert.strictEqual(done.audio, "", "the invitation does not start the talk");
+    const fade = await evaluate(send, `(async () => {
+      showCompletion();
+      const inner = document.querySelector("#done .inner");
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const anims = inner.getAnimations();
+      if (anims[0]) anims[0].currentTime = 0;
+      const early = window.__yantraType();
+      anims.forEach((anim) => anim.finish());
+      const settled = window.__yantraType();
+      return { animated: anims.length, early: early, settled: settled };
+    })()`);
+    console.log("completion fade", JSON.stringify(fade));
+    assert.ok(fade.animated > 0, "the completion room still fades in");
+    assert.ok(fade.early.quote.opacity <= 0.05, "the fade starts blank, opacity " + fade.early.quote.opacity);
+    assert.ok(fade.early.quote.contrast < 1.5, "a mid-fade capture is not readable contrast");
+    assertReadable(fade.settled, "quote", 7);
+    assertReadable(fade.settled, "line", 7);
+    assertReadable(fade.settled, "segue", 7);
+    await sleep(80);
     await shot(send, "quiet-done-segue.png");
+    await evaluate(send, `document.getElementById("done-segue").focus({ focusVisible: true })`);
+    const focus = await readType(send);
+    assert.strictEqual(focus.segue.outlineStyle, "solid");
+    assert.ok(parseFloat(focus.segue.outlineWidth) >= 2, "focus ring " + focus.segue.outlineWidth);
+    await shot(send, "quiet-done-focus.png");
+    await send("Emulation.setDeviceMetricsOverride", {
+      width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
+    });
+    await sleep(80);
+    await shot(send, "quiet-done-mobile.png");
+    await send("Emulation.clearDeviceMetricsOverride");
 
     await click(send, "#done-segue");
     await sleep(150);
@@ -403,6 +518,20 @@ async function heroClip(send) {
     assert.strictEqual(playing.sits, before.sits, "the talk does not add a formal sit");
     assert.strictEqual(playing.ms, before.ms);
     assert.ok(playing.title.length > 0);
+    await waitFor(send, `(() => {
+      const bar = document.getElementById("talk-bar");
+      if (!bar) return false;
+      let o = 1;
+      let n = bar;
+      while (n && n.nodeType === 1) {
+        o *= Number(getComputedStyle(n).opacity) || 1;
+        n = n.parentElement;
+      }
+      return o >= 0.95;
+    })()`, "playback controls");
+    const playType = await readType(send);
+    assertReadable(playType, "play", 4.5);
+    console.log("playback contrast", JSON.stringify(playType.play));
     await shot(send, "quiet-segue-playing.png");
 
     await click(send, "#talk-stop");
@@ -495,6 +624,34 @@ async function heroClip(send) {
 
     const long = await evaluate(send, `YantraPractice.summary().streaks.weekly.current`);
     assert.strictEqual(long, 7, "a year still shows 7 / 7, not a new cycle");
+
+    await send("Emulation.setEmulatedMedia", {
+      features: [{ name: "prefers-reduced-motion", value: "reduce" }],
+    });
+    const reduced = await evaluate(send, `(async () => {
+      showRoom("home");
+      showCompletion();
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const anims = document.querySelector("#done .inner").getAnimations();
+      return { animated: anims.length, type: window.__yantraType() };
+    })()`);
+    console.log("reduced motion", JSON.stringify(reduced));
+    assert.strictEqual(reduced.animated, 0, "reduced motion does not fade the completion text");
+    assertReadable(reduced.type, "quote", 7);
+    assertReadable(reduced.type, "segue", 7);
+    await shot(send, "quiet-done-reduced.png");
+    await evaluate(send, `showRoom("home"); document.getElementById("home").scrollTop = 0;`);
+    await sleep(50);
+    const reducedHome = await readType(send);
+    assertReadable(reducedHome, "home", 7);
+    assertReadable(reducedHome, "label", 4.5);
+    await shot(send, "quiet-home-reduced.png");
+    await evaluate(send, `document.getElementById("done-segue").click()`);
+    await sleep(80);
+    const reducedPlay = await readType(send);
+    assertReadable(reducedPlay, "play", 4.5);
+    await shot(send, "quiet-playing-reduced.png");
+    await send("Emulation.setEmulatedMedia", { features: [] });
     console.log("quiet.browser.test.js ok");
     client.close();
   } catch (err) {

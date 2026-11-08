@@ -115,6 +115,16 @@ const keptPreferred = Q.segueOffer({
   canPlay: can,
 });
 assert.strictEqual(keptPreferred.src, talk.src);
+const catalog = JSON.parse(fs.readFileSync(path.join(__dirname, "talks.json"), "utf8"));
+const catalogKept = new Set(["/talks/meditation.mp3"]);
+assert.strictEqual(T.talkSections(catalog, "zazen", { offline: true, kept: new Set() }).length, 0, "offline with nothing kept offers no catalog talk");
+const onlyKept = T.talkSections(catalog, "zazen", { offline: true, kept: catalogKept });
+const keptSrcs = onlyKept.flatMap((set) => set.talks.map((item) => item.src));
+assert.ok(keptSrcs.length >= 1 && keptSrcs.every((src) => src === "/talks/meditation.mp3"), "offline offers only the downloaded catalog talk");
+assert.strictEqual(T.canPlay("/talks/balance.mp3", { offline: true, kept: catalogKept }), false);
+assert.strictEqual(T.canPlay("/talks/meditation.mp3", { offline: true, kept: catalogKept }), true);
+const shelf = P.record(P.empty(), { date: "2026-11-08", theme: "", ms: 120000 }).store;
+assert.strictEqual(Q.monthCells(2026, 11, shelf.days).cells.find((cell) => cell.day === 8).formal, false, "listening is not a calendar sit");
 
 const nov = Q.monthCells(2026, 11, {
   "2026-11-01": { morning: 1, evening: 0 },
@@ -139,8 +149,11 @@ const lateEvening = P.record(P.empty(), {
   at: new Date(2026, 10, 9, 1, 0).getTime(),
 }).store;
 const lateMonth = Q.monthCells(2026, 11, lateEvening.days);
+assert.strictEqual(lateMonth.cells.find((cell) => cell.day === 8).date, "2026-11-08");
 assert.strictEqual(lateMonth.cells.find((cell) => cell.day === 8).evening, true, "1:00 AM evening belongs to the day before");
 assert.strictEqual(lateMonth.cells.find((cell) => cell.day === 9).formal, false);
+assert.strictEqual(lateEvening.days["2026-11-08"].weekly, undefined, "weekly is not stored on the day");
+assert.ok(!JSON.stringify(lateEvening).includes("weekly"));
 const lateMorning = P.record(P.empty(), {
   theme: "morning",
   ms: P.MIN_MS,
@@ -167,6 +180,13 @@ assert.ok(page.includes('id="practice-cal" hidden role="dialog"'));
 assert.ok(page.includes('id="talk-stop" hidden>Stop</button>'));
 assert.ok(page.includes('id="talk-still" hidden>Back to stillness</button>'));
 assert.ok(page.includes("prefers-reduced-motion"));
+assert.ok(page.includes("@keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; }"));
+assert.ok(page.includes("#done-words p { text-align: center; font-style: italic; color: #f3e6c8; }"));
+assert.ok(page.includes("color: #f7edd4; font: inherit; font-size: 1rem;"));
+assert.ok(page.includes("rgba(243, 230, 200, 0.72)"));
+assert.strictEqual(page.includes("opacity: 0.05"), false);
+assert.strictEqual(page.includes("opacity:.05"), false);
+assert.ok(page.includes(".room:not([hidden]) .inner,\n    .index:not([hidden]),\n    .face:not([hidden]) { animation: none; }"));
 assert.strictEqual(page.includes("Sample data"), false);
 assert.strictEqual(page.includes("yantra-preview"), false);
 assert.strictEqual(page.includes("Playback preview"), false);

@@ -208,6 +208,14 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #home .inner > :not(.altar-photos),
   #pick .inner > :not(#pick-altar) { width: min(26rem, 100%); }
   .room:not([hidden]) .inner { animation: settle 0.8s ease both; }
+  /* Reduced motion skips the fade. The from-keyframe is opacity 0, so a
+     capture or a glance during that 0.8s otherwise reads as blank text. */
+  @media (prefers-reduced-motion: reduce) {
+    .room:not([hidden]) .inner,
+    .index:not([hidden]),
+    .face:not([hidden]) { animation: none; }
+    #talk-bar, #talk-title, #talk-words { transition: none; }
+  }
   .room h1 { font-size: clamp(2.2rem, 7vw, 3.1rem); margin: 0 0 0.2rem; }
   .room h2 { font-family: inherit; font-weight: 500; font-size: 1.55rem; color: #f7edd4; margin: 0 0 1.2rem; }
   .room .kicker { margin-bottom: 1.8rem; }
@@ -573,7 +581,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .streak-hero { margin-top: 0.85rem; text-align: center; }
   .streak-meta { display: flex; justify-content: center; gap: 1.8rem; margin: 0 0 0.35rem; }
   .room p.streak-stat { margin: 0; text-align: center; }
-  .streak-label { display: block; font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(243, 230, 200, 0.46); }
+  .streak-label { display: block; font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(243, 230, 200, 0.72); }
   .streak-value { display: block; margin-top: 0.12rem; font-family: Palatino, "Iowan Old Style", Georgia, serif; font-size: 1.05rem; color: rgba(247, 237, 212, 0.9); }
   #streak-days { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
   #streak-days .day-btn {
