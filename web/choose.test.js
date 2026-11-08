@@ -135,13 +135,17 @@ for (const [theme, count, minutes] of sits) {
     assert.strictEqual(result.items.length, count, theme + " " + count + " (" + minutes + " min)");
     assert.strictEqual(result.via, "default");
     const circles = new Set(result.items.map((item) => discById(item.discId).circle));
-    assert.deepStrictEqual([...circles], ["vayu"], theme + " " + count + " stays with the sit's theme");
-    if (level === "sangha") {
+    if (level === "zazen") {
+      assert.ok(Choose.sitAlbumIds("zazen").indexOf(result.albumId) >= 0, theme + " " + count + " stays on a Zazen sit album");
+      assert.deepStrictEqual([...circles], ["zazen"], theme + " " + count);
+      assert.notStrictEqual(result.albumId, "mystery-school");
+      assert.notStrictEqual(result.albumId, "india-dream");
+    } else {
+      assert.deepStrictEqual([...circles], ["vayu"], theme + " " + count + " stays with the sit's theme");
       assert.ok(result.items.every((item) => discById(item.discId).circle === "vayu"));
       assert.notStrictEqual(result.albumId, "samurai");
+      assert.notStrictEqual(result.albumId, "india-dream");
     }
-    assert.notStrictEqual(result.albumId, "india-dream");
-    assert.notStrictEqual(result.albumId, "samurai");
     assert.notStrictEqual(discById(result.albumId).circle, "lumikara");
     if (count === 1) assert.deepStrictEqual(result.items.map((item) => item.chakra), ["heart"]);
     else {
@@ -155,19 +159,20 @@ for (const [theme, count, minutes] of sits) {
 
 const eveningPhone = session("zazen", false);
 const evening = plan({ theme: "evening", count: 3, session: eveningPhone, albumId: "" });
-assert.strictEqual(evening.albumId, "big-island", "a free evening sit starts on a hosted Vayu album");
+assert.ok(Choose.sitAlbumIds("zazen").indexOf(evening.albumId) >= 0, "a free evening sit stays on a Zazen sit album");
+assert.notStrictEqual(evening.albumId, "big-island");
 assert.ok(evening.items.every((item) => asTrack(discById(item.discId), item.n).hosted));
 
 const remembered = plan({ theme: "evening", count: 3, albumId: "india-dream" });
 assert.notStrictEqual(remembered.albumId, "india-dream");
-assert.strictEqual(remembered.via, "fallback");
-assert.strictEqual(discById(remembered.albumId).circle, "vayu", "fallback stays in the remembered album's circle");
+assert.strictEqual(remembered.via, "default", "an album outside the sit list is not a remembered fallback");
+assert.ok(Choose.sitAlbumIds("zazen").indexOf(remembered.albumId) >= 0);
 assert.strictEqual(remembered.announce, false);
 assertPlayable(remembered, eveningPhone);
 
 const golden = plan({ theme: "evening", count: 12, albumId: "golden" });
 assert.notStrictEqual(golden.albumId, "golden");
-assert.strictEqual(discById(golden.albumId).circle, "vayu");
+assert.ok(Choose.sitAlbumIds("zazen").indexOf(golden.albumId) >= 0);
 assert.strictEqual(golden.announce, false);
 
 const kept = plan({ theme: "evening", count: 3, albumId: "samurai" });
@@ -178,7 +183,7 @@ assert.strictEqual(kept.announce, false);
 
 const rotated = plan({ theme: "evening", count: 3, albumId: "", lastId: "big-island" });
 assert.notStrictEqual(rotated.albumId, "big-island");
-assert.strictEqual(discById(rotated.albumId).circle, "vayu");
+assert.ok(Choose.sitAlbumIds("zazen").indexOf(rotated.albumId) >= 0);
 
 const crossAsk = plan({ theme: "evening", count: 3, mix: true, albumId: "samurai" });
 assert.strictEqual(crossAsk.albumId, "samurai", "a sit never crosses albums, even if asked to mix");
@@ -187,7 +192,13 @@ assert.strictEqual(new Set(crossAsk.items.map((item) => item.discId)).size, 1);
 const lumikara = plan({ theme: "evening", count: 3, level: "zazen", albumId: "awake-in-anza-borrego" });
 assert.notStrictEqual(lumikara.albumId, "awake-in-anza-borrego");
 assert.notStrictEqual(discById(lumikara.albumId).circle, "lumikara");
+assert.ok(Choose.sitAlbumIds("zazen").indexOf(lumikara.albumId) >= 0);
 assert.strictEqual(lumikara.announce, false);
+
+const excluded = plan({ theme: "morning", count: 3, level: "zazen", albumId: "mystery-school" });
+assert.notStrictEqual(excluded.albumId, "mystery-school");
+assert.ok(Choose.sitAlbumIds("zazen").indexOf(excluded.albumId) >= 0);
+assert.strictEqual(excluded.via, "default");
 
 const hidden = plan({ theme: "morning", count: 3, level: "sangha", albumId: "samurai", session: session("sangha", false) });
 assert.ok(hidden.items.every((item) => discById(item.discId).circle === "vayu"));
@@ -196,9 +207,36 @@ assert.notStrictEqual(hidden.albumId, "awake-in-anza-borrego");
 
 const desktop = session("zazen", true);
 const asked = plan({ theme: "evening", count: 3, albumId: "india-dream", session: desktop });
-assert.strictEqual(asked.via, "album");
-assert.strictEqual(asked.albumId, "india-dream", "Spotify can play the asked album where the player runs");
+assert.notStrictEqual(asked.albumId, "india-dream", "a Zazen sit does not take a Vayu album from Spotify");
+assert.ok(Choose.sitAlbumIds("zazen").indexOf(asked.albumId) >= 0);
 assert.strictEqual(asked.announce, false, "the plan itself never raises the Spotify panel");
+
+const sanghaDesktop = plan({
+  theme: "evening",
+  count: 3,
+  albumId: "india-dream",
+  level: "sangha",
+  session: session("sangha", true),
+});
+assert.strictEqual(sanghaDesktop.via, "album");
+assert.strictEqual(sanghaDesktop.albumId, "india-dream", "Sangha still plays the asked Vayu album where Spotify runs");
+
+const playlistPhone = session("zazen", true);
+const playlist = Choose.planQuickSit({
+  discs: discs.discs,
+  level: "zazen",
+  formal: false,
+  circleOpen: Playback.circleOpen,
+  themeIds: themeIds("evening"),
+  albumId: "india-dream",
+  count: 3,
+  theme: "evening",
+  canPlay(disc, track) { return Playback.trackOffered(asTrack(disc, track.n), playlistPhone); },
+  playable(item) { return Playback.trackOffered(asTrack(discById(item.discId), item.n), playlistPhone); },
+  keep() { return true; },
+  rng: () => 0,
+});
+assert.strictEqual(playlist.albumId, "india-dream", "playlist recovery is not limited to the sit albums");
 
 const none = plan({
   theme: "evening",
@@ -276,5 +314,72 @@ assert.ok(page.includes("window.YantraChoose"));
 assert.ok(page.includes("choose.sitMinutes(chosen, count)"));
 assert.ok(page.includes("choose.catalogMinutes(discs, count)"));
 assert.ok(page.includes("· about "), "a new album each sit is marked as an average");
+
+assert.deepStrictEqual(Choose.sitAlbumIds("zazen"), [
+  "enlightenment",
+  "canyons-of-light",
+  "samurai",
+  "samadhi",
+  "ecstasy",
+  "cayman-blue",
+]);
+assert.strictEqual(Choose.sitAlbumIds("sangha"), null);
+assert.strictEqual(Choose.sitAlbumIds(""), null);
+assert.strictEqual(Choose.sitDefault("zazen", "morning"), "enlightenment");
+assert.strictEqual(Choose.sitDefault("zazen", "evening"), "canyons-of-light");
+assert.strictEqual(discById("cayman-blue").title, "Cayman Blue");
+assert.strictEqual(audio["cayman-blue"], undefined, "Cayman Blue has no hosted recordings to invent");
+assert.strictEqual(tracks["cayman-blue"], undefined, "Cayman Blue has no Spotify links to invent");
+const playableSix = ["enlightenment", "canyons-of-light", "samurai", "samadhi", "ecstasy"];
+assert.strictEqual(Choose.sitChoice("zazen", "morning", "", playableSix, false), "enlightenment");
+assert.strictEqual(Choose.sitChoice("zazen", "evening", "", playableSix, false), "canyons-of-light");
+assert.strictEqual(Choose.sitChoice("zazen", "morning", "samurai", playableSix, true), "samurai");
+assert.strictEqual(Choose.sitChoice("zazen", "evening", "samurai", playableSix, true), "samurai");
+assert.strictEqual(Choose.sitChoice("zazen", "evening", "", playableSix, true), "", "an explicit new album stays empty");
+assert.strictEqual(Choose.sitChoice("zazen", "morning", "mystery-school", playableSix, true), "enlightenment");
+assert.strictEqual(Choose.sitChoice("zazen", "evening", "mystery-school", playableSix, true), "canyons-of-light");
+assert.strictEqual(Choose.sitChoice("zazen", "morning", "enlightenment", ["samurai"], true), "samurai", "offline uses a sit album that can play");
+assert.strictEqual(Choose.sitChoice("zazen", "evening", "canyons-of-light", ["samurai"], true), "samurai");
+assert.strictEqual(Choose.sitChoice("sangha", "morning", "big-island", ["big-island", "samurai"], true), "big-island");
+const ordered = Choose.sitDiscs(discs.discs, "zazen").map((disc) => disc.id);
+assert.deepStrictEqual(ordered, Choose.sitAlbumIds("zazen"));
+assert.ok(Choose.sitDiscs(discs.discs, "sangha").some((disc) => disc.id === "india-dream"));
+assert.ok(Choose.sitDiscs(discs.discs, "sangha").some((disc) => disc.id === "mystery-school"));
+assert.ok(discs.discs.some((disc) => disc.id === "mystery-school"), "excluded albums stay in the catalog");
+
+const offlineSit = plan({
+  theme: "morning",
+  count: 3,
+  albumId: "enlightenment",
+  session: Object.assign(session("zazen", false), { offline: true, cachedAlbums: { samurai: true, "mystery-school": true } }),
+});
+assert.strictEqual(offlineSit.ok, true);
+assert.strictEqual(offlineSit.albumId, "samurai", "a cached sit album is used when the default is not kept");
+assert.notStrictEqual(offlineSit.albumId, "mystery-school");
+
+const offlineExcluded = plan({
+  theme: "evening",
+  count: 3,
+  albumId: "mystery-school",
+  session: Object.assign(session("zazen", false), { offline: true, cachedAlbums: { "mystery-school": true } }),
+});
+assert.strictEqual(offlineExcluded.ok, false, "a cached album outside the sit list does not start a formal sit");
+
+const askedEnlightenment = plan({ theme: "morning", count: 3, albumId: "enlightenment" });
+assert.strictEqual(askedEnlightenment.albumId, "enlightenment");
+assert.strictEqual(askedEnlightenment.via, "album");
+const askedCanyons = plan({ theme: "evening", count: 3, albumId: "canyons-of-light" });
+assert.strictEqual(askedCanyons.albumId, "canyons-of-light");
+assert.strictEqual(askedCanyons.via, "album");
+
+const shelf = page.slice(page.indexOf("function renderShelf"), page.indexOf("function chakraLabel"));
+assert.ok(shelf.includes("collection.discs"), "the album shelf is the full playable catalog");
+assert.ok(!shelf.includes("sitDiscs"), "resources are not filtered to the sit list");
+assert.ok(page.includes("choose.sitDiscs"));
+assert.ok(page.includes("choose.sitChoice"));
+assert.ok(page.includes('localStorage.removeItem("yantra.sitAlbum")'));
+assert.ok(web.includes("Choose.sitDiscs"));
+assert.ok(web.includes('hostedPlan("morning", 3, false)'), "playlist recovery is not a formal sit list");
+assert.ok(web.includes('fields.mode === "session"'));
 
 console.log("choose.test.js ok");

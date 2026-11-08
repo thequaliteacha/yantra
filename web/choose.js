@@ -7,6 +7,62 @@
 (function (root) {
   const CHAKRAS = ["naval", "heart", "eye"];
   const COUNTS = [1, 3, 6, 12];
+  /* Formal morning and evening sits for the Zazen word. Cayman Blue is the
+     catalog title for the requested Cayman Blues. This list does not add
+     recordings: an album still has to be playable on this device. Other
+     access levels are not filtered. */
+  const ZAZEN_SIT = [
+    "enlightenment",
+    "canyons-of-light",
+    "samurai",
+    "samadhi",
+    "ecstasy",
+    "cayman-blue",
+  ];
+  const ZAZEN_SIT_DEFAULT = {
+    morning: "enlightenment",
+    evening: "canyons-of-light",
+  };
+
+  function sitAlbumIds(level) {
+    return level === "zazen" ? ZAZEN_SIT.slice() : null;
+  }
+
+  function sitDefault(level, theme) {
+    if (level !== "zazen") return "";
+    return theme === "evening" ? ZAZEN_SIT_DEFAULT.evening : ZAZEN_SIT_DEFAULT.morning;
+  }
+
+  function sitDiscs(discs, level) {
+    const ids = sitAlbumIds(level);
+    if (!ids) return (discs || []).slice();
+    const order = {};
+    ids.forEach((id, index) => { order[id] = index; });
+    return (discs || []).filter((disc) => disc && Object.prototype.hasOwnProperty.call(order, disc.id))
+      .slice()
+      .sort((a, b) => order[a.id] - order[b.id]);
+  }
+
+  /* saved "" with known true is "A new album each sit". An id outside the
+     list is dropped. A remembered album that cannot play right now yields
+     the theme default when that album can play, otherwise the first album
+     in the list that can. The caller keeps a still-allowed id in storage. */
+  function sitChoice(level, theme, saved, available, known) {
+    const have = Array.isArray(available) ? available : [];
+    const ids = sitAlbumIds(level);
+    if (!ids) {
+      if (saved && have.length && have.indexOf(saved) < 0) return "";
+      return saved || "";
+    }
+    if (known && !saved) return "";
+    if (saved && ids.indexOf(saved) >= 0 && have.indexOf(saved) >= 0) return saved;
+    const mine = sitDefault(level, theme);
+    if (mine && have.indexOf(mine) >= 0) return mine;
+    for (let i = 0; i < ids.length; i += 1) {
+      if (have.indexOf(ids[i]) >= 0) return ids[i];
+    }
+    return "";
+  }
 
   function emptyLine() {
     return "Nothing is ready to play on this device right now.";
@@ -184,15 +240,18 @@
     if (!COUNTS.includes(count)) return { ok: false, line: emptyLine(), theme, via: "" };
     const level = (opts && opts.level) || "";
     const open = (disc) => !opts.circleOpen || opts.circleOpen(disc.circle, level);
-    const catalog = ((opts && opts.discs) || []).filter((disc) => disc && open(disc));
+    let catalog = ((opts && opts.discs) || []).filter((disc) => disc && open(disc));
+    const allow = opts && opts.formal === false ? null : sitAlbumIds(level);
+    if (allow) catalog = sitDiscs(catalog, level);
     const canPlay = (opts && opts.canPlay) || (() => false);
-    const preferredId = String((opts && opts.albumId) || "");
+    let preferredId = String((opts && opts.albumId) || "");
+    if (allow && preferredId && allow.indexOf(preferredId) < 0) preferredId = "";
     const disc = chooseAlbum({
       discs: catalog,
       catalog,
       count,
       preferredId,
-      themeIds: (opts && opts.themeIds) || [],
+      themeIds: allow ? [] : ((opts && opts.themeIds) || []),
       avoidId: preferredId ? "" : ((opts && opts.lastId) || ""),
       canPlay,
       rng: opts && opts.rng,
@@ -219,6 +278,10 @@
 
   const api = {
     emptyLine: emptyLine,
+    sitAlbumIds: sitAlbumIds,
+    sitDefault: sitDefault,
+    sitDiscs: sitDiscs,
+    sitChoice: sitChoice,
     trackChakra: trackChakra,
     albumFits: albumFits,
     chooseAlbum: chooseAlbum,
