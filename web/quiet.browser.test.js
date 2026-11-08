@@ -1,8 +1,9 @@
 /* node web/quiet.browser.test.js
  *
  * Opens the real web edition in Chrome and exercises the quiet streak,
- * the practice calendar, and the Dharma invitation. Screenshots land in
- * /opt/cursor/artifacts.
+ * the practice calendar, and the Dharma invitation. Screenshots go to
+ * $YANTRA_ARTIFACTS when that directory is set, otherwise a folder under
+ * the system temp directory. Either place is created as the current user.
  */
 const assert = require("assert");
 const fs = require("fs");
@@ -12,8 +13,17 @@ const path = require("path");
 const { spawn } = require("child_process");
 
 const ROOT = path.resolve(__dirname, "..");
-const ART = "/opt/cursor/artifacts";
 const PORT = 8766;
+
+/* A directory the current user can create. An explicit path wins; the
+   default never tries /opt, which an ordinary account cannot mkdir. */
+function artifactDir(env, tmp) {
+  const configured = env && typeof env.YANTRA_ARTIFACTS === "string" ? env.YANTRA_ARTIFACTS.trim() : "";
+  if (configured) return path.resolve(configured);
+  return path.join(tmp || os.tmpdir(), "yantra-quiet-artifacts");
+}
+
+const ART = artifactDir(process.env);
 const DEBUG = 9333;
 
 function mime(file) {
@@ -243,8 +253,9 @@ async function heroClip(send) {
   })()`);
 }
 
-(async () => {
+async function main() {
   fs.mkdirSync(ART, { recursive: true });
+  console.log("artifacts", ART);
   const server = await startServer();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "yantra-quiet-"));
   const chrome = spawn("/usr/local/bin/google-chrome", [
@@ -662,4 +673,10 @@ async function heroClip(send) {
     chrome.kill("SIGKILL");
     server.close();
   }
-})();
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = { artifactDir };
