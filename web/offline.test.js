@@ -83,10 +83,11 @@ assert.ok(storedTalk.detail.startsWith("On this device"));
 assert.strictEqual(O.talkView({}, true).action, "");
 assert.strictEqual(O.talkView({ error: true }, false).action, "Try again");
 
-assert.strictEqual(SW.SHELL, "yantra-v9");
+assert.strictEqual(SW.SHELL, "yantra-v10");
 assert.strictEqual(SW.AUDIO, O.AUDIO);
 assert.notStrictEqual(SW.SHELL, SW.AUDIO);
-assert.strictEqual(SW.retainCache("yantra-v9"), true);
+assert.strictEqual(SW.retainCache("yantra-v10"), true);
+assert.strictEqual(SW.retainCache("yantra-v9"), false);
 assert.strictEqual(SW.retainCache("yantra-audio-v1"), true);
 assert.strictEqual(SW.retainCache("yantra-v8"), false);
 assert.strictEqual(SW.retainCache("yantra-v7"), false);

@@ -5,7 +5,8 @@
  * and Dharma talks stay in yantra.listening.v1 and never enter these totals
  * or streaks. The day is the device's local calendar. An evening sit before
  * 2:22 AM still belongs to the day before. Missing a morning ends
- * the morning run only.
+ * the morning run only. The weekly count is the daily run capped at 7.
+ * It is derived when the page asks, never stored, and it does not start over.
  *
  * The days themselves stay in this browser. A device with no practice key
  * reads only those days. A linked device still records only its own sits
@@ -280,14 +281,24 @@
     return { current, best, last };
   }
 
+  /* Weekly is the live daily run, and it stops at seven. Eight days in a row
+     stays 7. It is not a remainder, and it is not a new stored streak. */
+  function weeklyOf(continuous) {
+    const n = Math.max(0, Math.floor(Number(continuous) || 0));
+    if (n <= 0) return 0;
+    return n < 7 ? n : 7;
+  }
+
   function streaks(store, today, eveningToday) {
     const days = (store && store.days) || {};
     const evening = eveningToday || today;
+    const daily = streakFor(days, "daily", today);
     return {
       morning: streakFor(days, "morning", today),
       evening: streakFor(days, "evening", evening),
-      daily: streakFor(days, "daily", today),
+      daily: daily,
       perfect: streakFor(days, "perfect", today),
+      weekly: { current: weeklyOf(daily.current), cap: 7 },
     };
   }
 
@@ -646,7 +657,7 @@
       rules: {
         minimumMs: MIN_MS,
         listening: "Playback time only. Paused time is not counted.",
-        streaks: "A perfect day has a morning sit and an evening sit; the perfect run counts those days. Morning and evening are separate runs. A missed morning ends only the morning run. The daily run counts a day with a morning or an evening sit. Album and talk listening are a separate total and do not extend a run. Dates are the device's local calendar. An evening sit before 2:22 AM still belongs to the day before.",
+        streaks: "A perfect day has a morning sit and an evening sit; the perfect run counts those days. Morning and evening are separate runs. A missed morning ends only the morning run. The daily run counts a day with a morning or an evening sit. The weekly count is that daily run capped at 7, derived and not stored, and it stays at 7 after the seventh day. Album and talk listening are a separate total and do not extend a run. Dates are the device's local calendar. An evening sit before 2:22 AM still belongs to the day before.",
         milestones: "Reserved. Empty until a later version marks them.",
         reminders: "Reserved. This version does not notify.",
       },
@@ -670,6 +681,7 @@
     mergeDays: mergeDays,
     totalsFromDays: totalsFromDays,
     streaks: streaks,
+    weeklyOf: weeklyOf,
     summarize: summarize,
     onCommit: onCommit,
     onErase: onErase,
