@@ -3217,8 +3217,14 @@ function roomBack() {
    carries its own intent, so a sit never crosses albums. The choice stays in
    this browser. */
 let pickAlbum = "";
+let pickShown = "";
+let pickAlbumKnown = false;
 try {
-  pickAlbum = localStorage.getItem("yantra.sitAlbum") || "";
+  const storedAlbum = localStorage.getItem("yantra.sitAlbum");
+  if (storedAlbum != null) {
+    pickAlbum = storedAlbum;
+    pickAlbumKnown = true;
+  }
   localStorage.removeItem("yantra.sitMix");
 } catch (e) {}
 function thirdsOf(disc) {
@@ -3232,7 +3238,21 @@ function fitsCount(disc, count) {
 }
 function paintPick(rebuild) {
   const select = document.getElementById("pick-album");
-  const discs = (collection && collection.discs) || [];
+  const all = (collection && collection.discs) || [];
+  const choose = window.YantraChoose;
+  const level = window.YANTRA_LEVEL || "";
+  const limited = choose && choose.sitAlbumIds && choose.sitAlbumIds(level);
+  const discs = limited && choose.sitDiscs ? choose.sitDiscs(all, level) : all;
+  if (limited && pickAlbumKnown && pickAlbum && limited.indexOf(pickAlbum) < 0) {
+    pickAlbum = "";
+    pickAlbumKnown = false;
+    try { localStorage.removeItem("yantra.sitAlbum"); } catch (e) {}
+  }
+  const signature = discs.map((disc) => disc.id).join("\n");
+  if (select.dataset.albums !== signature) {
+    select.dataset.albums = signature;
+    rebuild = true;
+  }
   if (rebuild) {
     select.querySelectorAll("optgroup").forEach((group) => group.remove());
     while (select.options.length > 1) select.remove(1);
@@ -3247,10 +3267,16 @@ function paintPick(rebuild) {
       if (group.children.length) select.appendChild(group);
     }
   }
-  if (pickAlbum && discs.length && !discs.some((disc) => disc.id === pickAlbum)) pickAlbum = "";
-  select.value = pickAlbum;
-  const chosen = discs.find((disc) => disc.id === pickAlbum);
-  const choose = window.YantraChoose;
+  let shown = pickAlbum;
+  if (limited && choose.sitChoice) {
+    shown = choose.sitChoice(level, sessionTheme, pickAlbum, discs.map((disc) => disc.id), pickAlbumKnown);
+  } else if (pickAlbum && all.length && !all.some((disc) => disc.id === pickAlbum)) {
+    pickAlbum = "";
+    shown = "";
+  }
+  pickShown = shown;
+  select.value = shown;
+  const chosen = discs.find((disc) => disc.id === shown);
   document.querySelectorAll("#pick [data-count]").forEach((button) => {
     const count = Number(button.dataset.count);
     button.disabled = !!chosen && !fitsCount(chosen, count);
@@ -3273,7 +3299,20 @@ function keepPick() {
 }
 async function playSession(theme, count, choice) {
   sessionTheme = theme;
-  const album = choice ? choice.album || "" : pickAlbum;
+  if (choice && Object.prototype.hasOwnProperty.call(choice, "album")) {
+    pickAlbum = choice.album || "";
+    pickAlbumKnown = true;
+    const ids = window.YantraChoose && window.YantraChoose.sitAlbumIds && window.YantraChoose.sitAlbumIds(window.YANTRA_LEVEL || "");
+    if (ids && pickAlbum && ids.indexOf(pickAlbum) < 0) {
+      pickAlbum = "";
+      pickAlbumKnown = false;
+      try { localStorage.removeItem("yantra.sitAlbum"); } catch (e) {}
+    } else {
+      try { localStorage.setItem("yantra.sitAlbum", pickAlbum); } catch (e) {}
+    }
+  }
+  paintPick();
+  const album = pickShown;
   const label = (theme === "morning" ? "Morning" : "Evening") + " · " + count + (count === 1 ? " song" : " songs");
   const note = document.getElementById("pick-note");
   note.textContent = "";
@@ -3338,6 +3377,7 @@ if (window.YANTRA_WEB) {
   });
   document.getElementById("pick-album").addEventListener("change", (event) => {
     pickAlbum = event.target.value;
+    pickAlbumKnown = true;
     keepPick();
   });
   document.getElementById("pick-help").addEventListener("click", () => {

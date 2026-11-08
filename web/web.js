@@ -1585,8 +1585,11 @@
     return "";
   }
 
-  function hostedList(count) {
-    return Offer.hostedAlbums(collection.discs, count, onRecordings, (disc) => albumFits(disc, count));
+  function hostedList(count, formal) {
+    const discs = formal && Choose.sitDiscs
+      ? Choose.sitDiscs(collection.discs, window.YANTRA_LEVEL || "")
+      : collection.discs;
+    return Offer.hostedAlbums(discs, count, onRecordings, (disc) => albumFits(disc, count));
   }
 
   function makeOffer(fields) {
@@ -1599,7 +1602,7 @@
       playing: fields.playing || "",
       playingId: fields.playingId || "",
       mix: !!fields.mix,
-      albums: hostedList(listCount),
+      albums: hostedList(listCount, fields.mode === "session"),
       theme: fields.theme || "morning",
       count: Number(fields.count) || 3,
       mode: fields.mode || "session",
@@ -1646,6 +1649,7 @@
       lastId,
       discs: collection.discs,
       level: window.YANTRA_LEVEL || "",
+      formal: true,
       circleOpen: (circle, level) => Playback.circleOpen(circle, level),
       themeIds: themeAlbumIds(theme),
       keep: (item) => !!recordingOf(item.discId, item.n),
@@ -1662,7 +1666,7 @@
   }
 
   /* A sit made only of hosted songs, for when Spotify cannot play what was asked. */
-  function hostedPlan(theme, count) {
+  function hostedPlan(theme, count, formal) {
     const sit = theme === "evening" ? "evening" : "morning";
     return Choose.planQuickSit({
       theme: sit,
@@ -1671,6 +1675,7 @@
       lastId: "",
       discs: collection.discs,
       level: window.YANTRA_LEVEL || "",
+      formal: formal !== false,
       circleOpen: (circle, level) => Playback.circleOpen(circle, level),
       themeIds: themeAlbumIds(sit),
       keep: (item) => !!recordingOf(item.discId, item.n),
@@ -1712,7 +1717,7 @@
       unavailable = spotify.lastFailure || spotify.blocked || "failed";
     }
 
-    const fallback = hostedPlan(plan.theme, items.length);
+    const fallback = hostedPlan(plan.theme, items.length, source === "session");
     if (!fallback.ok) return [{ ok: false, error: Choose.emptyLine() }, 409];
     const hosted = fallback.items.map((item) => ({ discId: item.discId, n: item.n }));
     const hostedChakras = fallback.items.map((item) => item.chakra);
@@ -1760,7 +1765,7 @@
     const prefer = payload.prefer === "apple" ? "apple" : "spotify";
     const items = orderedDraft(tracks);
     if (!items.length || items.some((item) => !itemPlayable(item))) {
-      const plan = hostedPlan("morning", 3);
+      const plan = hostedPlan("morning", 3, false);
       if (!plan.ok) return [{ ok: false, error: plan.line || Choose.emptyLine() }, 409];
       return startPlanned(name, plan, "playlist");
     }
@@ -1779,7 +1784,7 @@
       if (ok) return [{ ok: true, source: "playlist" }];
       unavailable = spotify.lastFailure || "failed";
     }
-    const plan = hostedPlan("morning", 3);
+    const plan = hostedPlan("morning", 3, false);
     if (!plan.ok) return [{ ok: false, error: Choose.emptyLine() }, 409];
     const started = await startPlanned(name, plan, "playlist");
     if (!started[0] || !started[0].ok) return started;

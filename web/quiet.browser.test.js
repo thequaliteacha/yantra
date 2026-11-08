@@ -729,6 +729,115 @@ async function main() {
     const long = await evaluate(send, `YantraPractice.summary().streaks.weekly.current`);
     assert.strictEqual(long, 7, "a year still shows 7 / 7, not a new cycle");
 
+    await evaluate(send, `(() => {
+      const close = document.getElementById("talk-close");
+      if (close && document.body.classList.contains("watching")) close.click();
+    })()`);
+    await waitFor(send, `document.querySelectorAll("#pick-album option").length > 1`, "sit albums");
+    const allow = ["enlightenment", "canyons-of-light", "samurai", "samadhi", "ecstasy", "cayman-blue"];
+    const morning = await evaluate(send, `(() => {
+      localStorage.removeItem("yantra.sitAlbum");
+      document.querySelector("#home [data-theme=morning]").click();
+      const select = document.getElementById("pick-album");
+      select.size = select.options.length + 2;
+      select.style.height = "280px";
+      Array.from(select.options).forEach((option) => {
+        option.style.background = option.selected ? "#3a2f1c" : "";
+      });
+      const inner = document.querySelector("#pick .inner");
+      if (inner) inner.getAnimations().forEach((anim) => anim.finish());
+      return {
+        options: Array.from(select.options).map((option) => ({ value: option.value, text: option.text })),
+        value: select.value,
+      };
+    })()`);
+    assert.strictEqual(morning.options[0].value, "");
+    assert.strictEqual(morning.options[0].text, "A new album each sit");
+    const morningIds = morning.options.slice(1).map((option) => option.value);
+    assert.deepStrictEqual(morningIds, allow.filter((id) => morningIds.indexOf(id) >= 0));
+    assert.ok(morningIds.indexOf("enlightenment") >= 0);
+    assert.ok(morningIds.indexOf("canyons-of-light") >= 0);
+    assert.ok(morningIds.indexOf("samurai") >= 0);
+    assert.ok(morningIds.indexOf("samadhi") >= 0);
+    assert.ok(morningIds.indexOf("ecstasy") >= 0);
+    assert.ok(morningIds.indexOf("cayman-blue") < 0, "Cayman Blue has no playable recording, so the sit list leaves it off");
+    assert.ok(morningIds.indexOf("mystery-school") < 0);
+    assert.ok(morningIds.indexOf("india-dream") < 0);
+    assert.strictEqual(morning.value, "enlightenment", "morning opens on Enlightenment");
+    console.log("morning sit albums", morning.options.map((option) => option.text).join(" | "));
+    await shot(send, "zazen-sit-morning.png");
+
+    const evening = await evaluate(send, `(() => {
+      document.querySelector("#home [data-theme=evening]").click();
+      const select = document.getElementById("pick-album");
+      select.size = select.options.length + 2;
+      select.style.height = "280px";
+      Array.from(select.options).forEach((option) => {
+        option.style.background = option.selected ? "#3a2f1c" : "";
+      });
+      const inner = document.querySelector("#pick .inner");
+      if (inner) inner.getAnimations().forEach((anim) => anim.finish());
+      return {
+        ids: Array.from(select.options).map((option) => option.value),
+        value: select.value,
+      };
+    })()`);
+    assert.deepStrictEqual(evening.ids, morning.options.map((option) => option.value));
+    assert.strictEqual(evening.value, "canyons-of-light", "evening opens on Canyons of Light");
+    await shot(send, "zazen-sit-evening.png");
+
+    await evaluate(send, `document.getElementById("pick-album").size = 1`);
+
+    const shelf = await evaluate(send, `(() => {
+      showRoom("account");
+      document.getElementById("open-shelf").click();
+      const zazen = Array.from(document.querySelectorAll("#circles button")).find((button) => button.textContent === "Zazen");
+      if (zazen) zazen.click();
+      const mystery = document.querySelector('#discs button[data-id="mystery-school"]');
+      if (mystery) mystery.click();
+      return {
+        titles: Array.from(document.querySelectorAll("#discs button")).map((button) => button.dataset.id),
+        heading: document.getElementById("disc-title").textContent,
+      };
+    })()`);
+    assert.ok(shelf.titles.indexOf("mystery-school") >= 0, "Mystery School stays in Resources");
+    assert.strictEqual(shelf.heading, "Mystery School");
+    assert.ok(shelf.titles.indexOf("tantra") >= 0 || shelf.titles.length > morningIds.length, "the shelf is wider than the sit list");
+    assert.ok(shelf.titles.indexOf("cayman-blue") < 0, "Cayman Blue is not shown until it can play");
+    console.log("zazen shelf", shelf.titles.join(" "));
+    await shot(send, "zazen-resources-albums.png");
+
+    await evaluate(send, `window.YANTRA_LEVEL = "sangha"; window.dispatchEvent(new Event("yantra:shelf"));`);
+    const sanghaPick = await waitFor(send, `(() => {
+      const ids = Array.from(document.querySelectorAll("#pick-album option")).map((option) => option.value);
+      if (ids.indexOf("big-island") < 0 || ids.indexOf("samurai") >= 0) return false;
+      return ids;
+    })()`, "sangha sit albums");
+    assert.ok(sanghaPick.indexOf("mystery-school") < 0, "Sangha does not list a Zazen album");
+    assert.ok(sanghaPick.indexOf("samurai") < 0);
+    await evaluate(send, `window.YANTRA_LEVEL = "zazen"; window.dispatchEvent(new Event("yantra:shelf"));`);
+    await waitFor(send, `(() => {
+      const ids = Array.from(document.querySelectorAll("#pick-album option")).map((option) => option.value);
+      return ids.indexOf("enlightenment") >= 0 && ids.indexOf("mystery-school") < 0 && ids.indexOf("samurai") >= 0;
+    })()`, "zazen sit albums restored");
+
+    await evaluate(send, `localStorage.setItem("yantra.sitAlbum", "mystery-school")`);
+    await send("Page.reload", { ignoreCache: true });
+    await waitFor(send, "!!(window.YantraChoose && window.showRoom && window.yantraQuoteFile && document.querySelectorAll('#pick-album option').length > 1)", "sit albums after reload");
+    const dropped = await evaluate(send, `(() => {
+      document.querySelector("#home [data-theme=morning]").click();
+      const select = document.getElementById("pick-album");
+      return {
+        stored: localStorage.getItem("yantra.sitAlbum"),
+        value: select.value,
+        ids: Array.from(select.options).map((option) => option.value),
+      };
+    })()`);
+    assert.strictEqual(dropped.stored, null, "a saved album outside the sit list is forgotten");
+    assert.strictEqual(dropped.value, "enlightenment");
+    assert.ok(dropped.ids.indexOf("mystery-school") < 0);
+    await installProbe(send);
+
     await send("Emulation.setEmulatedMedia", {
       features: [{ name: "prefers-reduced-motion", value: "reduce" }],
     });
