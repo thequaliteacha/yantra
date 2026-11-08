@@ -1,6 +1,7 @@
 /* node web/quiet.test.js */
 const assert = require("assert");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const Q = require("./quiet.js");
 const P = require("./practice.js");
@@ -215,6 +216,27 @@ const syncText = fs.readFileSync(path.join(__dirname, "sync.js"), "utf8");
 const payload = syncText.slice(syncText.indexOf("function payloadOf"), syncText.indexOf("function labelBook"));
 assert.ok(!payload.includes("markSeed"));
 assert.ok(!payload.includes("quiet"));
+
+const BrowserShots = require("./quiet.browser.test.js");
+const defaultArtifacts = BrowserShots.artifactDir({});
+assert.strictEqual(defaultArtifacts, path.join(os.tmpdir(), "yantra-quiet-artifacts"));
+assert.ok(defaultArtifacts.startsWith(os.tmpdir()));
+assert.notStrictEqual(defaultArtifacts, "/opt/cursor/artifacts");
+assert.strictEqual(BrowserShots.artifactDir({ YANTRA_ARTIFACTS: "" }), defaultArtifacts);
+assert.strictEqual(BrowserShots.artifactDir({ YANTRA_ARTIFACTS: "   " }), defaultArtifacts);
+const configuredRoot = path.join(os.tmpdir(), "yantra-quiet-artifacts-configured");
+assert.strictEqual(BrowserShots.artifactDir({ YANTRA_ARTIFACTS: configuredRoot }), path.resolve(configuredRoot));
+assert.strictEqual(BrowserShots.artifactDir({ YANTRA_ARTIFACTS: "yantra-shots" }), path.resolve("yantra-shots"));
+function probeWrite(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, "quiet-write-probe.txt");
+  fs.writeFileSync(file, "ok");
+  assert.strictEqual(fs.readFileSync(file, "utf8"), "ok");
+  fs.unlinkSync(file);
+}
+probeWrite(defaultArtifacts);
+probeWrite(configuredRoot);
+fs.rmdirSync(configuredRoot);
 
 (async () => {
   const key = Sync.generatePracticeKey();
