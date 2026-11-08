@@ -238,6 +238,30 @@ probeWrite(defaultArtifacts);
 probeWrite(configuredRoot);
 fs.rmdirSync(configuredRoot);
 
+assert.ok(BrowserShots.CHROME_PATHS.indexOf("/usr/bin/chromium") === 0);
+assert.ok(BrowserShots.CHROME_NAMES.indexOf("chromium") === 0);
+assert.ok(BrowserShots.CHROME_PATHS.indexOf("/usr/bin/brave") > BrowserShots.CHROME_PATHS.indexOf("/usr/bin/chromium"));
+const onlyChromium = (file) => file === "/usr/bin/chromium";
+assert.strictEqual(BrowserShots.chromeExecutable({ PATH: "" }, { exists: onlyChromium, pathEnv: "" }), "/usr/bin/chromium");
+const chromiumAndBrave = (file) => file === "/usr/bin/chromium" || file === "/usr/bin/brave";
+assert.strictEqual(BrowserShots.chromeExecutable({}, { exists: chromiumAndBrave, pathEnv: "" }), "/usr/bin/chromium");
+const bin = fs.mkdtempSync(path.join(os.tmpdir(), "yantra-browsers-"));
+fs.writeFileSync(path.join(bin, "brave"), "");
+fs.writeFileSync(path.join(bin, "chromium"), "");
+fs.chmodSync(path.join(bin, "brave"), 0o755);
+fs.chmodSync(path.join(bin, "chromium"), 0o755);
+assert.strictEqual(BrowserShots.chromeExecutable({ PATH: bin }), path.join(bin, "chromium"));
+assert.strictEqual(
+  BrowserShots.chromeExecutable({ YANTRA_CHROME: "/usr/bin/chromium", PATH: bin }, { exists: onlyChromium, pathEnv: bin }),
+  "/usr/bin/chromium"
+);
+assert.throws(() => BrowserShots.chromeExecutable({ YANTRA_CHROME: "/no/such/chromium" }, { exists: () => false, pathEnv: "" }), /YANTRA_CHROME/);
+assert.strictEqual(BrowserShots.chromeExecutable({ YANTRA_CHROME: "  ", PATH: "" }, { exists: onlyChromium, pathEnv: "" }), "/usr/bin/chromium");
+fs.rmSync(bin, { recursive: true });
+const discovered = BrowserShots.chromeExecutable(process.env);
+assert.strictEqual(fs.existsSync(discovered), true);
+assert.strictEqual(fs.accessSync(discovered, fs.constants.X_OK), undefined);
+
 (async () => {
   const key = Sync.generatePracticeKey();
   global.localStorage = memory();
