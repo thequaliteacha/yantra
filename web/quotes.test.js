@@ -186,15 +186,13 @@ assert.ok(page.includes('showRoom("talks");'));
 assert.strictEqual(page.includes("You decide to be happy"), false);
 assert.strictEqual(page.includes("ramameditationsociety.org"), false);
 
+const closeSit = web.slice(web.indexOf("function closeSit"), web.indexOf("function serviceFor"));
+assert.strictEqual([...closeSit.matchAll(/complete\(\)/g)].length, 1, "a sit finishes through one completion");
+assert.ok(closeSit.indexOf("noteSit()") < closeSit.indexOf("liveStop(false)"));
+assert.ok(closeSit.indexOf("liveStop(false)") < closeSit.indexOf("complete()"));
 const livePoll = web.slice(web.indexOf("async function livePoll"), web.indexOf("function listsKey"));
-const completes = [...livePoll.matchAll(/complete\(\)/g)];
-assert.strictEqual(completes.length, 3);
-completes.forEach((match) => {
-  const before = livePoll.slice(Math.max(0, match.index - 220), match.index);
-  assert.ok(before.includes("noteSit()"), before);
-  assert.ok(before.includes("liveStop(false)"));
-  assert.ok(before.indexOf("noteSit()") < before.lastIndexOf("liveStop(false)"));
-});
+assert.ok(!livePoll.includes("complete()"), "the poll does not complete a sit on its own");
+assert.ok(livePoll.includes("closeSit()"));
 assert.ok(web.includes("window.yantraLastSit"));
 assert.ok(web.includes('level === "zazen"'));
 assert.ok(web.includes("window.yantraQuoteFile = null"));

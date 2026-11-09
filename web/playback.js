@@ -150,6 +150,75 @@ const tracks = (disc.tracks || []).filter((track) => trackOffered(
     return -1;
   }
 
+  /* A formal sit rises over the first few seconds and settles over the last
+     few, so a song that was written to run into the next one does not stop
+     at full volume. One song uses both. A short song shares the time so the
+     two fades do not meet. */
+  const SIT_FADE_IN = 4;
+  const SIT_FADE_OUT = 8;
+  const SIT_RELEASE = 0.45;
+
+  function smoothStep(t) {
+    const x = Math.max(0, Math.min(1, Number(t) || 0));
+    return x * x * (3 - 2 * x);
+  }
+
+  function sitFadePlan(length, opts) {
+    const formal = !opts || opts.formal !== false;
+    const first = !!(opts && opts.first);
+    const last = !!(opts && opts.last);
+    const len = Number(length);
+    const known = Number.isFinite(len) && len > 0;
+    if (!formal) return { fadeIn: 0, fadeOut: 0, releaseAt: null };
+    let fadeIn = first ? SIT_FADE_IN : 0;
+    let fadeOut = last ? SIT_FADE_OUT : 0;
+    if (known && fadeIn + fadeOut > len * 0.62) {
+      const budget = Math.max(0.8, len * 0.62);
+      const share = fadeIn + fadeOut || 1;
+      fadeIn = fadeIn / share * budget;
+      fadeOut = fadeOut / share * budget;
+    }
+    return {
+      fadeIn: fadeIn,
+      fadeOut: fadeOut,
+      releaseAt: last && known ? Math.max(0, len - SIT_RELEASE) : null,
+    };
+  }
+
+  function sitGain(length, position, plan) {
+    const len = Number(length);
+    const known = Number.isFinite(len) && len > 0;
+    const pos = Math.max(0, Number(position) || 0);
+    const fadeIn = plan && Number(plan.fadeIn) > 0 ? Number(plan.fadeIn) : 0;
+    const fadeOut = plan && Number(plan.fadeOut) > 0 ? Number(plan.fadeOut) : 0;
+    let gain = 1;
+    if (fadeIn > 0) gain = Math.min(gain, smoothStep(pos / fadeIn));
+    if (fadeOut > 0 && known) {
+      const start = Math.max(fadeIn, len - fadeOut);
+      if (pos >= start) {
+        const span = Math.max(0.001, len - start);
+        gain = Math.min(gain, smoothStep((len - pos) / span));
+      }
+    }
+    return gain;
+  }
+
+  /* The sit caption names the album that is actually playing, then the song.
+     A shelf title that is still on screen is replaced at once. The later
+     change from album to song fades, unless motion is reduced. */
+  function sitLabel(state) {
+    if (!state || !state.sitting) return { text: "", dim: false };
+    const album = String(state.album || "");
+    const song = String(state.song || "");
+    const shown = String(state.shown || "");
+    if (state.phase !== "song" || !song || song === album) {
+      return { text: album || song || "", dim: false };
+    }
+    if (state.reduce || !shown || shown === song) return { text: song, dim: false };
+    if (state.dim) return { text: song, dim: false };
+    return { text: shown, dim: true };
+  }
+
   const api = {
     LUMAKARA: LUMAKARA,
     STALL_MS: STALL_MS,
@@ -165,6 +234,12 @@ const tracks = (disc.tracks || []).filter((track) => trackOffered(
     presentState: presentState,
     calmLine: calmLine,
     nextPlayable: nextPlayable,
+    SIT_FADE_IN: SIT_FADE_IN,
+    SIT_FADE_OUT: SIT_FADE_OUT,
+    SIT_RELEASE: SIT_RELEASE,
+    sitFadePlan: sitFadePlan,
+    sitGain: sitGain,
+    sitLabel: sitLabel,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.YantraPlayback = api;

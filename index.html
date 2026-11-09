@@ -140,7 +140,9 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #cap-title {
     font-family: Palatino, "Iowan Old Style", serif;
     font-size: 1.35rem; margin: 0; color: rgba(247, 237, 212, 0.88);
+    transition: opacity 0.9s ease;
   }
+  #cap-title.dim { opacity: 0; }
   #cap-place { margin: 0.25rem 0 0.45rem; letter-spacing: 0.18em; font-size: 0.72rem; text-transform: uppercase; color: rgba(230, 201, 138, 0.7); }
   #cap-bar { width: min(16rem, 40vw); height: 1px; margin: 0 auto; background: rgba(230, 201, 138, 0.18); }
   #cap-bar span { display: block; height: 1px; background: rgba(243, 230, 200, 0.8); width: 0; }
@@ -214,7 +216,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     .room:not([hidden]) .inner,
     .index:not([hidden]),
     .face:not([hidden]) { animation: none; }
-    #talk-bar, #talk-title, #talk-words { transition: none; }
+    #talk-bar, #talk-title, #talk-words, #cap-title { transition: none; }
   }
   .room h1 { font-size: clamp(2.2rem, 7vw, 3.1rem); margin: 0 0 0.2rem; }
   .room h2 { font-family: inherit; font-weight: 500; font-size: 1.55rem; color: #f7edd4; margin: 0 0 1.2rem; }
@@ -2313,6 +2315,7 @@ async function sitAlbum() {
       return;
     }
     playNote = "";
+    if (disc) armSitCaption(disc.title, "", disc.id);
     begin();
     if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
   } catch (e) {
@@ -2564,7 +2567,17 @@ function applyNow() {
     note.textContent = snap.source === "local" ? "Playing the installed disc, in order."
       : snap.source === "recordings" ? "The sangha's recording, in album order." : "In album order.";
   }
-  if (snap && snap.form && snap.title) {
+  if (document.body.classList.contains("sitting")) {
+    syncSitCaption(snap);
+    paintSitCaption();
+    const place = snap && snap.form
+      ? (Number(snap.formIndex) + 1) + "  /  " + (Number(snap.formTotal) || 0)
+      : (onDisc && current ? current + "  /  " + disc.tracks.length : (sitCaption.album ? "" : disc.artist));
+    const length = snap ? Number(snap.length) || 0 : 0;
+    const mark = snap && snap.form ? chakraLabel(snap.chakra) : "";
+    capPlace.textContent = place + (length ? "    " + clock(livePosition()) : "") + (mark ? "    " + mark : "");
+    capFill.style.width = length ? Math.min(100, (livePosition() / length) * 100) + "%" : "0%";
+  } else if (snap && snap.form && snap.title) {
     capTitle.textContent = snap.title;
     const place = (Number(snap.formIndex) + 1) + "  /  " + (Number(snap.formTotal) || 0);
     const length = Number(snap.length) || 0;
@@ -2655,10 +2668,75 @@ function followHearing() {
   applyNow();
 }
 
+let sitCaption = { id: "", album: "", song: "", at: 0 };
+let sitCaptionSwap = 0;
+function armSitCaption(album, song, id) {
+  clearTimeout(sitCaptionSwap);
+  sitCaption = {
+    id: id || "",
+    album: album || "",
+    song: song || "",
+    at: performance.now(),
+  };
+  capTitle.classList.remove("dim");
+  if (sitCaption.album) capTitle.textContent = sitCaption.album;
+}
+function paintSitCaption() {
+  if (!document.body.classList.contains("sitting") || !window.YantraPlayback || !window.YantraPlayback.sitLabel) return;
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const held = performance.now() - (sitCaption.at || 0);
+  const phase = sitCaption.song && held >= 2600 ? "song" : "album";
+  const view = window.YantraPlayback.sitLabel({
+    sitting: true,
+    album: sitCaption.album,
+    song: sitCaption.song,
+    phase: phase,
+    shown: capTitle.textContent,
+    dim: capTitle.classList.contains("dim"),
+    reduce: !!reduce,
+  });
+  if (view.dim) {
+    if (!capTitle.classList.contains("dim")) {
+      capTitle.classList.add("dim");
+      clearTimeout(sitCaptionSwap);
+      sitCaptionSwap = setTimeout(() => {
+        const next = window.YantraPlayback.sitLabel({
+          sitting: true,
+          album: sitCaption.album,
+          song: sitCaption.song,
+          phase: "song",
+          shown: capTitle.textContent,
+          dim: true,
+          reduce: !!reduce,
+        });
+        if (next.text) capTitle.textContent = next.text;
+        capTitle.classList.remove("dim");
+      }, reduce ? 0 : 900);
+    }
+    return;
+  }
+  capTitle.classList.remove("dim");
+  if (view.text) capTitle.textContent = view.text;
+  else if (!sitCaption.album) capTitle.textContent = "";
+}
+function syncSitCaption(now) {
+  if (!now || !now.discId) return;
+  if (sitCaption.id && now.discId !== sitCaption.id) return;
+  if (!sitCaption.album && now.album) {
+    sitCaption.album = now.album;
+    sitCaption.id = now.discId;
+    sitCaption.at = performance.now();
+  }
+  if (now.title && now.title !== sitCaption.album) sitCaption.song = now.title;
+}
 function begin() {
   window.yantraTimedSit = false;
   window.drawEpoch = (window.drawEpoch || 0) + 1;
   document.body.classList.add("sitting");
+  if (!sitCaption.album) {
+    capTitle.textContent = "";
+    capTitle.classList.remove("dim");
+  } else paintSitCaption();
   caption.classList.add("show");
   document.body.classList.remove("awake");
   settle();
@@ -2671,6 +2749,9 @@ function begin() {
 
 function endSitting() {
   const wasSitting = document.body.classList.contains("sitting");
+  sitCaption = { id: "", album: "", song: "", at: 0 };
+  clearTimeout(sitCaptionSwap);
+  capTitle.classList.remove("dim");
   document.body.classList.remove("sitting", "awake");
   if (wasSitting) dispatchEvent(new Event("yantra:ended"));
   caption.classList.remove("show");
@@ -2815,6 +2896,7 @@ async function playForm(name, id, tracks) {
       return;
     }
     playNote = "";
+    if (data.albumTitle) armSitCaption(data.albumTitle, data.trackTitle, data.albumId);
     begin();
     if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
     applyNow();
@@ -3296,6 +3378,7 @@ async function playSession(theme, count, choice) {
       return;
     }
     sessionLive = true;
+    if (data.albumTitle) armSitCaption(data.albumTitle, data.trackTitle, data.albumId);
     begin();
     if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
     else {

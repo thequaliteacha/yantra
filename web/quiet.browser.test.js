@@ -100,6 +100,27 @@ function mime(file) {
   return "application/octet-stream";
 }
 
+function silentWav(seconds) {
+  const rate = 8000;
+  const samples = Math.floor(rate * seconds);
+  const data = Buffer.alloc(samples, 128);
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + samples, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(rate, 24);
+  header.writeUInt32LE(rate, 28);
+  header.writeUInt16LE(1, 32);
+  header.writeUInt16LE(8, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(samples, 40);
+  return Buffer.concat([header, data]);
+}
+
 function startServer() {
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
@@ -113,6 +134,11 @@ function startServer() {
         return;
       }
       fs.readFile(file, (err, data) => {
+        if (err && pathname.includes("/audio/") && pathname.endsWith(".mp3")) {
+          res.writeHead(200, { "content-type": "audio/wav", "cache-control": "no-store" });
+          res.end(silentWav(6));
+          return;
+        }
         if (err) {
           res.writeHead(404);
           res.end("missing");
@@ -756,6 +782,92 @@ async function main() {
     assertReadable(reducedPlay, "play", 4.5);
     await shot(send, "quiet-playing-reduced.png");
     await send("Emulation.setEmulatedMedia", { features: [] });
+
+    const labels = await evaluate(send, `(() => {
+      const talk = document.querySelector("#talks-list audio");
+      if (talk && !talk.paused) talk.pause();
+      const albums = ["Enlightenment", "Canyons of Light", "Samadhi", "Ecstasy"];
+      const counts = [1, 3, 6, 12];
+      const titles = counts.map((count, i) => {
+        document.body.classList.add("sitting");
+        armSitCaption(albums[i], "First song", "not-samurai");
+        paintSitCaption();
+        const title = document.getElementById("cap-title").textContent;
+        document.body.classList.remove("sitting");
+        return { count, title };
+      });
+      document.body.classList.remove("watching", "sitting");
+      const close = document.getElementById("talk-close");
+      if (close) close.click();
+      showRoom("home");
+      return { titles, shelf: document.getElementById("cap-title").textContent };
+    })()`);
+    labels.titles.forEach((row) => {
+      assert.strictEqual(row.title, ["Enlightenment", "Canyons of Light", "Samadhi", "Ecstasy"][[1, 3, 6, 12].indexOf(row.count)]);
+      assert.notStrictEqual(row.title, "Samurai", row.count + " songs must not open on Samurai");
+    });
+
+    await evaluate(send, `(() => {
+      window.__completes = 0;
+      window.__capLog = [];
+      const title = document.getElementById("cap-title");
+      new MutationObserver(() => window.__capLog.push(title.textContent)).observe(title, { childList: true, subtree: true, characterData: true });
+      addEventListener("yantra:complete", () => { window.__completes += 1; });
+      document.getElementById("done").hidden = true;
+      showRoom("home");
+      window.__sitsBefore = YantraPractice.summary().totals.sits;
+    })()`);
+    await click(send, "#home [data-theme=morning]");
+    await waitFor(send, `!!document.querySelector("#pick-album option[value=enlightenment]")`, "enlightenment album");
+    await evaluate(send, `(() => {
+      const select = document.getElementById("pick-album");
+      select.value = "enlightenment";
+      select.dispatchEvent(new Event("change"));
+      window.__capFrom = window.__capLog.length;
+    })()`);
+    await click(send, "#pick [data-count='1']");
+    const sitOpen = await waitFor(send, `(() => {
+      const title = document.getElementById("cap-title").textContent;
+      if (title !== "Enlightenment") return false;
+      return { title, volume: window.yantraSitAudio ? window.yantraSitAudio.volume : -1 };
+    })()`, "album title and quiet open");
+    assert.strictEqual(sitOpen.title, "Enlightenment");
+    assert.ok(sitOpen.volume >= 0 && sitOpen.volume < 0.35, "the first track fades in, volume " + sitOpen.volume);
+    await shot(send, "sit-open-album.png");
+    const risen = await waitFor(send, `(() => {
+      const audio = window.yantraSitAudio;
+      if (!audio || audio.volume < 0.55) return false;
+      return audio.volume;
+    })()`, "fade in");
+    assert.ok(risen > sitOpen.volume, "the opening gets louder");
+    const faded = await waitFor(send, `(() => {
+      const audio = window.yantraSitAudio;
+      const title = document.getElementById("cap-title").textContent;
+      if (!audio || !Number.isFinite(audio.duration) || audio.duration < 1) return false;
+      if (audio.currentTime < audio.duration - 2.2) return false;
+      if (audio.volume > 0.45) return false;
+      return { volume: audio.volume, title, paused: audio.paused };
+    })()`, "fade out");
+    assert.ok(faded.volume < 0.45, "the last seconds are quiet, volume " + faded.volume);
+    await waitFor(send, `document.getElementById("done").hidden === false && window.__completes === 1`, "one completion");
+    const finished = await evaluate(send, `(() => {
+      const during = window.__capLog.slice(window.__capFrom);
+      return {
+        completes: window.__completes,
+        paused: !window.yantraSitAudio || window.yantraSitAudio.paused === true,
+        sits: YantraPractice.summary().totals.sits,
+        before: window.__sitsBefore,
+        during,
+        samurai: during.indexOf("Samurai") >= 0,
+      };
+    })()`);
+    assert.strictEqual(finished.completes, 1, "completion is recorded once");
+    assert.strictEqual(finished.paused, true, "the sit does not keep playing");
+    assert.strictEqual(finished.sits, finished.before, "a short faded sit is not an extra formal credit");
+    assert.strictEqual(finished.samurai, false, "Samurai never replaces the playing album");
+    console.log("sit open", JSON.stringify({ opened: sitOpen.volume, risen, faded: faded.volume, during: finished.during }));
+    await shot(send, "sit-fade-complete.png");
+
     console.log("quiet.browser.test.js ok");
     client.close();
   } catch (err) {
