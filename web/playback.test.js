@@ -3,6 +3,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 const P = require("./playback.js");
+const Choose = require("./choose.js");
 
 const audio = JSON.parse(fs.readFileSync(path.join(__dirname, "audio.json"), "utf8"));
 const tracks = JSON.parse(fs.readFileSync(path.join(__dirname, "tracks.json"), "utf8"));
@@ -279,5 +280,112 @@ assert.ok(!keptIsland.some((disc) => disc.circle !== "vayu"));
 const failedPlane = P.filterDiscs(catalog, Object.assign({}, plane, { failedKeys: { "samurai#1": true } })).find((disc) => disc.id === "samurai");
 assert.ok(failedPlane && failedPlane.tracks.length > 0);
 assert.ok(!failedPlane.tracks.some((track) => track.n === 1));
+
+const opening = P.sitFadePlan(240, { formal: true, first: true, last: true });
+assert.strictEqual(opening.fadeIn, P.SIT_FADE_IN);
+assert.strictEqual(opening.fadeOut, P.SIT_FADE_OUT);
+assert.ok(P.sitGain(240, 0, opening) < 0.02, "a formal sit starts in silence");
+assert.ok(P.sitGain(240, P.SIT_FADE_IN, opening) > 0.99, "the fade-in arrives at full level");
+assert.ok(P.sitGain(240, 120, opening) > 0.99);
+assert.ok(opening.releaseAt > 240 - 1);
+assert.ok(P.sitGain(240, opening.releaseAt, opening) < 0.08, "the sit is quiet before it is released");
+assert.ok(P.sitGain(240, 239.9, opening) < P.sitGain(240, 236, opening), "the ending keeps falling, it does not cut");
+
+const middle = P.sitFadePlan(240, { formal: true, first: false, last: false });
+assert.strictEqual(P.sitGain(240, 0, middle), 1);
+assert.strictEqual(P.sitGain(240, 239, middle), 1);
+const ending = P.sitFadePlan(240, { formal: true, first: false, last: true });
+assert.ok(P.sitGain(240, 200, ending) > 0.99);
+assert.ok(P.sitGain(240, ending.releaseAt, ending) < 0.08);
+const casual = P.sitFadePlan(240, { formal: false, first: true, last: true });
+assert.strictEqual(P.sitGain(240, 0, casual), 1, "album listening is left alone");
+
+const short = P.sitFadePlan(10, { formal: true, first: true, last: true });
+assert.ok(short.fadeIn + short.fadeOut < 10);
+assert.ok(P.sitGain(10, short.fadeIn, short) > 0.95);
+
+function hostedSession(level) {
+  return { sdk: false, connected: true, blocked: false, failed: false, handset: false, failedKeys: {}, level: level };
+}
+function planSit(theme, count, albumId) {
+  const phone = hostedSession("zazen");
+  return Choose.planQuickSit({
+    discs: discs.discs,
+    level: "zazen",
+    theme: theme,
+    count: count,
+    albumId: albumId,
+    circleOpen: (circle, level) => circle !== "lumikara" || level === "zazen",
+    canPlay(disc, track) {
+      return !!(audio[disc.id] && audio[disc.id][String(track.n)]);
+    },
+    playable(item) {
+      return !!(audio[discById(item.discId).id] && audio[item.discId][String(item.n)]);
+    },
+    keep() { return true; },
+    rng: () => 0,
+  });
+}
+for (const count of [1, 3, 6, 12]) {
+  const result = planSit("morning", count, "enlightenment");
+  assert.strictEqual(result.ok, true, "morning " + count);
+  const disc = discById(result.albumId);
+  const track = disc.tracks.find((row) => row.n === result.items[0].n);
+  const first = P.sitLabel({
+    sitting: true,
+    album: disc.title,
+    song: track.title,
+    phase: "album",
+    shown: "Samurai",
+  });
+  assert.strictEqual(first.text, disc.title, count + " songs first names the playing album");
+  assert.strictEqual(first.dim, false, "a wrong shelf title is replaced, not faded from");
+  assert.notStrictEqual(first.text, "Samurai");
+  assert.notStrictEqual(disc.id, "samurai");
+}
+const evening = planSit("evening", 3, "canyons-of-light");
+assert.strictEqual(discById(evening.albumId).title, "Canyons of Light");
+const held = P.sitLabel({
+  sitting: true,
+  album: "Canyons of Light",
+  song: "River",
+  phase: "song",
+  shown: "Canyons of Light",
+});
+assert.strictEqual(held.dim, true);
+assert.strictEqual(held.text, "Canyons of Light");
+const song = P.sitLabel({
+  sitting: true,
+  album: "Canyons of Light",
+  song: "River",
+  phase: "song",
+  shown: "Canyons of Light",
+  dim: true,
+});
+assert.strictEqual(song.text, "River");
+assert.strictEqual(song.dim, false);
+const reduced = P.sitLabel({
+  sitting: true,
+  album: "Canyons of Light",
+  song: "River",
+  phase: "song",
+  shown: "Canyons of Light",
+  reduce: true,
+});
+assert.strictEqual(reduced.text, "River");
+assert.strictEqual(reduced.dim, false, "reduced motion swaps the title without a fade");
+const chosen = P.sitLabel({ sitting: true, album: "Samurai", song: "First", phase: "album", shown: "Enlightenment" });
+assert.strictEqual(chosen.text, "Samurai", "Samurai shows only when that album is the one playing");
+
+assert.ok(page.includes("function armSitCaption"));
+assert.ok(page.includes("paintSitCaption"));
+assert.ok(page.includes("syncSitCaption"));
+assert.ok(page.includes("if (data.albumTitle) armSitCaption"));
+assert.ok(web.includes("function closeSit"));
+assert.ok(web.includes("Playback.sitGain"));
+assert.ok(web.includes("audio.volume = this.gainFor(index)"));
+assert.ok(!web.includes("remaining < 3"), "the last song is no longer cut at full volume");
+assert.strictEqual(P.SIT_FADE_IN, 4);
+assert.strictEqual(P.SIT_FADE_OUT, 8);
 
 console.log("playback.test.js ok");

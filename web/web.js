@@ -938,13 +938,26 @@
           if (this.onfail && this.index >= 0) this.onfail(this.index, "error");
         });
         this.audio.addEventListener("timeupdate", () => { this.heardAt = Date.now(); });
+        window.yantraSitAudio = this.audio;
       }
       return this.audio;
+    },
+    /* 0 at the first moment of a formal sit, so the fade-in is not preceded
+       by a full-volume attack. Other songs stay at full level. */
+    gainFor(index) {
+      if (typeof formalSit !== "function" || !formalSit() || !live.form) return 1;
+      const plan = Playback.sitFadePlan(0, {
+        formal: true,
+        first: index === 0,
+        last: live.items.length > 0 && index === live.items.length - 1,
+      });
+      return plan.fadeIn > 0 ? 0 : 1;
     },
     start(index) {
       const audio = this.element();
       this.index = index;
       const token = ++this.token;
+      audio.volume = this.gainFor(index);
       audio.src = this.keys[index];
       studyRecording(this.keys[index]);
       return audio.play().then(() => this.token === token, () => false);
@@ -1007,7 +1020,7 @@
 
   const services = { recordings: recorded, spotify, apple };
   const recordedAll = (items) => items.length > 0 && items.every((item) => recordingOf(item.discId, item.n));
-  const live = { service: null, name: "", items: [], keys: [], seen: false, timer: 0, form: false, chakras: null, lastHeard: false, recovering: false };
+  const live = { service: null, name: "", items: [], keys: [], seen: false, timer: 0, gainTimer: 0, form: false, chakras: null, lastHeard: false, recovering: false, closing: false };
   const progressWatch = Playback.createProgressWatch(Playback.STALL_MS);
 
   /* A sit stays inside one album. Each album runs from navel songs through heart
@@ -1032,6 +1045,20 @@
     dispatchEvent(new Event("yantra:complete"));
   }
 
+  /* One finish for a formal sit: the music is already quiet, the practice
+     record is taken once, and the completion screen follows. */
+  function closeSit() {
+    if (live.closing || !live.service) return;
+    live.closing = true;
+    const service = services[live.service];
+    if (service && service.pause) service.pause();
+    restoreSitGain();
+    NOW.status = "Stopped";
+    noteSit();
+    liveStop(false);
+    complete();
+  }
+
   function serviceFor(items, prefer) {
     // The sangha's own copies come first: they need no account and no app.
     const order = ["recordings"].concat(prefer === "apple" ? ["apple", "spotify"] : ["spotify", "apple"]);
@@ -1044,12 +1071,102 @@
   function liveStop(pause) {
     if (live.service && pause) services[live.service].pause();
     clearInterval(live.timer);
+    clearInterval(live.gainTimer);
     clearTimeout(live.endTimer);
+    live.gainTimer = 0;
     live.endTimer = 0;
     live.service = null;
     live.items = [];
     live.keys = [];
     live.seen = false;
+    gainAnchor = null;
+  }
+
+  let gainAnchor = null;
+
+  function rememberGainAnchor(state, index) {
+    gainAnchor = {
+      at: Date.now(),
+      position: Number(state && state.position) || 0,
+      length: Number(state && state.length) || 0,
+      playing: !!(state && state.playing),
+      index: index,
+    };
+  }
+
+  function gainNow() {
+    if (live.service === "recordings" && recorded.audio && recorded.index >= 0) {
+      const audio = recorded.audio;
+      return {
+        position: audio.currentTime || 0,
+        length: Number.isFinite(audio.duration) ? audio.duration : 0,
+        playing: !audio.paused && !audio.ended,
+        index: recorded.index,
+      };
+    }
+    if (!gainAnchor) return null;
+    const elapsed = gainAnchor.playing ? (Date.now() - gainAnchor.at) / 1000 : 0;
+    return {
+      position: gainAnchor.position + elapsed,
+      length: gainAnchor.length,
+      playing: gainAnchor.playing,
+      index: gainAnchor.index,
+    };
+  }
+
+  function restoreSitGain() {
+    if (recorded.audio) recorded.audio.volume = 1;
+    if (live.service === "spotify" && spotify.player && spotify.player.setVolume) {
+      spotify.player.setVolume(0.8).catch(() => {});
+    }
+    spotify.gainSent = null;
+  }
+
+  /* Spotify's in-page player can fade. Without it, the Web API volume is
+     stepped slowly. A phone that cannot set volume still pauses at the end
+     of the fade window, so the next album track does not start. */
+  function pushSpotifyGain(level) {
+    const percent = Math.max(0, Math.min(100, Math.round(level * 100)));
+    if (spotify.player && typeof spotify.player.setVolume === "function") {
+      if (spotify.gainSent === percent) return;
+      spotify.gainSent = percent;
+      spotify.player.setVolume(level).catch(() => { spotify.gainSent = null; });
+      return;
+    }
+    const now = Date.now();
+    if (spotify.gainSent === percent) return;
+    if (now - (spotify.gainAt || 0) < 500 && Math.abs((spotify.gainSent || 0) - percent) < 12) return;
+    spotify.gainSent = percent;
+    spotify.gainAt = now;
+    const device = spotify.deviceId ? "&device_id=" + spotify.deviceId : "";
+    spotify.api("PUT", "/me/player/volume?volume_percent=" + percent + device).catch(() => {});
+  }
+
+  function applySitGain() {
+    if (!formalSit() || !live.service || live.closing) return false;
+    const here = gainNow();
+    if (!here || !live.items.length) return false;
+    const last = here.index === live.items.length - 1;
+    const first = here.index === 0;
+    const plan = Playback.sitFadePlan(here.length, { formal: true, first: first, last: last });
+    const gain = Playback.sitGain(here.length, here.position, plan);
+    const base = live.service === "spotify" ? 0.8 : 1;
+    if (live.service === "recordings" && recorded.audio) recorded.audio.volume = base * gain;
+    else if (live.service === "spotify") pushSpotifyGain(base * gain);
+    const release = plan.releaseAt != null && here.length > 1 && here.position >= plan.releaseAt;
+    const ranOut = !here.playing && here.length > 1 && here.position >= here.length - 1.5;
+    if (last && (here.playing && release || ranOut)) {
+      closeSit();
+      return true;
+    }
+    return false;
+  }
+
+  function startSitGain() {
+    clearInterval(live.gainTimer);
+    live.gainTimer = 0;
+    if (!formalSit()) return;
+    live.gainTimer = setInterval(applySitGain, 100);
   }
 
   function markFailed(item, fromSpotify) {
@@ -1149,13 +1266,11 @@
     const index = live.keys.indexOf(state.key);
     if (index < 0) {
       // The list has finished and the service went on to something else.
-      if (live.seen) {
+      if (live.seen && live.lastHeard) closeSit();
+      else if (live.seen) {
         services[live.service].pause();
         NOW.status = "Stopped";
-        const finished = live.lastHeard;
-        if (finished) noteSit();
         liveStop(false);
-        if (finished) complete();
       }
       return;
     }
@@ -1165,26 +1280,12 @@
     const track = disc.tracks.find((row) => row.n === item.n);
     const last = index === live.items.length - 1;
     if (last && state.playing) live.lastHeard = true;
-    // A hard stop: pause a breath before the last song runs out, so Spotify's autoplay
-    // never sounds the first notes of a song from outside the sit.
-    const remaining = (state.length || 0) - (state.position || 0);
-    if (last && state.playing && state.length > 0 && remaining < 3 && !live.endTimer) {
-      const service = live.service;
-      live.endTimer = setTimeout(() => {
-        if (live.service !== service) return;
-        services[service].pause();
-        NOW.status = "Stopped";
-        noteSit();
-        liveStop(false);
-        complete();
-      }, Math.max(0, (remaining - 0.3) * 1000));
-    }
-    // The last song has run out and Spotify stopped on it: the sit is complete.
+    rememberGainAnchor(state, index);
+    // The last seconds are quiet. Pausing just before the file ends still keeps
+    // Spotify from sounding the next track, after the fade has arrived there.
+    if (formalSit() && applySitGain()) return;
     if (last && live.lastHeard && !state.playing && (state.position < 1 || state.position >= state.length - 1.5)) {
-      NOW.status = "Stopped";
-      noteSit();
-      liveStop(false);
-      complete();
+      closeSit();
       return;
     }
     const watch = progressWatch.sample(state.key, state.position, state.playing, Date.now());
@@ -1323,7 +1424,7 @@
     stopQueue();
     Object.assign(live, {
       service, name, items, keys: items.map((item) => songKey(item, service)), seen: false, form,
-      chakras: chakras || null, lastHeard: false,
+      chakras: chakras || null, lastHeard: false, closing: false,
     });
     // Unlocks audio for the in-page player; it has to run inside the tap.
     if (service === "spotify" && spotify.player && spotify.player.activateElement) spotify.player.activateElement();
@@ -1353,8 +1454,10 @@
         }
       })();
     } else if (service === "spotify" && albumOptions && albumOptions.spotify) {
+      if (formalSit()) pushSpotifyGain(0);
       started = spotify.play(albumOptions.spotify);
     } else if (service === "spotify") {
+      if (formalSit()) pushSpotifyGain(0);
       // A saved form plays from its own private Spotify playlist, so the songs keep
       // going in order on Spotify even if this page is closed or the phone sleeps.
       started = (async () => {
@@ -1380,6 +1483,7 @@
       setTimeout(() => { if (nextButton.textContent.startsWith("Playing on ")) nextButton.click(); }, 8000);
     }
     live.timer = setInterval(livePoll, 1000);
+    startSitGain();
     return true;
   }
 
@@ -1694,7 +1798,7 @@
       const ok = await liveStart(name, items, "recordings", true, null, "", chakras);
       if (!ok) return [{ ok: false, error: "The music did not start." }, 404];
       rememberAlbum(items);
-      return [{ ok: true, source: origin }];
+      return [Object.assign({ ok: true, source: origin }, openingOf(items))];
     }
 
     let unavailable = spotifyKnownUnavailable();
@@ -1707,7 +1811,7 @@
       const ok = await liveStart(name, items, "spotify", true, null, "", chakras);
       if (ok) {
         rememberAlbum(items);
-        return [{ ok: true, source: origin }];
+        return [Object.assign({ ok: true, source: origin }, openingOf(items))];
       }
       unavailable = spotify.lastFailure || spotify.blocked || "failed";
     }
@@ -1722,9 +1826,10 @@
     const ok = await liveStart(name, hosted, "recordings", true, null, "", hostedChakras);
     if (!ok) return [{ ok: false, error: Choose.emptyLine() }, 409];
     rememberAlbum(hosted);
+    const opened = openingOf(hosted);
     const spotifyExpected = !!Playback.spotifySdkSupported(navEnv()) && unavailable !== "sdk";
     if (!Choose.announceSwap({ explicit: plan.via === "album", swapped: true, spotifyExpected })) {
-      return [{ ok: true, source: origin }];
+      return [Object.assign({ ok: true, source: origin }, opened)];
     }
     const asked = plan.requestedId ? DISCS[plan.requestedId] : null;
     const heard = describeItems(hosted);
@@ -1739,7 +1844,7 @@
       count: hosted.length,
       mode: "session",
     });
-    return [{ ok: true, source: origin, offer }];
+    return [Object.assign({ ok: true, source: origin, offer }, opened)];
   }
 
   async function startSession(payload) {
@@ -1871,6 +1976,18 @@
     });
     if (!ok) return [{ ok: false, error: offer.text, offer }, 409];
     return [{ ok: true, source: "recordings", offer }];
+  }
+
+  function openingOf(items) {
+    const item = items && items[0];
+    if (!item) return { albumId: "", albumTitle: "", trackTitle: "" };
+    const disc = DISCS[item.discId];
+    const track = disc && disc.tracks.find((row) => row.n === item.n);
+    return {
+      albumId: disc ? disc.id : item.discId,
+      albumTitle: disc ? disc.title : "",
+      trackTitle: track ? track.title : "",
+    };
   }
 
   function play(payload) {
