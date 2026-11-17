@@ -389,7 +389,7 @@ async function main() {
       const audio = document.querySelector("#talks-list audio");
       segue.style.display = "flex";
       const hiddenDisplay = getComputedStyle(segue).display;
-      const cal = document.getElementById("practice-cal");
+      const cal = document.getElementById("rings");
       cal.style.display = "grid";
       const calDisplay = getComputedStyle(cal).display;
       return {
@@ -443,7 +443,7 @@ async function main() {
     assert.strictEqual(seeded.buttons, 14);
     assert.ok(seeded.svg && seeded.svg.includes("<svg"), "each day draws a mark");
     assert.ok(seeded.box >= 24, "the mark is large enough to see, got " + seeded.box);
-    assert.ok(seeded.label.includes("Open the practice calendar"));
+    assert.ok(seeded.label.includes("Opens practice"));
     const homeEarly = await readType(send);
     const homeRunning = await evaluate(send, `document.querySelector("#home .inner").getAnimations().filter((anim) => anim.playState === "running").length`);
     await evaluate(send, `document.querySelector("#home .inner").getAnimations().forEach((anim) => anim.finish())`);
@@ -453,7 +453,8 @@ async function main() {
     if (homeRunning) assert.ok(homeEarly.home.opacity < 0.85, "home is still inside the entrance fade when shot too soon, opacity " + homeEarly.home.opacity);
     assertReadable(homeType, "home", 7);
     assertReadable(homeType, "label", 4.5);
-    assertReadable(homeType, "value", 7);
+    assertReadable(homeType, "value", 4.5);
+    assert.ok(homeType.value.contrast <= 8, "the streak number stays dim, contrast " + homeType.value.contrast);
     await shot(send, "quiet-home-desktop.png");
     const deskClip = await heroClip(send);
     await shot(send, "quiet-hero-desktop.png", deskClip);
@@ -466,59 +467,74 @@ async function main() {
     await send("Emulation.clearDeviceMetricsOverride");
     await sleep(50);
 
+    await shot(send, "rings-closed.png");
     await evaluate(send, `document.querySelector("#streak-days button").focus()`);
     await key(send, "Enter", "Enter", 13);
-    await sleep(50);
+    await sleep(80);
     const opened = await evaluate(send, `(() => {
-      const modal = document.getElementById("practice-cal");
-      const formal = document.querySelectorAll("#practice-cal .cal-cell.formal").length;
-      const morning = document.querySelectorAll("#practice-cal .cal-dot:not(.evening)").length;
-      const evening = document.querySelectorAll("#practice-cal .cal-dot.evening").length;
-      const sample = document.getElementById("practice-cal").innerText;
+      const modal = document.getElementById("rings");
+      const morning = modal.querySelectorAll("[data-part='morning']").length;
+      const evening = modal.querySelectorAll("[data-part='evening']").length;
+      const rings = modal.querySelectorAll("circle.ring").length;
+      const words = (modal.innerText || "").trim();
+      const anim = getComputedStyle(document.getElementById("rings-figure")).animationName;
       return {
         open: modal.hidden === false,
         role: modal.getAttribute("role"),
+        label: modal.getAttribute("aria-label") || "",
         focus: document.activeElement && document.activeElement.id,
-        formal, morning, evening,
-        sample: sample.includes("Sample") || sample.includes("illustrative"),
-        listening: sample.includes("Listening is not shown"),
+        morning, evening, rings, words, anim,
       };
     })()`);
-    assert.strictEqual(opened.open, true, "Enter on a streak day opens the calendar");
+    assert.strictEqual(opened.open, true, "Enter on a streak day opens the rings");
     assert.strictEqual(opened.role, "dialog");
-    assert.strictEqual(opened.focus, "practice-cal-close");
-    assert.ok(opened.formal > 0, "the calendar shows real formal days");
-    assert.ok(opened.morning > 0);
-    assert.ok(opened.evening > 0);
-    assert.strictEqual(opened.sample, false);
-    assert.strictEqual(opened.listening, true);
-    await shot(send, "quiet-calendar.png");
-
-    await click(send, "#practice-cal-prev");
-    const monthMoved = await evaluate(send, `document.getElementById("practice-cal-next").disabled === false`);
-    assert.strictEqual(monthMoved, true, "previous month leaves a way forward");
-    await evaluate(send, `document.getElementById("practice-cal-next").focus()`);
+    assert.strictEqual(opened.focus, "rings");
+    assert.ok(opened.rings >= 1, "one ring per month");
+    assert.ok(opened.morning > 0, "morning beads");
+    assert.ok(opened.evening > 0, "evening beads");
+    assert.strictEqual(opened.words, "", "the rings have no visible words");
+    assert.ok(opened.label.includes("Practice on this device"), opened.label);
+    assert.ok(opened.anim.includes("rings"), "the rings grow on the shared breath, " + opened.anim);
+    await evaluate(send, `document.getElementById("rings-figure").getAnimations().forEach((anim) => anim.finish())`);
+    await sleep(40);
+    await shot(send, "rings-open.png");
+    await evaluate(send, `document.getElementById("rings").focus()`);
     await key(send, "Tab", "Tab", 9, 0);
     const wrapped = await evaluate(send, `document.activeElement && document.activeElement.id`);
-    assert.strictEqual(wrapped, "practice-cal-close", "Tab wraps inside the dialog");
-    const shifted = await evaluate(send, `(() => {
-      document.getElementById("practice-cal-close").focus();
-      const event = new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true, cancelable: true });
-      document.dispatchEvent(event);
-      return { id: document.activeElement && document.activeElement.id, defaulted: event.defaultPrevented };
-    })()`);
-    assert.strictEqual(shifted.defaulted, true);
-    assert.strictEqual(shifted.id, "practice-cal-next", "shift-tab wraps inside the dialog");
+    assert.strictEqual(wrapped, "rings", "Tab stays on the rings");
     await key(send, "Escape", "Escape", 27);
     const closed = await evaluate(send, `(() => {
       const back = document.activeElement;
       return {
-        hidden: document.getElementById("practice-cal").hidden === true,
+        hidden: document.getElementById("rings").hidden === true,
         focus: back && back.classList.contains("day-btn"),
       };
     })()`);
     assert.strictEqual(closed.hidden, true);
     assert.strictEqual(closed.focus, true, "Escape returns focus to the streak day");
+    await evaluate(send, `document.getElementById("streak-continuous").click()`);
+    const fromNumber = await evaluate(send, `document.getElementById("rings").hidden === false`);
+    assert.strictEqual(fromNumber, true, "the streak number opens the rings");
+    const swiped = await evaluate(send, `(() => {
+      const modal = document.getElementById("rings");
+      modal.dispatchEvent(new PointerEvent("pointerdown", { clientX: 120, clientY: 80, bubbles: true }));
+      modal.dispatchEvent(new PointerEvent("pointerup", { clientX: 120, clientY: 180, bubbles: true }));
+      return modal.hidden === true;
+    })()`);
+    assert.strictEqual(swiped, true, "a downward swipe closes the rings");
+    await evaluate(send, `document.getElementById("home-week").click()`);
+    const fromWeek = await evaluate(send, `(() => {
+      const week = document.getElementById("home-week");
+      return {
+        open: document.getElementById("rings").hidden === false,
+        label: week.getAttribute("aria-label") || "",
+        rings: week.querySelectorAll("circle").length,
+      };
+    })()`);
+    assert.strictEqual(fromWeek.open, true, "a medallion row opens the rings");
+    assert.strictEqual(fromWeek.rings, 7, "the seven medallions stay");
+    assert.ok(fromWeek.label.includes("perfect"));
+    await key(send, "Escape", "Escape", 27);
 
     const rollover = await evaluate(send, `(() => {
       const evening = YantraPractice.record(YantraPractice.empty(), {
@@ -729,9 +745,49 @@ async function main() {
     const long = await evaluate(send, `YantraPractice.summary().streaks.weekly.current`);
     assert.strictEqual(long, 7, "a year still shows 7 / 7, not a new cycle");
 
+    await evaluate(send, `(() => {
+      document.querySelectorAll(".room").forEach((el) => { el.hidden = true; });
+      document.body.classList.add("sitting");
+      const now = performance.now();
+      window.series = {
+        key: "wheel:naval", status: "Paused", index: 0, position: 180, length: 180,
+        lengths: [180], chakra: "naval", at: now,
+      };
+      window.ink = { key: "", portion: 1 };
+      window.pace = { key: "", pos: 180 };
+      window.wheelFor = "";
+      window.wheelAt = now;
+    })()`);
+    await sleep(120);
+    await shot(send, "wheel-point.png");
+    await evaluate(send, `window.wheelAt = performance.now() - 4200`);
+    await sleep(80);
+    await shot(send, "wheel-ring.png");
+    await evaluate(send, `window.wheelAt = performance.now() - 10000`);
+    await sleep(80);
+    await shot(send, "wheel-lobes.png");
+
     await send("Emulation.setEmulatedMedia", {
       features: [{ name: "prefers-reduced-motion", value: "reduce" }],
     });
+    await evaluate(send, `(() => {
+      document.querySelectorAll(".room").forEach((el) => { el.hidden = true; });
+      document.body.classList.add("sitting");
+      const now = performance.now();
+      window.series = {
+        key: "wheel:eye", status: "Paused", index: 0, position: 180, length: 180,
+        lengths: [180], chakra: "eye", at: now,
+      };
+      window.ink = { key: "", portion: 1 };
+      window.pace = { key: "", pos: 180 };
+      window.drawEpoch = (window.drawEpoch || 0) + 1;
+      window.seriesHold = null;
+      window.wheelFor = "";
+      window.wheelAt = now;
+    })()`);
+    await sleep(200);
+    await shot(send, "wheel-reduced.png");
+    await evaluate(send, `document.body.classList.remove("sitting"); document.querySelectorAll(".room").forEach((el) => { el.hidden = true; }); document.getElementById("home").hidden = false;`);
     const reduced = await evaluate(send, `(async () => {
       showRoom("home");
       showCompletion();

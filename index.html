@@ -13,6 +13,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   /* A flex or grid display must not bring back an element the page has hidden. */
   [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: #05040a; overflow: hidden; color: #f3e6c8; }
+  /* One breath, six a minute, the same pace as the bindu. web/breath.js is 10000. */
+  html { --breath: 10s; }
   canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; }
   /* A sit's element fullscreen uses the same night field. iOS still paints
      its status glyphs above this; the page cannot cover them. */
@@ -575,8 +577,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #talk-watch.awake #talk-title { opacity: 1; }
   #reminders[hidden] { display: none; }
   /* The week: seven days, each a circle whose left half is the sunrise sit and right half the sunset sit. */
-  .week { display: flex; justify-content: center; margin: 0.4rem 0 0; min-height: 1.9rem; }
-  .week svg { width: min(15rem, 80%); height: auto; overflow: visible; }
+  .week { display: flex; justify-content: center; align-items: center; margin: 0.4rem 0 0; min-height: 3rem; cursor: pointer; }
+  .week svg { width: min(15rem, 80%); height: auto; min-height: 3rem; overflow: visible; }
   .week.one svg { width: 5.5rem; }
   .streak-hero { margin-top: 0.85rem; text-align: center; }
   .streak-meta { display: flex; justify-content: center; gap: 1.8rem; margin: 0 0 0.35rem; }
@@ -584,9 +586,14 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   .streak-label { display: block; font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(243, 230, 200, 0.72); }
   .streak-value { display: block; margin-top: 0.12rem; font-family: Palatino, "Iowan Old Style", Georgia, serif; font-size: 1.05rem; color: rgba(247, 237, 212, 0.9); }
   #streak-days { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
+  #streak-continuous {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    color: rgba(230, 201, 138, 0.62);
+    min-width: 3rem; min-height: 3rem; padding: 0.35rem 0.7rem;
+  }
   #streak-days .day-btn {
-    appearance: none; border: 0; background: transparent; padding: 2px; border-radius: 50%;
-    cursor: pointer; color: inherit; min-width: 2.4rem; min-height: 2.4rem;
+    appearance: none; border: 0; background: transparent; padding: 6px; border-radius: 50%;
+    cursor: pointer; color: inherit; min-width: 3rem; min-height: 3rem;
   }
   #streak-days .day-btn:focus-visible { outline: 2px solid #d4b87a; outline-offset: 2px; }
   #streak-days svg { width: 2.15rem; height: 2.15rem; display: block; filter: drop-shadow(0 0 4px rgba(230, 201, 138, 0.2)); }
@@ -597,51 +604,28 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     color: #f7edd4; font: inherit; font-size: 1rem; letter-spacing: 0.01em; cursor: pointer;
     box-shadow: 0 0 18px rgba(230, 201, 138, 0.2);
   }
-  #done-segue:focus-visible, #practice-cal button:focus-visible { outline: 2px solid #d4b87a; outline-offset: 3px; }
-  #practice-cal {
+  #done-segue:focus-visible, #rings:focus-visible, #streak-continuous:focus-visible, .week:focus-visible { outline: 2px solid #d4b87a; outline-offset: 3px; }
+  #rings {
     position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
-    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
-             max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    background: transparent;
   }
-  #practice-cal .cal-backdrop { position: absolute; inset: 0; background: rgba(5, 4, 10, 0.72); }
-  #practice-cal .cal-panel {
-    position: relative; width: min(24rem, 100%); max-height: min(86vh, 40rem); overflow: auto;
-    background: #14120f; border: 1px solid rgba(230, 201, 138, 0.22); border-radius: 1.15rem;
-    padding: 1.25rem 1.1rem 1rem; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  #rings .rings-backdrop { position: absolute; inset: 0; background: rgba(5, 4, 10, 0.88); }
+  #rings .rings-figure {
+    position: relative; width: min(70vmin, 28rem); height: min(70vmin, 28rem);
+    transform-origin: center; animation: rings-wave var(--breath) ease-out forwards;
   }
-  #practice-cal h2 { font-family: Palatino, "Iowan Old Style", Georgia, serif; font-weight: 500; font-size: 1.25rem; margin: 0 0 0.2rem; color: #f7edd4; }
-  #practice-cal .cal-note { margin: 0 0 0.8rem; color: rgba(243, 230, 200, 0.62); font-size: 0.82rem; }
-  #practice-cal .cal-nav { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.55rem; }
-  #practice-cal .cal-nav button {
-    appearance: none; border: 1px solid rgba(230, 201, 138, 0.28); background: transparent; color: #f3e6c8;
-    width: 2.5rem; height: 2.5rem; border-radius: 999px; cursor: pointer; font: inherit; font-size: 1.2rem;
+  #rings .rings-figure svg { width: 100%; height: 100%; display: block; }
+  @keyframes rings-wave {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
   }
-  #practice-cal .cal-nav button:disabled { opacity: 0.35; cursor: default; }
-  #practice-cal-month { font-family: Palatino, "Iowan Old Style", Georgia, serif; color: #f3e6c8; }
-  #practice-cal .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; text-align: center; }
-  #practice-cal .dow { font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(243, 230, 200, 0.45); padding: 0.2rem 0; }
-  #practice-cal .cal-cell {
-    aspect-ratio: 1; min-height: 2.15rem; border-radius: 0.55rem; border: 1px solid transparent;
-    color: rgba(243, 230, 200, 0.55); font-size: 0.78rem; display: grid; place-items: center; position: relative;
-  }
-  #practice-cal .cal-cell.formal { color: #f7edd4; border-color: rgba(230, 201, 138, 0.22); background: rgba(230, 201, 138, 0.08); }
-  #practice-cal .cal-dots { position: absolute; bottom: 0.22rem; display: flex; gap: 0.18rem; }
-  #practice-cal .cal-dot { width: 0.28rem; height: 0.28rem; border-radius: 50%; background: rgba(233, 162, 90, 0.9); }
-  #practice-cal .cal-dot.evening { background: rgba(120, 170, 165, 0.95); }
-  #practice-cal .cal-legend { display: flex; flex-wrap: wrap; gap: 0.7rem 1rem; margin: 0.85rem 0 0; font-size: 0.75rem; color: rgba(243, 230, 200, 0.62); }
-  #practice-cal .cal-legend i { display: inline-block; width: 0.45rem; height: 0.45rem; border-radius: 50%; margin-right: 0.3rem; vertical-align: middle; }
-  #practice-cal .cal-legend .m { background: rgba(233, 162, 90, 0.9); }
-  #practice-cal .cal-legend .e { background: rgba(120, 170, 165, 0.95); }
-  #practice-cal-close {
-    position: absolute; top: 0.65rem; right: 0.65rem; appearance: none; border: 1px solid rgba(230, 201, 138, 0.28);
-    background: transparent; color: rgba(243, 230, 200, 0.8); width: 2.15rem; height: 2.15rem; border-radius: 999px;
-    cursor: pointer; font-size: 1.1rem; line-height: 1;
-  }
+  @keyframes rings-fade { from { opacity: 0; } to { opacity: 1; } }
   #home-day, #practice-lead { text-align: center; color: rgba(243, 230, 200, 0.9); font-size: 0.98rem; min-height: 1.4rem; }
   #home .choice + .streak-hero, #home-week { margin-top: 1rem; }
   @media (prefers-reduced-motion: reduce) {
     #streak-days svg { filter: none; }
     #done-segue { box-shadow: none; }
+    #rings .rings-figure { animation: rings-fade 0.2s ease forwards; transform: none; }
   }
   #pick-sheet { display: flex; flex-direction: column; gap: 0.6rem; margin: -0.4rem 0 0.6rem; padding: 0.8rem 0 1rem; border-bottom: 1px solid rgba(230, 201, 138, 0.16); }
   .sheet-head, .room p.sheet-head { margin: 0; font-size: 0.82rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(232, 204, 146, 0.84); text-align: left; }
@@ -809,7 +793,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <button class="choice dusk" type="button" data-theme="evening">Evening Meditation</button>
     <div id="home-streak" class="streak-hero" hidden>
       <div class="streak-meta">
-        <p class="streak-stat"><span class="streak-label">Continuous</span> <span id="streak-continuous" class="streak-value"></span></p>
+        <p class="streak-stat"><span class="streak-label">Continuous</span> <button type="button" id="streak-continuous" class="streak-value"></button></p>
         <p class="streak-stat"><span class="streak-label">Weekly</span> <span id="streak-weekly" class="streak-value"></span></p>
       </div>
       <div id="streak-days" role="group" aria-label="Formal practice days. Activate any day to open the practice calendar."></div>
@@ -1240,20 +1224,9 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   </div>
   <p id="talk-title"></p>
 </div>
-<div id="practice-cal" hidden role="dialog" aria-modal="true" aria-labelledby="practice-cal-title">
-  <div class="cal-backdrop" data-close="1"></div>
-  <div class="cal-panel" role="document">
-    <button type="button" id="practice-cal-close" aria-label="Close calendar">&#215;</button>
-    <h2 id="practice-cal-title">Practice</h2>
-    <p class="cal-note">Formal sits. Listening is separate.</p>
-    <div class="cal-nav">
-      <button type="button" id="practice-cal-prev" aria-label="Previous month">&#8249;</button>
-      <span id="practice-cal-month" aria-live="polite"></span>
-      <button type="button" id="practice-cal-next" aria-label="Next month">&#8250;</button>
-    </div>
-    <div id="practice-cal-grid" class="cal-grid"></div>
-    <p class="cal-legend"><span><i class="m"></i>Morning</span><span><i class="e"></i>Evening</span><span>Listening is not shown</span></p>
-  </div>
+<div id="rings" hidden role="dialog" aria-modal="true" aria-label="Practice on this device" tabindex="-1">
+  <div class="rings-backdrop" data-close="1"></div>
+  <div class="rings-figure" id="rings-figure"></div>
 </div>
 <div id="altar" class="altar-photos" aria-hidden="true"></div>
 <div id="caption">
@@ -1268,6 +1241,8 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   <button type="button" data-move="restart" aria-label="Start this song again"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 1 0 2.1-5"/><path d="M5 4v4h4"/></svg></button>
   <button type="button" data-move="next" aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M18 5v14"/><path d="M6 6l9 6-9 6z"/></svg></button>
 </div>
+<script src="/web/breath.js"></script>
+<script src="/web/wheels.js"></script>
 <script src="/web/series.js"></script>
 <script src="/web/field.js"></script>
 <script src="/web/awakening.js"></script>
@@ -1482,10 +1457,11 @@ function bhupura(ctx, cx, cy, R, grow) {
    Anahata the living green of the heart, Ajna the violet of the mind's eye. The lines
    carry the tint, the halo and field carry the glow. The gold leans toward
    the song's chakra over a few breaths, and the night stays dark. */
+const wheelCounts = window.YantraWheels ? window.YantraWheels.WHEELS : null;
 const CHAKRA = {
-  naval: { id: "naval", petals: 10, figure: "fire", tint: [248, 208, 96], glow: [232, 160, 28], ink: [146, 94, 18] },
-  heart: { id: "heart", petals: 12, figure: "air", tint: [140, 206, 150], glow: [44, 150, 92], ink: [34, 104, 60] },
-  eye: { id: "eye", petals: 2, figure: "mind", tint: [200, 172, 244], glow: [140, 92, 224], ink: [94, 56, 156] },
+  naval: { id: "naval", petals: wheelCounts ? wheelCounts.naval.petals : 10, figure: "fire", tint: [248, 208, 96], glow: [232, 160, 28], ink: [146, 94, 18] },
+  heart: { id: "heart", petals: wheelCounts ? wheelCounts.heart.petals : 12, figure: "air", tint: [140, 206, 150], glow: [44, 150, 92], ink: [34, 104, 60] },
+  eye: { id: "eye", petals: wheelCounts ? wheelCounts.eye.petals : 2, figure: "mind", tint: [200, 172, 244], glow: [140, 92, 224], ink: [94, 56, 156] },
 };
 const GOLD = { tint: [232, 204, 146], glow: [214, 164, 72], ink: [128, 88, 44] };
 const hue = { tint: GOLD.tint.slice(), glow: GOLD.glow.slice(), ink: GOLD.ink.slice() };
@@ -1672,20 +1648,36 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
   }
 
   // The outer lotus: sixteen petals, or in a sitting the petals of the song's chakra.
-  const outerPetals = stage(reveal, 0.78, 0.9);
+  // A chakra wheel does not fade in as a finished layer. It grows from a point
+  // to a ring to its petal lobes over one shared breath. Reduced motion draws
+  // the finished wheel. The petal count comes from YantraWheels.
+  const breathMs = window.YantraBreath ? window.YantraBreath.BREATH_MS : 10000;
+  const reduceWheel = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let grown = { ring: 1, lobes: 1 };
+  if (lotus && window.YantraWheels) {
+    if (window.wheelFor !== lotus.id) {
+      window.wheelFor = lotus.id;
+      window.wheelAt = now;
+    }
+    grown = window.YantraWheels.grow(now - window.wheelAt, breathMs, reduceWheel);
+  }
+  const outerPetals = lotus ? grown.lobes : stage(reveal, 0.78, 0.9);
   const count = lotus ? lotus.petals : 16;
   const outerOn = outerLevel && awake;
   const outerBreath = outerOn ? awake.innerScale(outerPulse) : 1;
   const outerGlow = outerOn ? 1 + awake.innerGlow(outerPulse) : 1;
-  layer(ctx, outerPetals * outerGlow, () => {
-    // Ajna's ring stays open: no wings, so nothing draws the eye away from the bindu.
-    if (count === 2) return;
+  layer(ctx, (lotus ? 0.9 : outerPetals) * outerGlow, () => {
+    if (lotus && grown.ring > 0.02) ring(ctx, cx, cy, R * 1.72 * grown.ring, 1);
+    if (lotus && grown.lobes <= 0.02) return;
+    if (!lotus && count === 2) return;
     for (let i = 0; i < count; i++) {
       // The wheel turns as it wakes: still while it forms, then spinning up.
       const a = awake
         ? awake.outerPetalAngle(i, count, outerDrift, outerLevel ? spin : 0, 0)
         : -Math.PI / 2 + (i * Math.PI * 2) / count;
-      bud(ctx, cx, cy, a, R * 1.525 * swell * outerBreath, R * 1.92 * swell * outerBreath, (Math.PI / count) * 1.3, outerPetals, null, "lotus");
+      const innerR = R * 1.525 * swell * outerBreath * (lotus ? Math.max(grown.ring, 0.15) : 1);
+      const outerR = R * (lotus ? 1.525 + 0.4 * grown.lobes : 1.92) * swell * outerBreath;
+      bud(ctx, cx, cy, a, innerR, outerR, (Math.PI / count) * 1.3, outerPetals, null, "lotus");
     }
   });
   const outer = stage(reveal, 0.88, 0.92);
@@ -1709,7 +1701,7 @@ function drawSri(ctx, cx, cy, R, reveal, bloom, lotus, quiver, spin, motion) {
   // The bindu: always lit, warming as the figure grows, breathing slowly (about 10 s).
   const glow = Math.min(1, reveal / 0.04);
   if (glow > 0) {
-    const wave = 0.5 + 0.5 * Math.sin(now * 0.00063);
+    const wave = 0.5 + 0.5 * Math.sin(now * ((Math.PI * 2) / breathMs));
     const breath = lotus ? Math.min(1, wave * 0.65 + Math.min(1, shown) * 0.55) : wave;
     const warmth = 0.45 + 0.55 * ease(reveal);
     // A stark point: a tight, bright halo that falls off quickly, and a crisp core
@@ -1817,8 +1809,9 @@ function emanate(ctx, cx, cy, R, now, strength) {
   if (strength <= 0) return;
   const op = ctx.globalCompositeOperation;
   ctx.globalCompositeOperation = glowBlend();
-  // One ripple per breath (about ten seconds).
-  const phase = ((now * 0.00063) / (Math.PI * 2)) % 1;
+  // One ripple per shared breath.
+  const breathMs = window.YantraBreath ? window.YantraBreath.BREATH_MS : 10000;
+  const phase = (now / breathMs) % 1;
   ctx.strokeStyle = rgba(inkOf(hue.tint), 0.07 * Math.pow(1 - phase, 1.5) * strength);
   ctx.lineWidth = 1;
   ctx.shadowBlur = 0;
@@ -2962,8 +2955,10 @@ function paintWeek(node, week) {
   svg.setAttribute("viewBox", "0 0 " + (days.length * 24) + " 26");
   const perfect = week.filter((day) => day.morning && day.evening).length;
   if (!one) {
-    svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", "This week: " + perfect + (perfect === 1 ? " perfect day" : " perfect days") + " of 7");
+    svg.setAttribute("aria-hidden", "true");
+    node.setAttribute("role", "button");
+    node.tabIndex = 0;
+    node.setAttribute("aria-label", "This week: " + perfect + (perfect === 1 ? " perfect day" : " perfect days") + " of 7. Opens practice.");
   }
   days.forEach((day, i) => {
     const cx = 12 + i * 24;
@@ -3480,8 +3475,8 @@ if (window.YANTRA_WEB) {
      None of this records a sit. A talk keeps its own listening time. */
   let segueQuote = null;
   let segueReturn = false;
-  let calReturn = null;
-  let calWhen = null;
+  let ringsReturn = null;
+  let ringsSwipe = null;
   function mountSvg(parent, markup) {
     /* The HTML parser builds a real SVG. A parsed fragment imported into the
        page was keeping the space and dropping the stroke. */
@@ -3505,7 +3500,10 @@ if (window.YANTRA_WEB) {
     hero.hidden = false;
     const continuous = document.getElementById("streak-continuous");
     const weekly = document.getElementById("streak-weekly");
-    if (continuous) continuous.textContent = window.YantraQuiet.continuousLabel(current);
+    if (continuous) {
+      continuous.textContent = window.YantraQuiet.continuousLabel(current);
+      continuous.setAttribute("aria-label", "Continuous, " + current + (current === 1 ? " day" : " days") + ". Opens practice.");
+    }
     const weeklyCount = summary.streaks && summary.streaks.weekly ? summary.streaks.weekly.current : 0;
     if (weekly) weekly.textContent = window.YantraQuiet.weeklyLabel(weeklyCount);
     row.replaceChildren();
@@ -3515,18 +3513,18 @@ if (window.YANTRA_WEB) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "day-btn";
-      btn.setAttribute("aria-label", "Day " + day + " of continuous practice. Open the practice calendar.");
+      btn.setAttribute("aria-label", "Day " + day + " of continuous practice. Opens practice.");
       mountSvg(btn, window.YantraQuiet.renderForm(window.YantraQuiet.formForDays(day), day, seed, {
         auraDays: current,
         formalMs: formalMs,
         size: 36,
       }));
-      btn.addEventListener("click", openPracticeCalendar);
+      btn.addEventListener("click", () => openRings(btn));
       btn.addEventListener("keydown", (event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         if (event.key === " ") event.preventDefault();
         if (event.repeat) return;
-        openPracticeCalendar();
+        openRings(btn);
       });
       row.append(btn);
     });
@@ -3536,83 +3534,65 @@ if (window.YANTRA_WEB) {
     const store = window.YantraPractice.loadView();
     return (store && store.days) || {};
   }
-  function paintPracticeCalendar() {
-    if (!calWhen || !window.YantraQuiet) return;
-    const built = window.YantraQuiet.monthCells(calWhen.y, calWhen.m, practiceDays());
-    const label = document.getElementById("practice-cal-month");
-    const next = document.getElementById("practice-cal-next");
-    const grid = document.getElementById("practice-cal-grid");
-    if (label) label.textContent = built.label;
-    const now = new Date();
-    if (next) next.disabled = built.year > now.getFullYear() || (built.year === now.getFullYear() && built.month >= now.getMonth() + 1);
-    if (!grid) return;
-    grid.replaceChildren();
-    grid.setAttribute("aria-label", built.label);
-    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((name) => {
-      const el = document.createElement("div");
-      el.className = "dow";
-      el.textContent = name;
-      grid.append(el);
+  function paintRings(built) {
+    const figure = document.getElementById("rings-figure");
+    if (!figure) return;
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 200 200");
+    svg.setAttribute("aria-hidden", "true");
+    const n = built.months.length;
+    const cx = 100;
+    const cy = 100;
+    built.months.forEach((month, i) => {
+      const radius = n === 1 ? 46 : 18 + (i / (n - 1)) * 72;
+      const ring = document.createElementNS(ns, "circle");
+      ring.setAttribute("class", "ring");
+      ring.setAttribute("cx", cx);
+      ring.setAttribute("cy", cy);
+      ring.setAttribute("r", radius.toFixed(2));
+      ring.setAttribute("fill", "none");
+      ring.setAttribute("stroke", "rgba(230, 201, 138, 0.28)");
+      ring.setAttribute("stroke-width", "0.7");
+      svg.append(ring);
+      month.beads.forEach((bead) => {
+        const dot = document.createElementNS(ns, "circle");
+        dot.setAttribute("class", "bead " + bead.part);
+        dot.setAttribute("data-part", bead.part);
+        const x = cx + Math.cos(bead.angle) * radius;
+        const y = cy + Math.sin(bead.angle) * radius;
+        dot.setAttribute("cx", x.toFixed(2));
+        dot.setAttribute("cy", y.toFixed(2));
+        dot.setAttribute("r", "1.8");
+        dot.setAttribute("fill", bead.part === "evening" ? "rgba(118, 158, 152, 0.75)" : "rgba(204, 156, 100, 0.78)");
+        svg.append(dot);
+      });
     });
-    built.cells.forEach((cell) => {
-      const el = document.createElement("div");
-      el.className = "cal-cell";
-      if (cell.empty) {
-        el.setAttribute("aria-hidden", "true");
-        grid.append(el);
-        return;
-      }
-      if (cell.formal) el.classList.add("formal");
-      const spoken = built.label.replace(" " + built.year, " " + cell.day + ", " + built.year);
-      let detail = spoken + ", no formal sit";
-      if (cell.morning && cell.evening) detail = spoken + ", morning formal, evening formal";
-      else if (cell.morning) detail = spoken + ", morning formal";
-      else if (cell.evening) detail = spoken + ", evening formal";
-      el.setAttribute("aria-label", detail);
-      el.textContent = String(cell.day);
-      if (cell.morning || cell.evening) {
-        const dots = document.createElement("span");
-        dots.className = "cal-dots";
-        dots.setAttribute("aria-hidden", "true");
-        if (cell.morning) {
-          const dot = document.createElement("span");
-          dot.className = "cal-dot";
-          dots.append(dot);
-        }
-        if (cell.evening) {
-          const dot = document.createElement("span");
-          dot.className = "cal-dot evening";
-          dots.append(dot);
-        }
-        el.append(dots);
-      }
-      grid.append(el);
-    });
+    figure.replaceChildren(svg);
+    figure.style.animation = "none";
+    void figure.offsetWidth;
+    figure.style.animation = "";
   }
-  function openPracticeCalendar() {
-    calReturn = document.activeElement;
-    const now = new Date();
-    calWhen = { y: now.getFullYear(), m: now.getMonth() + 1 };
-    paintPracticeCalendar();
-    const modal = document.getElementById("practice-cal");
+  function openRings(from) {
+    if (!window.YantraQuiet || !window.YantraQuiet.growthRings) return;
+    const today = window.YantraPractice && window.YantraPractice.localDate
+      ? window.YantraPractice.localDate(new Date())
+      : "";
+    const built = window.YantraQuiet.growthRings(practiceDays(), today);
+    if (!built.months.length) return;
+    ringsReturn = from || document.activeElement;
+    paintRings(built);
+    const modal = document.getElementById("rings");
     if (!modal) return;
+    modal.setAttribute("aria-label", built.label);
     modal.hidden = false;
-    const close = document.getElementById("practice-cal-close");
-    if (close) close.focus();
+    modal.focus();
   }
-  function closePracticeCalendar() {
-    const modal = document.getElementById("practice-cal");
+  function closeRings() {
+    const modal = document.getElementById("rings");
     if (!modal || modal.hidden) return;
     modal.hidden = true;
-    if (calReturn && typeof calReturn.focus === "function") calReturn.focus();
-  }
-  function shiftCalendar(by) {
-    if (!calWhen) return;
-    const next = new Date(calWhen.y, calWhen.m - 1 + by, 1);
-    const now = new Date();
-    if (by > 0 && (next.getFullYear() > now.getFullYear() || (next.getFullYear() === now.getFullYear() && next.getMonth() > now.getMonth()))) return;
-    calWhen = { y: next.getFullYear(), m: next.getMonth() + 1 };
-    paintPracticeCalendar();
+    if (ringsReturn && typeof ringsReturn.focus === "function") ringsReturn.focus();
   }
   function showSegueControls(on) {
     const stop = document.getElementById("talk-stop");
@@ -3741,33 +3721,45 @@ if (window.YANTRA_WEB) {
   document.getElementById("done-segue").addEventListener("click", beginSegue);
   document.getElementById("talk-stop").addEventListener("click", returnToStillness);
   document.getElementById("talk-still").addEventListener("click", returnToStillness);
-  document.getElementById("practice-cal-close").addEventListener("click", closePracticeCalendar);
-  document.getElementById("practice-cal-prev").addEventListener("click", () => shiftCalendar(-1));
-  document.getElementById("practice-cal-next").addEventListener("click", () => shiftCalendar(1));
-  document.getElementById("practice-cal").addEventListener("click", (event) => {
-    if (event.target && event.target.getAttribute("data-close")) closePracticeCalendar();
+  const streakNumber = document.getElementById("streak-continuous");
+  if (streakNumber) streakNumber.addEventListener("click", () => openRings(streakNumber));
+  ["home-week", "account-week"].forEach((id) => {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.addEventListener("click", () => openRings(node));
+    node.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openRings(node);
+    });
   });
+  const rings = document.getElementById("rings");
+  if (rings) {
+    rings.addEventListener("click", (event) => {
+      if (event.target && event.target.getAttribute("data-close")) closeRings();
+    });
+    rings.addEventListener("pointerdown", (event) => {
+      ringsSwipe = { x: event.clientX, y: event.clientY };
+    });
+    rings.addEventListener("pointerup", (event) => {
+      if (!ringsSwipe) return;
+      const dx = event.clientX - ringsSwipe.x;
+      const dy = event.clientY - ringsSwipe.y;
+      ringsSwipe = null;
+      if (dy > 48 && Math.abs(dx) < 80) closeRings();
+    });
+  }
   document.addEventListener("keydown", (event) => {
-    const modal = document.getElementById("practice-cal");
+    const modal = document.getElementById("rings");
     if (!modal || modal.hidden) return;
     if (event.key === "Escape") {
       event.preventDefault();
-      closePracticeCalendar();
+      closeRings();
       return;
     }
     if (event.key !== "Tab") return;
-    const targets = Array.from(modal.querySelectorAll("button")).filter((el) => !el.disabled && !el.closest("[hidden]"));
-    if (!targets.length) return;
-    const first = targets[0];
-    const last = targets[targets.length - 1];
-    const active = document.activeElement;
-    if (event.shiftKey && (active === first || !modal.contains(active))) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && (active === last || !modal.contains(active))) {
-      event.preventDefault();
-      first.focus();
-    }
+    event.preventDefault();
+    modal.focus();
   });
   addEventListener("offline", () => {
     const from = document.getElementById("done-from");

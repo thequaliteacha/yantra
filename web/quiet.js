@@ -323,6 +323,54 @@
     return { year: y, month: m, label: monthLabel(y, m), cells: cells };
   }
 
+  /* One ring per month from the first formal day on this device through
+     today. A bead is a morning or an evening sit. Listening is not here.
+     Months with no sit still draw a ring. The picture stops at twenty
+     years so a bad date cannot draw without end. */
+  function growthRings(days, today) {
+    const book = days && typeof days === "object" ? days : {};
+    const dates = Object.keys(book).filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key)).sort();
+    let first = "";
+    let last = "";
+    let formalDays = 0;
+    dates.forEach((date) => {
+      const src = book[date] || {};
+      const morning = (Number(src.morning) || 0) > 0;
+      const evening = (Number(src.evening) || 0) > 0;
+      if (!morning && !evening) return;
+      if (!first) first = date;
+      last = date;
+      formalDays += 1;
+    });
+    if (!first) return { months: [], beads: 0, days: 0, first: "", label: "" };
+    const end = /^\d{4}-\d{2}-\d{2}$/.test(today) && today > last ? today : last;
+    let cursor = new Date(Number(first.slice(0, 4)), Number(first.slice(5, 7)) - 1, 1);
+    const stop = new Date(Number(end.slice(0, 4)), Number(end.slice(5, 7)) - 1, 1);
+    const months = [];
+    let beads = 0;
+    while ((cursor.getFullYear() < stop.getFullYear() || (cursor.getFullYear() === stop.getFullYear() && cursor.getMonth() <= stop.getMonth())) && months.length < 240) {
+      const y = cursor.getFullYear();
+      const m = cursor.getMonth() + 1;
+      const count = new Date(y, m, 0).getDate();
+      const marks = [];
+      for (let day = 1; day <= count; day += 1) {
+        const date = y + "-" + pad(m) + "-" + pad(day);
+        const src = book[date] || {};
+        const morning = (Number(src.morning) || 0) > 0;
+        const evening = (Number(src.evening) || 0) > 0;
+        const angle = -Math.PI / 2 + ((day - 0.5) / count) * Math.PI * 2;
+        if (morning) marks.push({ date: date, part: "morning", angle: angle - 0.05 });
+        if (evening) marks.push({ date: date, part: "evening", angle: angle + 0.05 });
+      }
+      beads += marks.length;
+      months.push({ year: y, month: m, label: monthLabel(y, m), beads: marks });
+      cursor = new Date(y, m, 1);
+    }
+    const span = monthLabel(Number(first.slice(0, 4)), Number(first.slice(5, 7)));
+    const label = "Practice on this device, " + formalDays + (formalDays === 1 ? " formal day" : " formal days") + ", from " + span;
+    return { months: months, beads: beads, days: formalDays, first: first, label: label };
+  }
+
   const api = {
     SEED_KEY: SEED_KEY,
     HERO_CAP: HERO_CAP,
@@ -340,6 +388,7 @@
     segueOffer: segueOffer,
     monthCells: monthCells,
     monthLabel: monthLabel,
+    growthRings: growthRings,
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;

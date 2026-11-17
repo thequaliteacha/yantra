@@ -170,6 +170,16 @@ const atTwo = P.record(P.empty(), {
 }).store;
 assert.strictEqual(Q.monthCells(2026, 11, atTwo.days).cells.find((cell) => cell.day === 9).evening, true);
 
+const rings = Q.growthRings(lateEvening.days, "2026-11-09");
+assert.strictEqual(rings.first, "2026-11-08", "rings start at the first formal day");
+assert.strictEqual(rings.months.length, 1);
+assert.ok(rings.months[0].beads.some((bead) => bead.date === "2026-11-08" && bead.part === "evening"), "an evening before 2:22 stays on the previous day");
+assert.strictEqual(rings.months[0].beads.some((bead) => bead.date === "2026-11-09"), false);
+const dawnRings = Q.growthRings(lateMorning.days, "2026-11-09");
+assert.ok(dawnRings.months[0].beads.some((bead) => bead.date === "2026-11-09" && bead.part === "morning"));
+assert.strictEqual(Q.growthRings({ "2026-11-08": { ms: 60000 } }, "2026-11-09").months.length, 0, "listening is not a ring");
+assert.strictEqual(Q.growthRings({}, "2026-11-09").label, "");
+
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 const shell = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
 const sw = fs.readFileSync(path.join(__dirname, "sw.js"), "utf8");
@@ -177,7 +187,9 @@ const quietText = fs.readFileSync(path.join(__dirname, "quiet.js"), "utf8");
 assert.ok(page.includes("[hidden] { display: none !important; }"));
 assert.ok(page.includes('id="done-segue" hidden>Continue with a Dharma talk</button>'));
 assert.ok(page.includes('id="home-streak"'));
-assert.ok(page.includes('id="practice-cal" hidden role="dialog"'));
+assert.ok(page.includes('id="rings" hidden role="dialog"'));
+assert.strictEqual(page.includes('id="practice-cal"'), false, "the labeled calendar is replaced by the rings");
+assert.ok(page.includes("--breath: 10s"));
 assert.ok(page.includes('id="talk-stop" hidden>Stop</button>'));
 assert.ok(page.includes('id="talk-still" hidden>Back to stillness</button>'));
 assert.ok(page.includes("prefers-reduced-motion"));
@@ -211,7 +223,7 @@ assert.ok(!begin.includes("yantraMusicOffer"));
 assert.ok(!begin.includes("spotify"));
 assert.ok(shell.indexOf("talks.js") < shell.indexOf("quiet.js"));
 assert.ok(sw.includes('"/web/quiet.js"'));
-assert.ok(sw.includes("yantra-v10"));
+assert.ok(sw.includes("yantra-v11"));
 const syncText = fs.readFileSync(path.join(__dirname, "sync.js"), "utf8");
 const payload = syncText.slice(syncText.indexOf("function payloadOf"), syncText.indexOf("function labelBook"));
 assert.ok(!payload.includes("markSeed"));
