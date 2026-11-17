@@ -824,6 +824,8 @@ async function main() {
     })()`);
     await evaluate(send, `document.querySelector("#pick [data-count='1']").click()`);
     await waitFor(send, `document.getElementById("cap-title").textContent === "Enlightenment"`, "enlightenment caption");
+    const captionTone = await evaluate(send, `getComputedStyle(document.getElementById("cap-title")).color`);
+    assert.ok(String(captionTone).indexOf("247, 237, 212") < 0, "the sit caption stays off bright ivory: " + captionTone);
     await shot(send, "sit-chosen-album.png");
     const secondSit = await waitFor(send, `(() => {
       const audio = window.yantraSitAudio;

@@ -139,11 +139,12 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   body.sitting.awake #caption.show, body.sitting #caption.show.fresh { opacity: 1; }
   #cap-title {
     font-family: Palatino, "Iowan Old Style", serif;
-    font-size: 1.35rem; margin: 0; color: rgba(247, 237, 212, 0.88);
+    font-size: 1.35rem; font-weight: 400; margin: 0;
+    color: rgba(230, 201, 138, 0.62);
   }
-  #cap-place { margin: 0.25rem 0 0.45rem; letter-spacing: 0.18em; font-size: 0.72rem; text-transform: uppercase; color: rgba(230, 201, 138, 0.7); }
-  #cap-bar { width: min(16rem, 40vw); height: 1px; margin: 0 auto; background: rgba(230, 201, 138, 0.18); }
-  #cap-bar span { display: block; height: 1px; background: rgba(243, 230, 200, 0.8); width: 0; }
+  #cap-place { margin: 0.25rem 0 0.45rem; letter-spacing: 0.08em; font-size: 0.78rem; text-transform: none; color: rgba(230, 201, 138, 0.48); }
+  #cap-bar { width: min(16rem, 40vw); height: 1px; margin: 0 auto; background: rgba(230, 201, 138, 0.14); }
+  #cap-bar span { display: block; height: 1px; background: rgba(230, 201, 138, 0.4); width: 0; }
   #cap-note {
     margin: 0.7rem auto 0; max-width: 22rem; font-family: Palatino, "Iowan Old Style", "Times New Roman", serif;
     font-size: 0.98rem; line-height: 1.45; letter-spacing: 0; text-transform: none; color: rgba(243, 230, 200, 0.86);
@@ -214,7 +215,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     .room:not([hidden]) .inner,
     .index:not([hidden]),
     .face:not([hidden]) { animation: none; }
-    #talk-bar, #talk-title, #talk-words { transition: none; }
+    #talk-bar, #talk-title, #talk-words, #caption { transition: none; }
   }
   .room h1 { font-size: clamp(2.2rem, 7vw, 3.1rem); margin: 0 0 0.2rem; }
   .room h2 { font-family: inherit; font-weight: 500; font-size: 1.55rem; color: #f7edd4; margin: 0 0 1.2rem; }
