@@ -805,7 +805,56 @@ async function main() {
     assert.strictEqual(stats.hasContinuous, true);
     assert.strictEqual(stats.hasWeekly, false, stats.text);
     await shot(send, "streak-practice.png");
-    console.log("streak display", JSON.stringify({ continuous: shown.continuous, practice: shown.practice, stats: stats.text }));
+    const medallions = await evaluate(send, `(() => {
+      function read(id) {
+        const node = document.getElementById(id);
+        const svg = node && node.querySelector("svg");
+        if (!svg) return null;
+        const rings = svg.querySelectorAll("circle").length;
+        const paths = Array.from(svg.querySelectorAll("path")).map((path) => path.getAttribute("d") || "");
+        return {
+          rings,
+          mornings: paths.filter((d) => d.includes(" 0 0 0 ")).length,
+          evenings: paths.filter((d) => d.includes(" 0 0 1 ")).length,
+          label: svg.getAttribute("aria-label") || "",
+        };
+      }
+      const live = { home: read("home-week"), account: read("account-week") };
+      const sample = [
+        { morning: true, evening: false, today: false },
+        { morning: true, evening: true, today: false },
+        { morning: false, evening: true, today: false },
+        { morning: false, evening: false, today: false },
+        { morning: true, evening: false, today: false },
+        { morning: true, evening: true, today: false },
+        { morning: true, evening: false, today: true },
+      ];
+      paintWeek(document.getElementById("home-week"), sample);
+      paintWeek(document.getElementById("account-week"), sample);
+      return { live, painted: { home: read("home-week"), account: read("account-week") } };
+    })()`);
+    for (const place of ["home", "account"]) {
+      const live = medallions.live[place];
+      assert.ok(live, place + " medallion is missing");
+      assert.strictEqual(live.rings, 7, place + " keeps seven circles");
+      assert.strictEqual(live.mornings, 7, place + " morning halves follow the recorded sits");
+      assert.strictEqual(live.evenings, 0, place + " evening halves stay empty when no sunset was sat");
+      const painted = medallions.painted[place];
+      assert.strictEqual(painted.rings, 7);
+      assert.strictEqual(painted.mornings, 5, place + " fills the sunrise half");
+      assert.strictEqual(painted.evenings, 3, place + " fills the sunset half");
+      assert.strictEqual(painted.label, "This week: 2 perfect days of 7");
+    }
+    await evaluate(send, `(() => {
+      showRoom("home");
+      const inner = document.querySelector("#home .inner");
+      if (inner) inner.getAnimations().forEach((anim) => anim.finish());
+      const week = document.getElementById("home-week");
+      if (week && week.scrollIntoView) week.scrollIntoView({ block: "center" });
+    })()`);
+    await sleep(40);
+    await shot(send, "streak-medallions.png");
+    console.log("streak display", JSON.stringify({ continuous: shown.continuous, practice: shown.practice, stats: stats.text, medallions: medallions.live }));
     console.log("quiet.browser.test.js ok");
     client.close();
   } catch (err) {
