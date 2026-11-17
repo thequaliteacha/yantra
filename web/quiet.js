@@ -102,12 +102,6 @@
     return n === 1 ? "1 day" : n + " days";
   }
 
-  function weeklyLabel(days) {
-    const n = Math.max(0, Math.min(7, Math.floor(Number(days) || 0)));
-    if (n === 1) return "1 / 7 day";
-    return n + " / 7 days";
-  }
-
   function svgShell(inner, opts) {
     const size = opts.size || 36;
     const aura = opts.aura != null ? opts.aura : 0.28;
@@ -335,7 +329,6 @@
     formForDays: formForDays,
     heroDays: heroDays,
     continuousLabel: continuousLabel,
-    weeklyLabel: weeklyLabel,
     renderForm: renderForm,
     segueOffer: segueOffer,
     monthCells: monthCells,

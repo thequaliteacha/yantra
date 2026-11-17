@@ -810,7 +810,6 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <div id="home-streak" class="streak-hero" hidden>
       <div class="streak-meta">
         <p class="streak-stat"><span class="streak-label">Continuous</span> <span id="streak-continuous" class="streak-value"></span></p>
-        <p class="streak-stat"><span class="streak-label">Weekly</span> <span id="streak-weekly" class="streak-value"></span></p>
       </div>
       <div id="streak-days" role="group" aria-label="Formal practice days. Activate any day to open the practice calendar."></div>
     </div>
@@ -3082,16 +3081,6 @@ function paintPractice() {
     add("Sunrise", summary.streaks.morning, "dawn");
     add("Sunset", summary.streaks.evening, "dusk");
     add("Continuous", summary.streaks.daily, "");
-    if (summary.streaks.weekly && window.YantraQuiet) {
-      const weeklyRow = document.createElement("div");
-      weeklyRow.className = "practice-row";
-      const weeklyName = document.createElement("span");
-      weeklyName.textContent = "Weekly";
-      const weeklyCurrent = document.createElement("span");
-      weeklyCurrent.textContent = window.YantraQuiet.weeklyLabel(summary.streaks.weekly.current);
-      weeklyRow.append(weeklyName, weeklyCurrent, document.createElement("span"));
-      rows.append(weeklyRow);
-    }
     const today = document.createElement("div");
     today.className = "practice-row";
     const name = document.createElement("span");
@@ -3504,10 +3493,7 @@ if (window.YANTRA_WEB) {
     }
     hero.hidden = false;
     const continuous = document.getElementById("streak-continuous");
-    const weekly = document.getElementById("streak-weekly");
     if (continuous) continuous.textContent = window.YantraQuiet.continuousLabel(current);
-    const weeklyCount = summary.streaks && summary.streaks.weekly ? summary.streaks.weekly.current : 0;
-    if (weekly) weekly.textContent = window.YantraQuiet.weeklyLabel(weeklyCount);
     row.replaceChildren();
     const seed = quietSeed();
     const formalMs = summary.totals ? summary.totals.ms : 0;
