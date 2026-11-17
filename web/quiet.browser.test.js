@@ -335,7 +335,7 @@ function assertReadable(sample, name, minContrast) {
 function assertQuietNumber(sample) {
   assert.ok(sample && sample.value, "the streak number was not measured");
   assert.ok(sample.value.opacity >= 0.95, "streak number opacity " + sample.value.opacity);
-  assert.ok(sample.value.contrast >= 3 && sample.value.contrast <= 8, "streak number stays dim, contrast " + sample.value.contrast + " (" + sample.value.color + ")");
+  assert.ok(sample.value.contrast >= 4.5 && sample.value.contrast <= 8, "streak number stays dim and readable, contrast " + sample.value.contrast + " (" + sample.value.color + ")");
 }
 
 async function heroClip(send) {
