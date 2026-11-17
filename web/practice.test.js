@@ -393,7 +393,7 @@ assert.strictEqual(web.includes("captureStream"), false);
 assert.ok(worker.includes("microphone=()"));
 assert.strictEqual(worker.includes("microphone=(self)"), false);
 assert.strictEqual(/Naval/.test(web + page), false);
-assert.ok(sw.includes("yantra-v10"));
+assert.ok(sw.includes("yantra-v11"));
 assert.ok(sw.includes('"/web/listening.js"'));
 assert.ok(readme.includes("Evening continues until 2:22 AM."));
 assert.ok(P.RULE.includes("Evening continues until 2:22 AM."));
