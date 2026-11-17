@@ -307,7 +307,6 @@ const TYPE_PROBE = `(function () {
     segue: document.getElementById("done-segue"),
     line: document.getElementById("done-line"),
     home: document.querySelector("#home h1"),
-    label: document.querySelector(".streak-label"),
     value: document.getElementById("streak-continuous"),
     play: document.getElementById("talk-stop"),
   };
@@ -331,6 +330,12 @@ function assertReadable(sample, name, minContrast) {
   assert.ok(sample && sample[name], name + " was not measured");
   assert.ok(sample[name].opacity >= 0.95, name + " settled opacity " + sample[name].opacity);
   assert.ok(sample[name].contrast >= minContrast, name + " contrast " + sample[name].contrast + " (" + sample[name].color + ")");
+}
+
+function assertQuietNumber(sample) {
+  assert.ok(sample && sample.value, "the streak number was not measured");
+  assert.ok(sample.value.opacity >= 0.95, "streak number opacity " + sample.value.opacity);
+  assert.ok(sample.value.contrast >= 3 && sample.value.contrast <= 8, "streak number stays dim, contrast " + sample.value.contrast + " (" + sample.value.color + ")");
 }
 
 async function heroClip(send) {
@@ -447,11 +452,11 @@ async function main() {
     await evaluate(send, `document.querySelector("#home .inner").getAnimations().forEach((anim) => anim.finish())`);
     await sleep(80);
     const homeType = await readType(send);
-    console.log("home fade", JSON.stringify({ running: homeRunning, early: homeEarly.home, settled: homeType.home, label: homeType.label }));
+    console.log("home fade", JSON.stringify({ running: homeRunning, early: homeEarly.home, settled: homeType.home, value: homeType.value }));
     if (homeRunning) assert.ok(homeEarly.home.opacity < 0.85, "home is still inside the entrance fade when shot too soon, opacity " + homeEarly.home.opacity);
     assertReadable(homeType, "home", 7);
-    assertReadable(homeType, "label", 4.5);
-    assertReadable(homeType, "value", 7);
+    assertQuietNumber(homeType);
+    assert.strictEqual(await evaluate(send, `!!document.querySelector(".streak-label")`), false, "the streak has no loud label");
     await shot(send, "quiet-home-desktop.png");
     const deskClip = await heroClip(send);
     await shot(send, "quiet-hero-desktop.png", deskClip);
@@ -753,7 +758,7 @@ async function main() {
     await sleep(50);
     const reducedHome = await readType(send);
     assertReadable(reducedHome, "home", 7);
-    assertReadable(reducedHome, "label", 4.5);
+    assertQuietNumber(reducedHome);
     await shot(send, "quiet-home-reduced.png");
     await evaluate(send, `document.getElementById("done-segue").click()`);
     await sleep(80);
