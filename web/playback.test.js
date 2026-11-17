@@ -280,4 +280,18 @@ const failedPlane = P.filterDiscs(catalog, Object.assign({}, plane, { failedKeys
 assert.ok(failedPlane && failedPlane.tracks.length > 0);
 assert.ok(!failedPlane.tracks.some((track) => track.n === 1));
 
+assert.strictEqual(P.sameSource("audio/enlightenment/01.mp3", "https://yantramedi.app/web/audio/enlightenment/01.mp3"), true);
+assert.strictEqual(P.sameSource("audio/enlightenment/01.mp3", "https://yantramedi.app/web/audio/samurai/01.mp3"), false);
+assert.strictEqual(P.sameSource("spotify:track:abc", "https://open.spotify.com/track/abc"), true);
+assert.strictEqual(P.openingVerdict("audio/enlightenment/01.mp3", ["audio/enlightenment/01.mp3", "audio/enlightenment/02.mp3"]), "open");
+assert.strictEqual(P.openingVerdict("audio/enlightenment/02.mp3", ["audio/enlightenment/01.mp3", "audio/enlightenment/02.mp3"]), "later");
+assert.strictEqual(P.openingVerdict("audio/samurai/01.mp3", ["audio/enlightenment/01.mp3"]), "foreign");
+assert.strictEqual(P.openingVerdict("", ["audio/enlightenment/01.mp3"]), "wait");
+assert.ok(web.includes("recorded.detach"));
+assert.ok(web.includes("function showOpening"));
+assert.ok(web.includes("confirmSpotify"));
+assert.ok(page.includes("function armSitCaption"));
+assert.ok(page.includes("function paintSitCaption"));
+assert.ok(page.includes("picked ? picked.value : pickAlbum"));
+
 console.log("playback.test.js ok");

@@ -850,7 +850,13 @@
         playing: !!data.is_playing,
       };
     },
-    pause() { this.api("PUT", "/me/player/pause" + (this.deviceId ? "?device_id=" + this.deviceId : "")); },
+    pause() {
+      const pending = this.api("PUT", "/me/player/pause" + (this.deviceId ? "?device_id=" + this.deviceId : ""));
+      if (this.player && this.player.pause) {
+        try { this.player.pause(); } catch (e) {}
+      }
+      return pending || Promise.resolve();
+    },
   };
 
   const apple = {
@@ -926,8 +932,10 @@
     element() {
       if (!this.audio) {
         this.audio = new Audio();
+        window.yantraSitAudio = this.audio;
         this.audio.preload = "auto";
         this.audio.addEventListener("ended", () => {
+          if (this.switching) return;
           const next = this.index + 1;
           if (next >= this.keys.length) return;
           this.start(next).then((ok) => {
@@ -941,13 +949,49 @@
       }
       return this.audio;
     },
+    /* Drop a file the element still has loaded. play() on that element
+       otherwise resumes it, which is how the previous album opens the next sit. */
+    detach() {
+      const audio = this.audio;
+      if (!audio) return;
+      this.switching = true;
+      this.index = -1;
+      this.keys = [];
+      audio.pause();
+      audio.removeAttribute("src");
+      try { audio.load(); } catch (e) {}
+      this.switching = false;
+    },
     start(index) {
       const audio = this.element();
-      this.index = index;
+      const next = this.keys[index];
+      if (!next) return Promise.resolve(false);
       const token = ++this.token;
-      audio.src = this.keys[index];
-      studyRecording(this.keys[index]);
-      return audio.play().then(() => this.token === token, () => false);
+      this.switching = true;
+      const heard = audio.currentSrc || "";
+      if (heard && !Playback.sameSource(next, heard)) {
+        audio.pause();
+        audio.removeAttribute("src");
+        try { audio.load(); } catch (e) {}
+      }
+      this.index = index;
+      audio.src = next;
+      studyRecording(next);
+      let played;
+      try { played = audio.play(); } catch (e) { played = Promise.reject(e); }
+      return Promise.resolve(played).then(() => {
+        this.switching = false;
+        if (this.token !== token) return false;
+        const now = audio.currentSrc || audio.getAttribute("src") || audio.src || "";
+        if (!Playback.sameSource(next, now)) {
+          audio.pause();
+          return false;
+        }
+        return true;
+      }, () => {
+        this.switching = false;
+        return false;
+      });
     },
     play(keys) {
       this.keys = keys.slice();
@@ -955,9 +999,12 @@
     },
     state() {
       const audio = this.audio;
-      if (!audio || this.index < 0) return null;
+      if (!audio || this.index < 0 || this.switching) return null;
+      const intended = this.keys[this.index];
+      const actual = audio.currentSrc || "";
+      if (actual && !Playback.sameSource(intended, actual)) return null;
       return {
-        key: this.keys[this.index],
+        key: intended,
         position: audio.currentTime || 0,
         length: Number.isFinite(audio.duration) ? audio.duration : 0,
         playing: !audio.paused && !audio.ended,
@@ -1042,7 +1089,8 @@
   }
 
   function liveStop(pause) {
-    if (live.service && pause) services[live.service].pause();
+    let stopping = null;
+    if (live.service && pause && services[live.service].pause) stopping = services[live.service].pause();
     clearInterval(live.timer);
     clearTimeout(live.endTimer);
     live.endTimer = 0;
@@ -1050,6 +1098,84 @@
     live.items = [];
     live.keys = [];
     live.seen = false;
+    publishMedia("", "", "");
+    return stopping;
+  }
+
+  function publishMedia(title, artist, album) {
+    try {
+      if (!navigator.mediaSession || typeof MediaMetadata === "undefined") return;
+      navigator.mediaSession.metadata = title
+        ? new MediaMetadata({ title: title, artist: artist || "", album: album || "" })
+        : null;
+    } catch (e) {}
+  }
+
+  /* The caption and the lock screen follow the sit that was queued, before a
+     player can report a leftover track from the previous album. */
+  function showOpening() {
+    const item = live.items && live.items[0];
+    const disc = item && DISCS[item.discId];
+    const track = disc && disc.tracks.find((row) => row.n === item.n);
+    if (!disc || !track) return;
+    Object.assign(NOW, {
+      connected: true,
+      status: "Starting",
+      moving: false,
+      notice: "",
+      title: track.title,
+      artist: disc.artist,
+      album: disc.title,
+      track: item.n,
+      length: track.length || 0,
+      position: 0,
+      discId: disc.id,
+      allowed: true,
+      source: live.service,
+      form: live.form ? live.name : "",
+      formIndex: 0,
+      formTotal: live.form ? live.items.length : 0,
+      chakra: live.form ? ((live.chakras && live.chakras[0]) || chakraOf(disc, item.n)) : "",
+      formPlan: live.form ? planOf(live.items) : [],
+    });
+    publishMedia(track.title, disc.artist, disc.title);
+  }
+
+  function openingOf(items) {
+    const item = items && items[0];
+    if (!item) return { albumId: "", albumTitle: "", trackTitle: "" };
+    const disc = DISCS[item.discId];
+    const track = disc && disc.tracks.find((row) => row.n === item.n);
+    return {
+      albumId: disc ? disc.id : item.discId,
+      albumTitle: disc ? disc.title : "",
+      trackTitle: track ? track.title : "",
+    };
+  }
+
+  /* Spotify can still be sounding the previous album after play() returns.
+     A foreign track is not this sit. No report yet is left alone. */
+  async function confirmSpotify(allow) {
+    let replayed = false;
+    for (let i = 0; i < 8; i += 1) {
+      const state = await spotify.state();
+      const verdict = Playback.openingVerdict(state && state.key, allow);
+      if (verdict === "open") return true;
+      if ((verdict === "foreign" || verdict === "later") && !replayed && i >= 1) {
+        replayed = true;
+        await spotify.pause();
+        const again = await spotify.play({ uris: allow });
+        if (!again) return false;
+      } else if (verdict === "wait" && i >= 3) return true;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    const state = await spotify.state();
+    const verdict = Playback.openingVerdict(state && state.key, allow);
+    if (verdict === "foreign" || verdict === "later") {
+      await spotify.pause();
+      return false;
+    }
+    return true;
   }
 
   function markFailed(item, fromSpotify) {
@@ -1319,12 +1445,15 @@
   async function liveStart(name, items, prefer, form, albumOptions, formId, chakras) {
     const service = serviceFor(items, prefer);
     if (!service) return false;
-    liveStop(true);
+    recorded.detach();
+    const stopping = liveStop(true);
+    if (stopping && typeof stopping.then === "function") await stopping;
     stopQueue();
     Object.assign(live, {
       service, name, items, keys: items.map((item) => songKey(item, service)), seen: false, form,
       chakras: chakras || null, lastHeard: false,
     });
+    showOpening();
     // Unlocks audio for the in-page player; it has to run inside the tap.
     if (service === "spotify" && spotify.player && spotify.player.activateElement) spotify.player.activateElement();
     let started;
@@ -1368,6 +1497,13 @@
     if (!ok || live.service !== service) {
       if (live.service === service) liveStop(false);
       return false;
+    }
+    if (service === "spotify") {
+      const heard = await confirmSpotify(live.keys);
+      if (!heard || live.service !== service) {
+        if (live.service === service) liveStop(false);
+        return false;
+      }
     }
     progressWatch.reset();
     if (service === "recordings") recorded.onfail = (index, reason) => { skipFrom(index, reason); };
@@ -1694,7 +1830,7 @@
       const ok = await liveStart(name, items, "recordings", true, null, "", chakras);
       if (!ok) return [{ ok: false, error: "The music did not start." }, 404];
       rememberAlbum(items);
-      return [{ ok: true, source: origin }];
+      return [Object.assign({ ok: true, source: origin }, openingOf(items))];
     }
 
     let unavailable = spotifyKnownUnavailable();
@@ -1707,11 +1843,14 @@
       const ok = await liveStart(name, items, "spotify", true, null, "", chakras);
       if (ok) {
         rememberAlbum(items);
-        return [{ ok: true, source: origin }];
+        return [Object.assign({ ok: true, source: origin }, openingOf(items))];
       }
       unavailable = spotify.lastFailure || spotify.blocked || "failed";
     }
 
+    if (plan.via === "album" && plan.requestedId) {
+      return [{ ok: false, error: Choose.emptyLine() }, 409];
+    }
     const fallback = hostedPlan(plan.theme, items.length);
     if (!fallback.ok) return [{ ok: false, error: Choose.emptyLine() }, 409];
     const hosted = fallback.items.map((item) => ({ discId: item.discId, n: item.n }));
@@ -1722,9 +1861,10 @@
     const ok = await liveStart(name, hosted, "recordings", true, null, "", hostedChakras);
     if (!ok) return [{ ok: false, error: Choose.emptyLine() }, 409];
     rememberAlbum(hosted);
+    const opened = openingOf(hosted);
     const spotifyExpected = !!Playback.spotifySdkSupported(navEnv()) && unavailable !== "sdk";
     if (!Choose.announceSwap({ explicit: plan.via === "album", swapped: true, spotifyExpected })) {
-      return [{ ok: true, source: origin }];
+      return [Object.assign({ ok: true, source: origin }, opened)];
     }
     const asked = plan.requestedId ? DISCS[plan.requestedId] : null;
     const heard = describeItems(hosted);
@@ -1739,7 +1879,7 @@
       count: hosted.length,
       mode: "session",
     });
-    return [{ ok: true, source: origin, offer }];
+    return [Object.assign({ ok: true, source: origin, offer }, opened)];
   }
 
   async function startSession(payload) {

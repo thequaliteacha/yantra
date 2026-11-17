@@ -113,6 +113,28 @@ function startServer() {
         return;
       }
       fs.readFile(file, (err, data) => {
+        if (err && pathname.includes("/audio/") && pathname.endsWith(".mp3")) {
+          const rate = 8000;
+          const samples = rate * 6;
+          const pcm = Buffer.alloc(samples, 128);
+          const header = Buffer.alloc(44);
+          header.write("RIFF", 0);
+          header.writeUInt32LE(36 + samples, 4);
+          header.write("WAVE", 8);
+          header.write("fmt ", 12);
+          header.writeUInt32LE(16, 16);
+          header.writeUInt16LE(1, 20);
+          header.writeUInt16LE(1, 22);
+          header.writeUInt32LE(rate, 24);
+          header.writeUInt32LE(rate, 28);
+          header.writeUInt16LE(1, 32);
+          header.writeUInt16LE(8, 34);
+          header.write("data", 36);
+          header.writeUInt32LE(samples, 40);
+          res.writeHead(200, { "content-type": "audio/wav", "cache-control": "no-store" });
+          res.end(Buffer.concat([header, pcm]));
+          return;
+        }
         if (err) {
           res.writeHead(404);
           res.end("missing");
@@ -756,6 +778,91 @@ async function main() {
     assertReadable(reducedPlay, "play", 4.5);
     await shot(send, "quiet-playing-reduced.png");
     await send("Emulation.setEmulatedMedia", { features: [] });
+    await evaluate(send, `(() => {
+      document.body.classList.remove("watching", "sitting");
+      const talk = document.querySelector("#talks-list audio");
+      if (talk && !talk.paused) talk.pause();
+      document.body.classList.remove("watching");
+      const bar = document.getElementById("talk-watch");
+      if (bar) bar.hidden = true;
+      sessionTheme = "morning";
+      document.getElementById("pick").dataset.theme = "morning";
+      const canvas = document.getElementById("c");
+      if (canvas) canvas.style.pointerEvents = "none";
+      showRoom("pick");
+      paintPick();
+      const select = document.getElementById("pick-album");
+      select.value = "samurai";
+      select.dispatchEvent(new Event("change"));
+    })()`);
+    await evaluate(send, `document.querySelector("#pick [data-count='1']").click()`);
+    const firstSit = await waitFor(send, `(() => {
+      const audio = window.yantraSitAudio;
+      const title = document.getElementById("cap-title").textContent;
+      if (!audio || !audio.currentSrc || audio.currentSrc.indexOf("/audio/samurai/") < 0) {
+        return "ERR " + JSON.stringify({
+          title,
+          src: audio ? audio.currentSrc : "",
+          note: document.getElementById("pick-note").textContent,
+          sitting: document.body.classList.contains("sitting"),
+          hidden: document.getElementById("pick").hidden,
+        });
+      }
+      return { title, src: audio.currentSrc };
+    })()`, "samurai sit");
+    assert.ok(firstSit.src.indexOf("/audio/samurai/") >= 0);
+    await evaluate(send, `endSitting()`);
+    await waitFor(send, `document.body.classList.contains("sitting") === false`, "sit ended");
+    await evaluate(send, `(() => {
+      showRoom("pick");
+      const select = document.getElementById("pick-album");
+      select.value = "enlightenment";
+      select.dispatchEvent(new Event("change"));
+      window.__capLog = [];
+      const node = document.getElementById("cap-title");
+      new MutationObserver(() => window.__capLog.push(node.textContent)).observe(node, { childList: true, subtree: true, characterData: true });
+    })()`);
+    await evaluate(send, `document.querySelector("#pick [data-count='1']").click()`);
+    await waitFor(send, `document.getElementById("cap-title").textContent === "Enlightenment"`, "enlightenment caption");
+    const captionTone = await evaluate(send, `getComputedStyle(document.getElementById("cap-title")).color`);
+    assert.ok(String(captionTone).indexOf("247, 237, 212") < 0, "the sit caption stays off bright ivory: " + captionTone);
+    await shot(send, "sit-chosen-album.png");
+    const secondSit = await waitFor(send, `(() => {
+      const audio = window.yantraSitAudio;
+      const log = window.__capLog || [];
+      if (!audio || !audio.currentSrc || audio.currentSrc.indexOf("/audio/enlightenment/") < 0) return false;
+      if (log.indexOf("Enlightenment") < 0) return false;
+      return { title: document.getElementById("cap-title").textContent, src: audio.currentSrc, log };
+    })()`, "enlightenment after samurai");
+    assert.ok(secondSit.log.indexOf("Enlightenment") >= 0);
+    assert.ok(secondSit.log.indexOf("Samurai") < 0, "the caption does not flash Samurai");
+    assert.ok(secondSit.src.indexOf("/audio/enlightenment/") >= 0, secondSit.src);
+    await evaluate(send, `endSitting()`);
+    await waitFor(send, `document.body.classList.contains("sitting") === false`, "second sit ended");
+    await evaluate(send, `(() => {
+      localStorage.removeItem("yantra.sitAlbum");
+      sessionTheme = "evening";
+      document.getElementById("pick").dataset.theme = "evening";
+      showRoom("pick");
+      const select = document.getElementById("pick-album");
+      select.value = "";
+      select.dispatchEvent(new Event("change"));
+      window.__capLog = [];
+      const node = document.getElementById("cap-title");
+      new MutationObserver(() => window.__capLog.push(node.textContent)).observe(node, { childList: true, subtree: true, characterData: true });
+    })()`);
+    await evaluate(send, `document.querySelector("#pick [data-count='3']").click()`);
+    const eveningDefault = await waitFor(send, `(() => {
+      const audio = window.yantraSitAudio;
+      const log = window.__capLog || [];
+      if (!audio || audio.currentSrc.indexOf("canyons-of-light") < 0) return false;
+      if (log.indexOf("Canyons of Light") < 0) return false;
+      return { src: audio.currentSrc, log };
+    })()`, "evening default");
+    assert.ok(eveningDefault.log.indexOf("Canyons of Light") >= 0);
+    assert.ok(eveningDefault.log.indexOf("Samurai") < 0);
+    assert.ok(eveningDefault.src.indexOf("samurai") < 0);
+    console.log("chosen sit", JSON.stringify({ first: firstSit.src, second: secondSit.src, evening: eveningDefault.src }));
     console.log("quiet.browser.test.js ok");
     client.close();
   } catch (err) {

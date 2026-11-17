@@ -150,6 +150,53 @@ const tracks = (disc.tracks || []).filter((track) => trackOffered(
     return -1;
   }
 
+  /* A relative audio path and the browser's absolute currentSrc are the same
+     file. Spotify uris match either as a uri or as an open.spotify.com link. */
+  function sameSource(intended, actual) {
+    const want = String(intended || "").trim();
+    const heard = String(actual || "").trim();
+    if (!want || !heard) return false;
+    if (want === heard) return true;
+    const idOf = (value) => {
+      const uri = value.match(/spotify:track:([A-Za-z0-9]+)/);
+      if (uri) return uri[1];
+      const link = value.match(/\/track\/([A-Za-z0-9]+)/);
+      return link ? link[1] : "";
+    };
+    const wantId = idOf(want);
+    const heardId = idOf(heard);
+    if (wantId || heardId) return !!wantId && wantId === heardId;
+    const pathOf = (value) => {
+      const cut = value.split("?")[0].split("#")[0];
+      if (/^https?:/i.test(cut)) {
+        try { return decodeURIComponent(new URL(cut).pathname); } catch (e) { return cut; }
+      }
+      return cut.charAt(0) === "/" ? cut : "/" + cut.replace(/^\.?\//, "");
+    };
+    const a = pathOf(want);
+    const b = pathOf(heard);
+    return a === b || a.endsWith(b) || b.endsWith(a);
+  }
+
+  /* What the player is sounding, compared with the sit that was just queued.
+     "open" is that sit's first track. "later" is another song of the same sit.
+     "foreign" is a previous album. "wait" means the player has not reported yet. */
+  function openingVerdict(key, allow) {
+    const heard = String(key || "");
+    const keys = allow || [];
+    if (!heard) return "wait";
+    let at = -1;
+    for (let i = 0; i < keys.length; i += 1) {
+      if (sameSource(keys[i], heard)) {
+        at = i;
+        break;
+      }
+    }
+    if (at === 0) return "open";
+    if (at > 0) return "later";
+    return "foreign";
+  }
+
   const api = {
     LUMAKARA: LUMAKARA,
     STALL_MS: STALL_MS,
@@ -165,6 +212,8 @@ const tracks = (disc.tracks || []).filter((track) => trackOffered(
     presentState: presentState,
     calmLine: calmLine,
     nextPlayable: nextPlayable,
+    sameSource: sameSource,
+    openingVerdict: openingVerdict,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.YantraPlayback = api;

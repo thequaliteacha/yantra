@@ -139,11 +139,12 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   body.sitting.awake #caption.show, body.sitting #caption.show.fresh { opacity: 1; }
   #cap-title {
     font-family: Palatino, "Iowan Old Style", serif;
-    font-size: 1.35rem; margin: 0; color: rgba(247, 237, 212, 0.88);
+    font-size: 1.35rem; font-weight: 400; margin: 0;
+    color: rgba(230, 201, 138, 0.62);
   }
-  #cap-place { margin: 0.25rem 0 0.45rem; letter-spacing: 0.18em; font-size: 0.72rem; text-transform: uppercase; color: rgba(230, 201, 138, 0.7); }
-  #cap-bar { width: min(16rem, 40vw); height: 1px; margin: 0 auto; background: rgba(230, 201, 138, 0.18); }
-  #cap-bar span { display: block; height: 1px; background: rgba(243, 230, 200, 0.8); width: 0; }
+  #cap-place { margin: 0.25rem 0 0.45rem; letter-spacing: 0.08em; font-size: 0.78rem; text-transform: none; color: rgba(230, 201, 138, 0.48); }
+  #cap-bar { width: min(16rem, 40vw); height: 1px; margin: 0 auto; background: rgba(230, 201, 138, 0.14); }
+  #cap-bar span { display: block; height: 1px; background: rgba(230, 201, 138, 0.4); width: 0; }
   #cap-note {
     margin: 0.7rem auto 0; max-width: 22rem; font-family: Palatino, "Iowan Old Style", "Times New Roman", serif;
     font-size: 0.98rem; line-height: 1.45; letter-spacing: 0; text-transform: none; color: rgba(243, 230, 200, 0.86);
@@ -214,7 +215,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     .room:not([hidden]) .inner,
     .index:not([hidden]),
     .face:not([hidden]) { animation: none; }
-    #talk-bar, #talk-title, #talk-words { transition: none; }
+    #talk-bar, #talk-title, #talk-words, #caption { transition: none; }
   }
   .room h1 { font-size: clamp(2.2rem, 7vw, 3.1rem); margin: 0 0 0.2rem; }
   .room h2 { font-family: inherit; font-weight: 500; font-size: 1.55rem; color: #f7edd4; margin: 0 0 1.2rem; }
@@ -2313,6 +2314,7 @@ async function sitAlbum() {
       return;
     }
     playNote = "";
+    if (disc) armSitCaption(disc.title, "", disc.id);
     begin();
     if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
   } catch (e) {
@@ -2564,7 +2566,16 @@ function applyNow() {
     note.textContent = snap.source === "local" ? "Playing the installed disc, in order."
       : snap.source === "recordings" ? "The sangha's recording, in album order." : "In album order.";
   }
-  if (snap && snap.form && snap.title) {
+  if (paintSitCaption()) {
+    const match = !!(snap && sitFocus.id && snap.discId === sitFocus.id);
+    const place = match && snap.form
+      ? (Number(snap.formIndex) + 1) + "  /  " + (Number(snap.formTotal) || 0)
+      : "";
+    const length = match ? Number(snap.length) || 0 : 0;
+    const mark = match && snap.chakra ? chakraLabel(snap.chakra) : "";
+    capPlace.textContent = place + (length ? "    " + clock(livePosition()) : "") + (mark ? "    " + mark : "");
+    capFill.style.width = length ? Math.min(100, (livePosition() / length) * 100) + "%" : "0%";
+  } else if (snap && snap.form && snap.title) {
     capTitle.textContent = snap.title;
     const place = (Number(snap.formIndex) + 1) + "  /  " + (Number(snap.formTotal) || 0);
     const length = Number(snap.length) || 0;
@@ -2658,7 +2669,9 @@ function followHearing() {
 function begin() {
   window.yantraTimedSit = false;
   window.drawEpoch = (window.drawEpoch || 0) + 1;
+  if (!sitFocus.album) capTitle.textContent = "";
   document.body.classList.add("sitting");
+  paintSitCaption();
   caption.classList.add("show");
   document.body.classList.remove("awake");
   settle();
@@ -2671,6 +2684,7 @@ function begin() {
 
 function endSitting() {
   const wasSitting = document.body.classList.contains("sitting");
+  sitFocus = { id: "", album: "", song: "" };
   document.body.classList.remove("sitting", "awake");
   if (wasSitting) dispatchEvent(new Event("yantra:ended"));
   caption.classList.remove("show");
@@ -2815,6 +2829,7 @@ async function playForm(name, id, tracks) {
       return;
     }
     playNote = "";
+    if (data.albumTitle) armSitCaption(data.albumTitle, data.trackTitle, data.albumId);
     begin();
     if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
     applyNow();
@@ -3217,10 +3232,22 @@ function roomBack() {
    carries its own intent, so a sit never crosses albums. The choice stays in
    this browser. */
 let pickAlbum = "";
+let sitFocus = { id: "", album: "", song: "" };
 try {
   pickAlbum = localStorage.getItem("yantra.sitAlbum") || "";
   localStorage.removeItem("yantra.sitMix");
 } catch (e) {}
+function armSitCaption(album, song, id) {
+  sitFocus = { id: id || "", album: album || "", song: song || "" };
+  if (sitFocus.album) capTitle.textContent = sitFocus.album;
+}
+function paintSitCaption() {
+  if (!document.body.classList.contains("sitting")) return false;
+  const match = !!(snap && sitFocus.id && snap.discId === sitFocus.id);
+  if (match && snap.title) capTitle.textContent = snap.title;
+  else capTitle.textContent = sitFocus.album || "";
+  return true;
+}
 function thirdsOf(disc) {
   const sizes = { naval: 0, heart: 0, eye: 0 };
   for (const track of disc.tracks) sizes[track.chakra] = (sizes[track.chakra] || 0) + 1;
@@ -3273,7 +3300,11 @@ function keepPick() {
 }
 async function playSession(theme, count, choice) {
   sessionTheme = theme;
-  const album = choice ? choice.album || "" : pickAlbum;
+  const picked = document.getElementById("pick-album");
+  const album = choice && Object.prototype.hasOwnProperty.call(choice, "album")
+    ? (choice.album || "")
+    : (picked ? picked.value : pickAlbum);
+  if (!(choice && Object.prototype.hasOwnProperty.call(choice, "album"))) pickAlbum = album;
   const label = (theme === "morning" ? "Morning" : "Evening") + " · " + count + (count === 1 ? " song" : " songs");
   const note = document.getElementById("pick-note");
   note.textContent = "";
@@ -3296,6 +3327,7 @@ async function playSession(theme, count, choice) {
       return;
     }
     sessionLive = true;
+    if (data.albumTitle) armSitCaption(data.albumTitle, data.trackTitle, data.albumId);
     begin();
     if (data.offer && window.yantraMusicOffer) window.yantraMusicOffer(data.offer);
     else {

@@ -66,6 +66,7 @@
     if (opts.preferredId) {
       const preferred = fitting.find((disc) => disc.id === opts.preferredId);
       if (preferred) return preferred;
+      if (opts.strict) return null;
     }
     const catalog = opts.catalog || opts.discs || [];
     const remembered = catalog.find((disc) => disc && disc.id === opts.preferredId);
@@ -90,6 +91,11 @@
     if (opts.avoidId && pool.length > 1) {
       const narrower = narrow(pool, (disc) => disc.id !== opts.avoidId);
       if (narrower) pool = narrower;
+    }
+    const forbid = opts.forbid || [];
+    if (forbid.length) {
+      const allowed = pool.filter((disc) => forbid.indexOf(disc.id) < 0);
+      if (allowed.length) pool = allowed;
     }
     const random = rngOf(opts.rng);
     const index = Math.min(pool.length - 1, Math.floor(random() * pool.length));
@@ -186,14 +192,21 @@
     const open = (disc) => !opts.circleOpen || opts.circleOpen(disc.circle, level);
     const catalog = ((opts && opts.discs) || []).filter((disc) => disc && open(disc));
     const canPlay = (opts && opts.canPlay) || (() => false);
-    const preferredId = String((opts && opts.albumId) || "");
+    const asked = String((opts && opts.albumId) || "");
+    const defaultId = !asked && level === "zazen"
+      ? (theme === "evening" ? "canyons-of-light" : "enlightenment")
+      : "";
+    const preferredId = asked || defaultId;
+    const visible = !!asked && catalog.some((disc) => disc.id === asked);
     const disc = chooseAlbum({
       discs: catalog,
       catalog,
       count,
       preferredId,
-      themeIds: (opts && opts.themeIds) || [],
-      avoidId: preferredId ? "" : ((opts && opts.lastId) || ""),
+      strict: visible,
+      forbid: asked === "samurai" ? [] : ["samurai"],
+      themeIds: asked ? [] : ((opts && opts.themeIds) || []),
+      avoidId: asked ? "" : ((opts && opts.lastId) || ""),
       canPlay,
       rng: opts && opts.rng,
     });
@@ -204,14 +217,14 @@
       return { ok: false, line: emptyLine(), theme, via: "" };
     }
     let via = "default";
-    if (preferredId && disc.id === preferredId) via = "album";
-    else if (preferredId) via = "fallback";
+    if (asked && disc.id === asked) via = "album";
+    else if (asked) via = "fallback";
     return {
       ok: true,
       items,
       via,
       albumId: disc.id,
-      requestedId: preferredId,
+      requestedId: asked,
       theme,
       announce: false,
     };
