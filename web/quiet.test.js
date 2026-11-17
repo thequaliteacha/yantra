@@ -61,11 +61,9 @@ assert.ok(Q.renderForm("enso", 7, seedA).includes("<path"));
 assert.ok(Q.renderForm("year", 365, seedA).includes("<path"));
 assert.strictEqual(Q.continuousLabel(1), "1 day");
 assert.strictEqual(Q.continuousLabel(42), "42 days");
-assert.strictEqual(Q.weeklyLabel(0), "0 / 7 days");
-assert.strictEqual(Q.weeklyLabel(1), "1 / 7 day");
-assert.strictEqual(Q.weeklyLabel(7), "7 / 7 days");
-assert.strictEqual(Q.weeklyLabel(8), "7 / 7 days");
-assert.strictEqual(Q.weeklyLabel(90), "7 / 7 days");
+assert.strictEqual(Q.continuousLabel(1), "1 day");
+assert.strictEqual(Q.continuousLabel(42), "42 days");
+assert.strictEqual(typeof Q.weeklyLabel, "undefined");
 
 const kept = memory();
 const local = Q.seedFor(kept, "");

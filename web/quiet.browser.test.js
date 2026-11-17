@@ -307,7 +307,6 @@ const TYPE_PROBE = `(function () {
     segue: document.getElementById("done-segue"),
     line: document.getElementById("done-line"),
     home: document.querySelector("#home h1"),
-    label: document.querySelector(".streak-label"),
     value: document.getElementById("streak-continuous"),
     play: document.getElementById("talk-stop"),
   };
@@ -331,6 +330,12 @@ function assertReadable(sample, name, minContrast) {
   assert.ok(sample && sample[name], name + " was not measured");
   assert.ok(sample[name].opacity >= 0.95, name + " settled opacity " + sample[name].opacity);
   assert.ok(sample[name].contrast >= minContrast, name + " contrast " + sample[name].contrast + " (" + sample[name].color + ")");
+}
+
+function assertQuietNumber(sample) {
+  assert.ok(sample && sample.value, "the streak number was not measured");
+  assert.ok(sample.value.opacity >= 0.95, "streak number opacity " + sample.value.opacity);
+  assert.ok(sample.value.contrast >= 4.5 && sample.value.contrast <= 8, "streak number stays dim and readable, contrast " + sample.value.contrast + " (" + sample.value.color + ")");
 }
 
 async function heroClip(send) {
@@ -425,9 +430,8 @@ async function main() {
       const buttons = document.querySelectorAll("#streak-days button");
       return {
         daily: summary.streaks.daily.current,
-        weekly: summary.streaks.weekly.current,
         continuous: document.getElementById("streak-continuous").textContent,
-        weeklyText: document.getElementById("streak-weekly").textContent,
+        weeklyGone: !document.getElementById("streak-weekly"),
         buttons: buttons.length,
         heroHidden: document.getElementById("home-streak").hidden,
         label: buttons[0] ? buttons[0].getAttribute("aria-label") : "",
@@ -436,9 +440,8 @@ async function main() {
       };
     })()`);
     assert.strictEqual(seeded.daily, 42);
-    assert.strictEqual(seeded.weekly, 7);
     assert.strictEqual(seeded.continuous, "42 days");
-    assert.strictEqual(seeded.weeklyText, "7 / 7 days");
+    assert.strictEqual(seeded.weeklyGone, true, "the home streak has no weekly counter");
     assert.strictEqual(seeded.heroHidden, false);
     assert.strictEqual(seeded.buttons, 14);
     assert.ok(seeded.svg && seeded.svg.includes("<svg"), "each day draws a mark");
@@ -449,11 +452,11 @@ async function main() {
     await evaluate(send, `document.querySelector("#home .inner").getAnimations().forEach((anim) => anim.finish())`);
     await sleep(80);
     const homeType = await readType(send);
-    console.log("home fade", JSON.stringify({ running: homeRunning, early: homeEarly.home, settled: homeType.home, label: homeType.label }));
+    console.log("home fade", JSON.stringify({ running: homeRunning, early: homeEarly.home, settled: homeType.home, value: homeType.value }));
     if (homeRunning) assert.ok(homeEarly.home.opacity < 0.85, "home is still inside the entrance fade when shot too soon, opacity " + homeEarly.home.opacity);
     assertReadable(homeType, "home", 7);
-    assertReadable(homeType, "label", 4.5);
-    assertReadable(homeType, "value", 7);
+    assertQuietNumber(homeType);
+    assert.strictEqual(await evaluate(send, `!!document.querySelector(".streak-label")`), false, "the streak has no loud label");
     await shot(send, "quiet-home-desktop.png");
     const deskClip = await heroClip(send);
     await shot(send, "quiet-hero-desktop.png", deskClip);
@@ -708,7 +711,6 @@ async function main() {
         const buttons = Array.from(document.querySelectorAll("#streak-days button"));
         const last = buttons[buttons.length - 1];
         return {
-          weekly: summary.streaks.weekly.current,
           daily: summary.streaks.daily.current,
           count: buttons.length,
           label: last ? last.getAttribute("aria-label") : "",
@@ -716,7 +718,6 @@ async function main() {
         };
       })()`);
       assert.strictEqual(form.daily, days);
-      assert.strictEqual(form.weekly, days >= 7 ? 7 : days);
       assert.strictEqual(form.count, Math.min(14, days));
       assert.ok(form.label.includes("Day " + days));
       if (days === 7) assert.ok(form.svg.includes("<path"), "the seventh day is an open ring");
@@ -726,8 +727,17 @@ async function main() {
       await shot(send, "quiet-form-" + days + ".png", clip);
     }
 
-    const long = await evaluate(send, `YantraPractice.summary().streaks.weekly.current`);
-    assert.strictEqual(long, 7, "a year still shows 7 / 7, not a new cycle");
+    const long = await evaluate(send, `(() => {
+      const summary = YantraPractice.summary();
+      return {
+        daily: summary.streaks.daily.current,
+        weekly: summary.streaks.weekly,
+        text: document.getElementById("streak-continuous").textContent,
+      };
+    })()`);
+    assert.strictEqual(long.daily, 365, "a year stays a continuous run");
+    assert.strictEqual(long.weekly, undefined);
+    assert.strictEqual(long.text, "365 days");
 
     await send("Emulation.setEmulatedMedia", {
       features: [{ name: "prefers-reduced-motion", value: "reduce" }],
@@ -748,7 +758,7 @@ async function main() {
     await sleep(50);
     const reducedHome = await readType(send);
     assertReadable(reducedHome, "home", 7);
-    assertReadable(reducedHome, "label", 4.5);
+    assertQuietNumber(reducedHome);
     await shot(send, "quiet-home-reduced.png");
     await evaluate(send, `document.getElementById("done-segue").click()`);
     await sleep(80);
@@ -756,6 +766,100 @@ async function main() {
     assertReadable(reducedPlay, "play", 4.5);
     await shot(send, "quiet-playing-reduced.png");
     await send("Emulation.setEmulatedMedia", { features: [] });
+    await evaluate(send, `(() => {
+      document.body.classList.remove("watching", "sitting");
+      const talk = document.querySelector("#talks-list audio");
+      if (talk && !talk.paused) talk.pause();
+      const bar = document.getElementById("talk-watch");
+      if (bar) bar.hidden = true;
+      showRoom("home");
+      paintPractice();
+      const inner = document.querySelector("#home .inner");
+      if (inner) inner.getAnimations().forEach((anim) => anim.finish());
+    })()`);
+    await shot(send, "streak-home-continuous.png");
+    const shown = await evaluate(send, `(() => {
+      showCompletion();
+      const done = document.querySelector("#done .inner");
+      if (done) done.getAnimations().forEach((anim) => anim.finish());
+      const practice = document.getElementById("done-practice").textContent;
+      return {
+        weeklyNode: !!document.getElementById("streak-weekly"),
+        continuous: document.getElementById("streak-continuous").textContent,
+        practice,
+        page: document.body.innerText.includes("Weekly") || document.body.innerText.includes("/ 7"),
+      };
+    })()`);
+    assert.strictEqual(shown.weeklyNode, false);
+    assert.strictEqual(shown.continuous, "365 days");
+    assert.ok(!shown.practice.includes("/ 7"), shown.practice);
+    assert.strictEqual(shown.page, false, "no weekly counter remains on the page");
+    await shot(send, "streak-completion.png");
+    await evaluate(send, `(() => {
+      showRoom("account");
+      const fold = document.getElementById("account-practice-block");
+      if (fold) fold.open = true;
+      const rows = document.getElementById("practice-rows");
+      if (rows && rows.scrollIntoView) rows.scrollIntoView({ block: "center" });
+    })()`);
+    await sleep(80);
+    const stats = await evaluate(send, `(() => {
+      const text = document.getElementById("practice-rows").innerText;
+      return { text, hasContinuous: text.includes("Continuous"), hasWeekly: text.includes("Weekly") };
+    })()`);
+    assert.strictEqual(stats.hasContinuous, true);
+    assert.strictEqual(stats.hasWeekly, false, stats.text);
+    await shot(send, "streak-practice.png");
+    const medallions = await evaluate(send, `(() => {
+      function read(id) {
+        const node = document.getElementById(id);
+        const svg = node && node.querySelector("svg");
+        if (!svg) return null;
+        const rings = svg.querySelectorAll("circle").length;
+        const paths = Array.from(svg.querySelectorAll("path")).map((path) => path.getAttribute("d") || "");
+        return {
+          rings,
+          mornings: paths.filter((d) => d.includes(" 0 0 0 ")).length,
+          evenings: paths.filter((d) => d.includes(" 0 0 1 ")).length,
+          label: svg.getAttribute("aria-label") || "",
+        };
+      }
+      const live = { home: read("home-week"), account: read("account-week") };
+      const sample = [
+        { morning: true, evening: false, today: false },
+        { morning: true, evening: true, today: false },
+        { morning: false, evening: true, today: false },
+        { morning: false, evening: false, today: false },
+        { morning: true, evening: false, today: false },
+        { morning: true, evening: true, today: false },
+        { morning: true, evening: false, today: true },
+      ];
+      paintWeek(document.getElementById("home-week"), sample);
+      paintWeek(document.getElementById("account-week"), sample);
+      return { live, painted: { home: read("home-week"), account: read("account-week") } };
+    })()`);
+    for (const place of ["home", "account"]) {
+      const live = medallions.live[place];
+      assert.ok(live, place + " medallion is missing");
+      assert.strictEqual(live.rings, 7, place + " keeps seven circles");
+      assert.strictEqual(live.mornings, 7, place + " morning halves follow the recorded sits");
+      assert.strictEqual(live.evenings, 0, place + " evening halves stay empty when no sunset was sat");
+      const painted = medallions.painted[place];
+      assert.strictEqual(painted.rings, 7);
+      assert.strictEqual(painted.mornings, 5, place + " fills the sunrise half");
+      assert.strictEqual(painted.evenings, 3, place + " fills the sunset half");
+      assert.strictEqual(painted.label, "This week: 2 perfect days of 7");
+    }
+    await evaluate(send, `(() => {
+      showRoom("home");
+      const inner = document.querySelector("#home .inner");
+      if (inner) inner.getAnimations().forEach((anim) => anim.finish());
+      const week = document.getElementById("home-week");
+      if (week && week.scrollIntoView) week.scrollIntoView({ block: "center" });
+    })()`);
+    await sleep(40);
+    await shot(send, "streak-medallions.png");
+    console.log("streak display", JSON.stringify({ continuous: shown.continuous, practice: shown.practice, stats: stats.text, medallions: medallions.live }));
     console.log("quiet.browser.test.js ok");
     client.close();
   } catch (err) {

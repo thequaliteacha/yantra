@@ -310,11 +310,11 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     padding: 0.55rem 0 0.55rem 0.75rem; border-top: 1px solid rgba(230, 201, 138, 0.16);
     text-align: left; color: rgba(243, 230, 200, 0.86);
   }
-  .practice-row span:nth-child(2) { text-align: right; color: #f7edd4; }
+  .practice-row span:nth-child(2) { text-align: right; color: rgba(243, 230, 200, 0.65); }
   .practice-row span:nth-child(3) { text-align: right; color: rgba(232, 204, 146, 0.69); font-size: 0.88rem; }
-  .practice-row.dawn { box-shadow: inset 2px 0 0 rgba(233, 162, 90, 0.8); }
-  .practice-row.dusk { box-shadow: inset 2px 0 0 rgba(120, 170, 165, 0.8); }
-  .practice-row.perfect { box-shadow: inset 2px 0 0 rgba(233, 162, 90, 0.8), inset 4px 0 0 rgba(120, 170, 165, 0.8); color: #f7edd4; }
+  .practice-row.dawn { box-shadow: inset 2px 0 0 rgba(196, 150, 96, 0.45); }
+  .practice-row.dusk { box-shadow: inset 2px 0 0 rgba(110, 150, 145, 0.4); }
+  .practice-row.perfect { box-shadow: inset 2px 0 0 rgba(196, 150, 96, 0.45), inset 4px 0 0 rgba(110, 150, 145, 0.4); color: rgba(243, 230, 200, 0.78); }
   #practice-note { font-size: 0.92rem; color: rgba(243, 230, 200, 0.76); }
   #practice-link { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.35rem; }
   #practice-link[hidden] { display: none; }
@@ -576,17 +576,21 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
   #reminders[hidden] { display: none; }
   /* The week: seven days, each a circle whose left half is the sunrise sit and right half the sunset sit. */
   .week { display: flex; justify-content: center; margin: 0.4rem 0 0; min-height: 1.9rem; }
-  .week svg { width: min(15rem, 80%); height: auto; overflow: visible; }
+  .week svg { width: min(15rem, 80%); height: auto; min-height: 3rem; overflow: visible; }
   .week.one svg { width: 5.5rem; }
   .streak-hero { margin-top: 0.85rem; text-align: center; }
   .streak-meta { display: flex; justify-content: center; gap: 1.8rem; margin: 0 0 0.35rem; }
   .room p.streak-stat { margin: 0; text-align: center; }
-  .streak-label { display: block; font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(243, 230, 200, 0.72); }
-  .streak-value { display: block; margin-top: 0.12rem; font-family: Palatino, "Iowan Old Style", Georgia, serif; font-size: 1.05rem; color: rgba(247, 237, 212, 0.9); }
+  .streak-value {
+    display: block; margin-top: 0.15rem;
+    font-family: Palatino, "Iowan Old Style", Georgia, serif;
+    font-size: 1.35rem; font-weight: 400; letter-spacing: 0.02em;
+    color: rgba(230, 201, 138, 0.62);
+  }
   #streak-days { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
   #streak-days .day-btn {
-    appearance: none; border: 0; background: transparent; padding: 2px; border-radius: 50%;
-    cursor: pointer; color: inherit; min-width: 2.4rem; min-height: 2.4rem;
+    appearance: none; border: 0; background: transparent; padding: 6px; border-radius: 50%;
+    cursor: pointer; color: inherit; min-width: 3rem; min-height: 3rem;
   }
   #streak-days .day-btn:focus-visible { outline: 2px solid #d4b87a; outline-offset: 2px; }
   #streak-days svg { width: 2.15rem; height: 2.15rem; display: block; filter: drop-shadow(0 0 4px rgba(230, 201, 138, 0.2)); }
@@ -809,8 +813,7 @@ if (location.hostname.endsWith("github.io")) location.replace("https://yantramed
     <button class="choice dusk" type="button" data-theme="evening">Evening Meditation</button>
     <div id="home-streak" class="streak-hero" hidden>
       <div class="streak-meta">
-        <p class="streak-stat"><span class="streak-label">Continuous</span> <span id="streak-continuous" class="streak-value"></span></p>
-        <p class="streak-stat"><span class="streak-label">Weekly</span> <span id="streak-weekly" class="streak-value"></span></p>
+        <p class="streak-stat" id="streak-stat"><span id="streak-continuous" class="streak-value"></span></p>
       </div>
       <div id="streak-days" role="group" aria-label="Formal practice days. Activate any day to open the practice calendar."></div>
     </div>
@@ -2975,14 +2978,14 @@ function paintWeek(node, week) {
       path.setAttribute("fill", color);
       svg.append(path);
     };
-    if (day.morning) half(0, "rgba(233, 162, 90, 0.85)");
-    if (day.evening) half(1, "rgba(120, 170, 165, 0.85)");
+    if (day.morning) half(0, "rgba(204, 156, 100, 0.62)");
+    if (day.evening) half(1, "rgba(118, 158, 152, 0.62)");
     const ring = document.createElementNS(ns, "circle");
     ring.setAttribute("cx", cx);
     ring.setAttribute("cy", cy);
     ring.setAttribute("r", r);
     ring.setAttribute("fill", "none");
-    ring.setAttribute("stroke", day.today ? "rgba(247, 237, 212, 0.75)" : "rgba(230, 201, 138, 0.35)");
+    ring.setAttribute("stroke", day.today ? "rgba(230, 201, 138, 0.5)" : "rgba(230, 201, 138, 0.28)");
     ring.setAttribute("stroke-width", day.today ? "1.5" : "0.9");
     svg.append(ring);
   });
@@ -3082,16 +3085,6 @@ function paintPractice() {
     add("Sunrise", summary.streaks.morning, "dawn");
     add("Sunset", summary.streaks.evening, "dusk");
     add("Continuous", summary.streaks.daily, "");
-    if (summary.streaks.weekly && window.YantraQuiet) {
-      const weeklyRow = document.createElement("div");
-      weeklyRow.className = "practice-row";
-      const weeklyName = document.createElement("span");
-      weeklyName.textContent = "Weekly";
-      const weeklyCurrent = document.createElement("span");
-      weeklyCurrent.textContent = window.YantraQuiet.weeklyLabel(summary.streaks.weekly.current);
-      weeklyRow.append(weeklyName, weeklyCurrent, document.createElement("span"));
-      rows.append(weeklyRow);
-    }
     const today = document.createElement("div");
     today.className = "practice-row";
     const name = document.createElement("span");
@@ -3504,10 +3497,10 @@ if (window.YANTRA_WEB) {
     }
     hero.hidden = false;
     const continuous = document.getElementById("streak-continuous");
-    const weekly = document.getElementById("streak-weekly");
-    if (continuous) continuous.textContent = window.YantraQuiet.continuousLabel(current);
-    const weeklyCount = summary.streaks && summary.streaks.weekly ? summary.streaks.weekly.current : 0;
-    if (weekly) weekly.textContent = window.YantraQuiet.weeklyLabel(weeklyCount);
+    const words = window.YantraQuiet.continuousLabel(current);
+    if (continuous) continuous.textContent = words;
+    const stat = document.getElementById("streak-stat");
+    if (stat) stat.setAttribute("aria-label", "Continuous, " + words);
     row.replaceChildren();
     const seed = quietSeed();
     const formalMs = summary.totals ? summary.totals.ms : 0;
