@@ -135,12 +135,15 @@ for (const [theme, count, minutes] of sits) {
     assert.strictEqual(result.items.length, count, theme + " " + count + " (" + minutes + " min)");
     assert.strictEqual(result.via, "default");
     const circles = new Set(result.items.map((item) => discById(item.discId).circle));
-    assert.deepStrictEqual([...circles], ["vayu"], theme + " " + count + " stays with the sit's theme");
-    if (level === "sangha") {
+    if (level === "zazen") {
+      assert.strictEqual(result.albumId, theme === "evening" ? "canyons-of-light" : "enlightenment", theme + " " + count);
+      assert.deepStrictEqual([...circles], ["zazen"]);
+    } else {
+      assert.deepStrictEqual([...circles], ["vayu"], theme + " " + count + " stays with the sit's theme");
       assert.ok(result.items.every((item) => discById(item.discId).circle === "vayu"));
       assert.notStrictEqual(result.albumId, "samurai");
+      assert.notStrictEqual(result.albumId, "india-dream");
     }
-    assert.notStrictEqual(result.albumId, "india-dream");
     assert.notStrictEqual(result.albumId, "samurai");
     assert.notStrictEqual(discById(result.albumId).circle, "lumikara");
     if (count === 1) assert.deepStrictEqual(result.items.map((item) => item.chakra), ["heart"]);
@@ -155,20 +158,18 @@ for (const [theme, count, minutes] of sits) {
 
 const eveningPhone = session("zazen", false);
 const evening = plan({ theme: "evening", count: 3, session: eveningPhone, albumId: "" });
-assert.strictEqual(evening.albumId, "big-island", "a free evening sit starts on a hosted Vayu album");
+assert.strictEqual(evening.albumId, "canyons-of-light", "a free evening sit starts on Canyons of Light");
 assert.ok(evening.items.every((item) => asTrack(discById(item.discId), item.n).hosted));
 
+const morningFree = plan({ theme: "morning", count: 3, session: eveningPhone, albumId: "" });
+assert.strictEqual(morningFree.albumId, "enlightenment");
+
 const remembered = plan({ theme: "evening", count: 3, albumId: "india-dream" });
-assert.notStrictEqual(remembered.albumId, "india-dream");
-assert.strictEqual(remembered.via, "fallback");
-assert.strictEqual(discById(remembered.albumId).circle, "vayu", "fallback stays in the remembered album's circle");
-assert.strictEqual(remembered.announce, false);
-assertPlayable(remembered, eveningPhone);
+assert.strictEqual(remembered.ok, false, "an album that cannot play is not replaced");
+assert.notStrictEqual(remembered.albumId, "samurai");
 
 const golden = plan({ theme: "evening", count: 12, albumId: "golden" });
-assert.notStrictEqual(golden.albumId, "golden");
-assert.strictEqual(discById(golden.albumId).circle, "vayu");
-assert.strictEqual(golden.announce, false);
+assert.strictEqual(golden.ok, false, "a chosen album that cannot hold the sit is not swapped");
 
 const kept = plan({ theme: "evening", count: 3, albumId: "samurai" });
 assert.strictEqual(kept.via, "album");
@@ -176,18 +177,16 @@ assert.strictEqual(kept.albumId, "samurai", "a hosted album the listener chose s
 assert.ok(kept.items.every((item) => asTrack(discById(item.discId), item.n).hosted));
 assert.strictEqual(kept.announce, false);
 
-const rotated = plan({ theme: "evening", count: 3, albumId: "", lastId: "big-island" });
-assert.notStrictEqual(rotated.albumId, "big-island");
-assert.strictEqual(discById(rotated.albumId).circle, "vayu");
+const rotated = plan({ theme: "evening", count: 3, albumId: "", lastId: "samurai" });
+assert.strictEqual(rotated.albumId, "canyons-of-light");
+assert.notStrictEqual(rotated.albumId, "samurai");
 
 const crossAsk = plan({ theme: "evening", count: 3, mix: true, albumId: "samurai" });
 assert.strictEqual(crossAsk.albumId, "samurai", "a sit never crosses albums, even if asked to mix");
 assert.strictEqual(new Set(crossAsk.items.map((item) => item.discId)).size, 1);
 
 const lumikara = plan({ theme: "evening", count: 3, level: "zazen", albumId: "awake-in-anza-borrego" });
-assert.notStrictEqual(lumikara.albumId, "awake-in-anza-borrego");
-assert.notStrictEqual(discById(lumikara.albumId).circle, "lumikara");
-assert.strictEqual(lumikara.announce, false);
+assert.strictEqual(lumikara.ok, false, "a chosen album outside this device is not replaced with Samurai");
 
 const hidden = plan({ theme: "morning", count: 3, level: "sangha", albumId: "samurai", session: session("sangha", false) });
 assert.ok(hidden.items.every((item) => discById(item.discId).circle === "vayu"));
@@ -199,6 +198,34 @@ const asked = plan({ theme: "evening", count: 3, albumId: "india-dream", session
 assert.strictEqual(asked.via, "album");
 assert.strictEqual(asked.albumId, "india-dream", "Spotify can play the asked album where the player runs");
 assert.strictEqual(asked.announce, false, "the plan itself never raises the Spotify panel");
+
+const afterSamurai = plan({
+  theme: "morning",
+  count: 3,
+  albumId: "enlightenment",
+  lastId: "samurai",
+  session: eveningPhone,
+});
+assert.strictEqual(afterSamurai.ok, true);
+assert.strictEqual(afterSamurai.albumId, "enlightenment", "a chosen album replaces the previous one");
+assert.ok(afterSamurai.items.every((item) => item.discId === "enlightenment"));
+
+const offlineChosen = plan({
+  theme: "morning",
+  count: 3,
+  albumId: "enlightenment",
+  session: Object.assign(session("zazen", false), { offline: true, cachedAlbums: { enlightenment: true, samurai: true } }),
+});
+assert.strictEqual(offlineChosen.ok, true);
+assert.strictEqual(offlineChosen.albumId, "enlightenment", "offline plays the chosen album when it is kept");
+
+const offlineOther = plan({
+  theme: "morning",
+  count: 3,
+  albumId: "enlightenment",
+  session: Object.assign(session("zazen", false), { offline: true, cachedAlbums: { samurai: true } }),
+});
+assert.strictEqual(offlineOther.ok, false, "a kept Samurai does not stand in for a chosen album");
 
 const none = plan({
   theme: "evening",
