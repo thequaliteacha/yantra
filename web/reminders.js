@@ -233,7 +233,9 @@ async function saveReminders(record) {
   }
   const permission = await Notification.requestPermission();
   if (permission !== "granted") {
-    status("Notifications stayed off. The choice is kept here for when you allow them.");
+    status(iosDevice()
+      ? "Notifications stayed off. On iPhone and iPad, allow them for Yantra in Settings, then open the Home Screen app and save again."
+      : "Notifications stayed off. The choice is kept here for when you allow them.");
     return;
   }
   const key = await pushServer("/push/key");

@@ -63,4 +63,40 @@ const dropped = await runReminders(env, morningAt + 1000, async () => 410);
 assert.strictEqual(dropped.removed, 1);
 assert.strictEqual(store.map.has("sub:stale"), false);
 
+const lateStore = kv({
+  index: JSON.stringify([{ id: "11111111-1111-4111-8111-111111111111", at: morningAt }]),
+  "sub:11111111-1111-4111-8111-111111111111": JSON.stringify({ ...record, sent: {} }),
+});
+let lateSends = 0;
+const late = await runReminders({ REMINDERS: lateStore }, morningAt + 5 * 60 * 1000, async () => {
+  lateSends += 1;
+  return 201;
+});
+assert.strictEqual(late.sent, 1, "five minutes late still sends");
+assert.strictEqual(lateSends, 1);
+
+const missedStore = kv({
+  index: JSON.stringify([{ id: "11111111-1111-4111-8111-111111111111", at: morningAt }]),
+  "sub:11111111-1111-4111-8111-111111111111": JSON.stringify({ ...record, sent: {} }),
+});
+let missedSends = 0;
+const missed = await runReminders({ REMINDERS: missedStore }, morningAt + 30 * 60 * 1000, async () => {
+  missedSends += 1;
+  return 201;
+});
+assert.strictEqual(missed.sent, 0, "past the window it does not send a stale note");
+assert.strictEqual(missedSends, 0);
+assert.strictEqual(missed.rescheduled, 1);
+const moved = JSON.parse(missedStore.map.get("index"));
+assert.strictEqual(moved[0].at, eveningAt, "a missed morning still leaves the evening in place");
+
+const retryStore = kv({
+  index: JSON.stringify([{ id: "11111111-1111-4111-8111-111111111111", at: morningAt }]),
+  "sub:11111111-1111-4111-8111-111111111111": JSON.stringify({ ...record, sent: {} }),
+});
+const failed = await runReminders({ REMINDERS: retryStore }, morningAt + 1000, async () => 503);
+assert.strictEqual(failed.sent, 0);
+assert.strictEqual(failed.failed, 1);
+assert.strictEqual(JSON.parse(retryStore.map.get("index"))[0].at, morningAt, "a failed send stays on this note");
+
 console.log("dispatch.test.mjs ok");

@@ -4008,6 +4008,20 @@ forgetBrightness();
   }
   bindGroup("motion-inner", "inner");
   bindGroup("motion-outer", "outer");
+  /* A linked device's newer petal level turns this wheel on the next frame. */
+  function applyLinkedMotion(which, value) {
+    const level = window.YantraAwakening ? window.YantraAwakening.levelOf(value) : (value === 1 || value === 2 || value === 3 ? value : 0);
+    if (which === "inner") window.motionInner = level;
+    else window.motionOuter = level;
+    paintGroup("motion-" + which, level);
+  }
+  if (window.YantraSettings && window.YantraSettings.subscribe) {
+    window.YantraSettings.subscribe((key, value, info) => {
+      if (!info || info.from !== "link") return;
+      if (key !== "motion.inner" && key !== "motion.outer") return;
+      applyLinkedMotion(key.slice("motion.".length), value);
+    });
+  }
 })();
 
 // Back, restart, next. The web edition moves its own players; the desktop app asks

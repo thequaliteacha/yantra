@@ -1,7 +1,7 @@
 /* node web/schedule.test.mjs */
 import assert from "assert";
 import {
-  COPY, addDays, dueReminders, fireAt, formatLocal, localDate, nextFire,
+  COPY, GRACE_MS, addDays, dueReminders, fireAt, formatLocal, localDate, nextFire,
   notificationFor, roundCoord, sanitizeSchedule, zonedToUtc,
 } from "./schedule.js";
 
@@ -52,8 +52,24 @@ assert.deepStrictEqual(
   dueReminders(record, morningAt + 30 * 1000).map((item) => item.theme),
   ["morning"]
 );
-assert.strictEqual(dueReminders(record, morningAt + 5 * 60 * 1000).length, 0);
+assert.strictEqual(dueReminders(record, morningAt + 5 * 60 * 1000).length, 1, "a late minute still matches");
+assert.strictEqual(dueReminders(record, morningAt + GRACE_MS).length, 0, "past the window it is no longer due");
 assert.strictEqual(dueReminders(record, morningAt - 10 * 1000).length, 0);
+const winter = zonedToUtc(2026, 1, 15, 6, 30, "America/Chicago");
+const summer = zonedToUtc(2026, 7, 15, 6, 30, "America/Chicago");
+assert.strictEqual(winter, Date.UTC(2026, 0, 15, 12, 30), "Chicago standard time is UTC-6");
+assert.strictEqual(summer, Date.UTC(2026, 6, 15, 11, 30), "Chicago daylight time is UTC-5");
+assert.strictEqual(formatLocal(winter, "America/Chicago").replace(/\s/g, ""), "6:30AM");
+assert.strictEqual(formatLocal(summer, "America/Chicago").replace(/\s/g, ""), "6:30AM");
+const austinRise = fireAt(sanitizeSchedule({
+  tz: "America/Chicago",
+  lat: 30.3,
+  lon: -97.7,
+  morning: { on: true, mode: "sunrise", offset: 0, time: "06:30" },
+  evening: { on: true, mode: "sunset", offset: 0, time: "19:00" },
+}), "morning", "2026-06-21");
+const austinHour = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "numeric", hourCycle: "h23" }).format(new Date(austinRise)));
+assert.ok(austinHour >= 5 && austinHour <= 8, "Austin sunrise stays in the morning, hour " + austinHour);
 assert.strictEqual(dueReminders({ ...record, sent: { morning: "2026-06-21" } }, morningAt + 1000).length, 0);
 
 const eveningAt = fireAt(record, "evening", "2026-06-21");

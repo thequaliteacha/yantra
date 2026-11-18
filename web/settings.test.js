@@ -115,6 +115,26 @@ assert.strictEqual(S.set("sit.background", "ocean", store), "silent");
 assert.strictEqual(S.set("sit.bedVolume", 2, store), 1);
 assert.strictEqual(S.set("sit.bedVolume", -1, store), 0);
 
+assert.ok(S.SHARED.indexOf("motion.inner") >= 0, "inner petal level is shared");
+assert.ok(S.SHARED.indexOf("motion.outer") >= 0, "outer petal level is shared");
+assert.ok(S.SHARED.indexOf("theme.light") < 0, "the screen look stays on the device");
+assert.ok(S.SHARED.indexOf("access.level") < 0);
+const petalsA = mem();
+const petalsB = mem();
+S.set("motion.inner", 2, petalsA);
+S.set("motion.outer", 3, petalsA);
+S.set("theme.light", true, petalsA);
+const petalShare = S.sharedEntries(petalsA);
+assert.strictEqual(petalShare["motion.inner"].value, 2);
+assert.strictEqual(petalShare["motion.outer"].value, 3);
+assert.strictEqual(petalShare["theme.light"], undefined);
+assert.deepStrictEqual(S.adopt(petalShare, petalsB).sort(), ["motion.inner", "motion.outer"]);
+assert.strictEqual(S.get("motion.inner", petalsB), 2);
+assert.strictEqual(S.get("motion.outer", petalsB), 3);
+const stalePetal = { "motion.inner": { value: 1, updatedAt: petalShare["motion.inner"].updatedAt - 1000 } };
+assert.deepStrictEqual(S.adopt(stalePetal, petalsB), [], "an older petal level does not replace a newer one");
+assert.strictEqual(S.get("motion.inner", petalsB), 2);
+
 const page = fs.readFileSync(path.join(__dirname, "../index.html"), "utf8");
 const account = fs.readFileSync(path.join(__dirname, "account.js"), "utf8");
 const worker = fs.readFileSync(path.join(__dirname, "../deploy/cloudflare/worker.js"), "utf8");

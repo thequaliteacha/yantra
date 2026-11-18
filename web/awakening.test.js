@@ -249,6 +249,8 @@ assert.ok(page.includes("For intermediate and advanced students."));
 assert.ok(page.includes("keep gazing with eyes open at the center bindu"));
 assert.ok(page.includes('YantraSettings.get("motion." + which)'), "a stored choice is kept");
 assert.ok(page.includes('YantraSettings.set("motion." + which, clean)'));
+assert.ok(page.includes("applyLinkedMotion"), "a linked petal level reaches the live wheels");
+assert.ok(page.includes('info.from !== "link"'));
 assert.strictEqual(page.includes('get("motion.heart")'), false, "the page does not read the heart mark");
 assert.strictEqual(page.includes('set("motion.heart"'), false);
 assert.strictEqual(page.includes("motionHeart"), false);
