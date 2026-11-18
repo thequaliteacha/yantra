@@ -1,6 +1,6 @@
 /* Cron pass: send reminders that are due, then point each one at its next day.
    Push sending is injected so the timing can be tested without a push service. */
-import { dueReminders, nextFire, notificationFor } from "../../web/schedule.js";
+import { GRACE_MS, dueReminders, nextFire, notificationFor } from "../../web/schedule.js";
 
 async function readIndex(kv) {
   try {
@@ -17,9 +17,11 @@ export async function runReminders(env, now, send) {
   let changed = false;
   let sent = 0;
   let removed = 0;
+  let rescheduled = 0;
+  let failed = 0;
   for (let i = 0; i < index.length; i += 1) {
     const row = index[i];
-    if (!row || !row.id || !row.at || now < row.at || now - row.at >= 3 * 60 * 1000) continue;
+    if (!row || !row.id || !row.at || now < row.at) continue;
     const key = "sub:" + row.id;
     let record = null;
     try { record = JSON.parse(await env.REMINDERS.get(key) || "null"); } catch (e) { record = null; }
@@ -28,6 +30,15 @@ export async function runReminders(env, now, send) {
       i -= 1;
       changed = true;
       removed += 1;
+      continue;
+    }
+    /* A pass that arrives after the window used to leave the old time in
+       the index, so every later pass skipped it. Point it at the next note. */
+    if (now - row.at >= GRACE_MS) {
+      const upcoming = nextFire(record, now);
+      index[i] = { id: row.id, at: upcoming ? upcoming.at : 0 };
+      changed = true;
+      rescheduled += 1;
       continue;
     }
     const due = dueReminders(record, now);
@@ -43,7 +54,10 @@ export async function runReminders(env, now, send) {
         drop = true;
         break;
       }
-      if (status < 200 || status >= 300) continue;
+      if (status < 200 || status >= 300) {
+        failed += 1;
+        continue;
+      }
       record.sent = Object.assign({}, record.sent, { [item.theme]: item.date });
       sent += 1;
     }
@@ -55,7 +69,10 @@ export async function runReminders(env, now, send) {
     changed = true;
   }
   if (changed) await env.REMINDERS.put("index", JSON.stringify(index));
-  return { sent, removed };
+  if (sent || removed || rescheduled || failed) {
+    console.log(JSON.stringify({ reminder: "cron", sent: sent, removed: removed, rescheduled: rescheduled, failed: failed }));
+  }
+  return { sent: sent, removed: removed, rescheduled: rescheduled, failed: failed };
 }
 
 export function indexEntry(id, record, now) {

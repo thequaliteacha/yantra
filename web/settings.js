@@ -44,13 +44,16 @@
     "motion.outer": 0,
   };
   const LEGACY = ["yantra.profile.v1", "yantra.reminders.v1", "yantra.glow", "yantra.awakening", "yantra.motion.heart"];
-  /* What a linked device shares. The look of each screen (theme), any leftover
-     brightness keys, the access word, and this device's reminder id stay on the
-     device. The page clears a saved brightness and draws the yantra at full light. */
+  /* What a linked device shares. Petal levels travel, so each wheel's pace
+     on one device is the pace on the others. The newer choice wins.
+     The look of each screen (theme), leftover brightness, the access word,
+     and this device's reminder id stay on the device. The page clears a
+     saved brightness and draws the yantra at full light. */
   const SHARED = [
     "profile.name", "profile.greeting", "altar.photos", "altar.show",
     "talks.saved", "talks.progress", "reminders", "welcome.seen",
     "sit.minutes", "sit.midway", "sit.background", "sit.bedVolume",
+    "motion.inner", "motion.outer",
   ];
   const listeners = new Set();
 

@@ -460,6 +460,8 @@ function snapshotBlob(deviceId) {
   Settings.set("profile.name", "Stephen");
   Settings.set("reminders", { id: "11111111-1111-4111-8111-111111111111", morning: { on: true, mode: "clock", time: "05:30" } });
   Settings.set("glow.levelDark", 60);
+  Settings.set("motion.inner", 2);
+  Settings.set("motion.outer", 1);
   const linkedLaptop = Sync.linkNew({ name: "March On" });
   await Sync.sync();
   use(phoneStore);
@@ -471,12 +473,17 @@ function snapshotBlob(deviceId) {
   assert.strictEqual(Settings.get("reminders").morning.time, "05:30", "reminder times reach the phone");
   assert.strictEqual(Settings.get("reminders").id, undefined, "the laptop's reminder id stays on the laptop");
   assert.strictEqual(Settings.get("glow.levelDark"), 120, "brightness stays per device");
+  assert.strictEqual(Settings.get("motion.inner"), 2, "inner petal level reaches the phone");
+  assert.strictEqual(Settings.get("motion.outer"), 1, "outer petal level reaches the phone");
   await new Promise((done) => setTimeout(done, 5));
   Settings.set("profile.name", "Stephen F");
+  Settings.set("motion.inner", 3);
   await Sync.sync();
   use(laptopStore);
   await Sync.sync();
   assert.strictEqual(Settings.get("profile.name"), "Stephen F", "a newer change on the phone reaches the laptop");
+  assert.strictEqual(Settings.get("motion.inner"), 3, "a newer petal level reaches the laptop");
+  assert.strictEqual(Settings.get("motion.outer"), 1);
   assert.strictEqual(Settings.get("reminders").id, "11111111-1111-4111-8111-111111111111");
   assert.strictEqual(Settings.get("altar.photos").length, 2);
 

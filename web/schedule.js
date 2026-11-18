@@ -7,7 +7,9 @@ export const COPY = {
   evening: "The evening has come. A few minutes of stillness?",
 };
 
-const GRACE_MS = 3 * 60 * 1000;
+/* A minute cron is not exact. Keep the note due long enough that a late
+   pass still sends it, then the caller points the record at the next day. */
+export const GRACE_MS = 15 * 60 * 1000;
 const OFFSETS = [-60, -30, -15, 0, 15, 30, 60];
 
 export function roundCoord(value) {

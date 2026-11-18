@@ -244,7 +244,7 @@ if (typeof ServiceWorkerGlobalScope !== "undefined" && self instanceof ServiceWo
     const url = typeof data.url === "string" && data.url.startsWith("/web/") ? data.url : "/web/?ready=" + ready;
     event.waitUntil(self.registration.showNotification(title, {
       body,
-      icon: "icons/apple-touch-icon.png",
+      icon: "/web/icons/apple-touch-icon.png",
       data: { url, ready },
       tag: "yantra-" + ready,
     }));

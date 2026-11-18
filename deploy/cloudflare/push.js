@@ -91,7 +91,8 @@ export async function sendPush(env, subscription, payload) {
     const response = await fetch(subscription.endpoint, {
       method: "POST",
       headers: {
-        TTL: "10800",
+        TTL: "43200",
+        Urgency: "high",
         "Content-Type": "application/octet-stream",
         "Content-Encoding": "aes128gcm",
         Authorization: "vapid t=" + jwt + ", k=" + env.VAPID_PUBLIC_KEY,
